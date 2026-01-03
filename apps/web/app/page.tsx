@@ -157,7 +157,7 @@ export default function DashboardPage() {
                     <StatCard
                         label="Billing Load"
                         value={stats?.slip_generated}
-                        icon={<DbWarning className="w-5 h-5 text-cyan-500" />}
+                        icon={<DatabaseWarning className="w-5 h-5 text-cyan-500" />}
                         trend="Active"
                         variant="success"
                     />
