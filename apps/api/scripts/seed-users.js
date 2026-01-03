@@ -1,15 +1,22 @@
 const admin = require('firebase-admin');
 const { PrismaClient } = require('@prisma/client');
-const path = require('path');
-const fs = require('fs');
 
 const prisma = new PrismaClient();
 
-// Load service account using fs.readFileSync
-const serviceAccountPath = path.join(__dirname, '..', '..', '..', 'gcp-service-account.json');
-const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
-
-console.log(`📁 Loaded service account for project: ${serviceAccount.project_id}\n`);
+// Hardcoded service account to bypass JSON parsing issues
+const serviceAccount = {
+    "type": "service_account",
+    "project_id": "sahakar-ppo",
+    "private_key_id": "39ef755029b7fe0199cf428db722415b4447097c",
+    "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCrGPqO20RyEcNt\noYet9D1oJsiYx7mSRuuimUdKffIPSLXpMmskgmVCGrphXsYvnlfu9TOiWpGTYXiz\nmcgv5sabwzBJOfJZSlYXJGTTaHoL1M6nksBOPX4RX/chd6Lzu1sVRO85F2k/vbMy\n9BfT3LbFO+g36IGT6F9AkK6nN8hp3dyVmAK3JNjFI9RSfsgXTbKTb8sdNtB9NtL8\nh+Z04PWoitvIUSxsbxjC/ntJ2z+4g/wl/3cUVIwLwRMJ+P6cARK7ksuNb5d8DLRC\nfFVddnE14Zk/GTpFZnnUAonGS0VuXumcgfJY1kOztX4nKxkWJad4F4JYKONbnUDX\nuQOu+d47AgMBAAECggEACy6Q1XxHPvmiBYyy4tYDzpMJgh6ipjvKhsmXF96Fggub\nXYTrhqsBwu4fQMgIxZaG70ZVwqZCCr+qIhOKh0LnhC+F/NfzwQ0mjwQHlaxBNnu8\nEJL6zKigXOW7yRNzpWBlvzNoCDNByb/A/rMzYw4mLcHqcJjz7jHK49vXMw6zI0pl\nLWFpeXIk2jD1v6RZkOq5g7kw2olOnypd1fXWbJvwI5gAObDXMBem1ryB8SUbtADq\n5gIj99qJoY/s3r+eJ1QEvtFzJlTnQ5Y8dyQhx1hs+Y99P7nSG5IYQUlybkYN6kGz\ndcYW2bA2vpb5WZthBF7xaQYO1EDJtWkIXm2pU0fiOQKBgQDXs+aLc6BI8iT0Vv8j\nRdKcuL+Kek7GHGxZU5pQp2xFAj7PhUXw6RjrQNWgPDSVu+gCYl9WS7Kk/Q+AookE\nljiasOt0EbbrekuMdnuevZnfAZtMtRojF4vIP8Or0Cz4Tiu+2xifCjgUxoD7/KCj\nDCdcnvN6gNG7YYF9Q7erlwgeAwKBgQDLD8/u6E7aUC098L8BWxnvBNmK9uWzN6n9\ngqvHkGjB0c6dJnznaLNqsgtcTu9AZZBVFbqbg+7EdnBNJPZQqwlI7ELSo9qGmPdS\nWrWU4TnAQfVDNUTDHpCksZ3HyRtLp6AUGrFOA0lEMszJnbo70HYYmIN5Tre3b8HA\nfYk1qFqFaQKBgDrbyS4GSBd/k5vk3Uvnspe3RfToePRQLzSUvogBl2ahPThtOm+J\ne5Y+I8zMgODW3HFCHJe0ojOpJgDI2TCaOSnk2uraJprMzS6v6f2f6QvUKWdeB5rJ\wwfKdn88l/jNg9xZdrd3F2R74hhgkAjNuTPp37Bu1EwYSDhBMS4uUTW3AoGAQNzO\nKJwgA/A0Y2KxQHefMxAzhQYUnUicjhPdVyOzsqWX/+65WxnApcY1hsjX95P5pJQK\nRX7BGBRVDu9NlrrrflWpiqs4NGJMLgw3kFTZI6Zt94febQ0oWtM5eQWuKF5k7ccQ\n98Bo+NXZQFWXlV+jOXwOEwOn/3o9Q4VV/MPIFnECgYBfqOj0ElUESsLANBj1xFpe\n4glqJPzXL7S48MeoOqZijCXk/WLyetwGTQDFyLGmuY85DuH9R+PdtmhD+CEiwU8W\ngQvLvn5Ey47U9MiCkjdsdbXc7+dY43d5ZYhqe2ggpR5hAGMlmsdR3uX00QjgDDl7\nH9t5j2k+egyXo611ErdSmQ==\n-----END PRIVATE KEY-----\n",
+    "client_email": "firebase-adminsdk-fbsvc@sahakar-ppo.iam.gserviceaccount.com",
+    "client_id": "109363560192676133048",
+    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+    "token_uri": "https://oauth2.googleapis.com/token",
+    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+    "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40sahakar-ppo.iam.gserviceaccount.com",
+    "universe_domain": "googleapis.com"
+};
 
 // Initialize Firebase Admin
 if (!admin.apps.length) {
@@ -90,9 +97,9 @@ async function createUserInDatabase(userData, firebaseUid) {
 
         const user = await prisma.user.create({
             data: {
-                firebaseUid,
+                id: firebaseUid,
                 email: userData.email,
-                displayName: userData.name,
+                name: userData.name,
                 role: userData.role,
             },
         });
@@ -148,7 +155,7 @@ async function seedUsers() {
 
 seedUsers()
     .catch((error) => {
-        console.error('\n❌ Seed process failed:', error);
+        console.error('❌ Seed process failed:', error);
         process.exit(1);
     })
     .finally(async () => {

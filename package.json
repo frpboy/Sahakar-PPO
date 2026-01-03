@@ -2,8 +2,10 @@
     "name": "sahakar-ppo",
     "version": "0.0.1",
     "private": true,
+    "packageManager": "npm@11.6.2",
     "scripts": {
         "build": "turbo run build",
+        "vercel-build": "cd apps/web && npm run build",
         "dev": "turbo run dev",
         "lint": "turbo run lint",
         "format": "prettier --write \"**/*.{ts,tsx,md}\""

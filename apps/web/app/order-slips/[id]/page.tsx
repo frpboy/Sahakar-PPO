@@ -60,7 +60,6 @@ export default function OrderSlipDetailPage() {
             <DataGrid
                 data={slip.items}
                 columns={columns}
-                keyExtractor={(item: any) => item.id}
             />
         </div>
     );

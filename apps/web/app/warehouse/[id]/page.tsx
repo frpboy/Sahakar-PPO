@@ -154,7 +154,6 @@ export default function WarehouseExecutionPage() {
             <DataGrid
                 data={slip.items}
                 columns={columns}
-                keyExtractor={(item) => item.id}
             />
         </div>
     );

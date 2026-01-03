@@ -1,0 +1,398 @@
+Γ£à Firebase Admin initialized successfully
+
+≡ƒî▒ Starting user seed process...
+
+≡ƒôè Total users to create: 17
+
+
+≡ƒô¥ Processing: Drisya (drisya.purchase.sahakar@gmail.com)
+Γ£ô User drisya.purchase.sahakar@gmail.com already exists in Firebase (UID: 65mlmibAiHb1kPe28bGxdmStwU72)
+Γ£ù Failed to create database user drisya.purchase.sahakar@gmail.com: 
+Invalid `prisma.user.create()` invocation in
+D:\K4NN4N\Sahakar-PPO\apps\api\scripts\seed-users.js:98:40
+
+  95     return existingUser;
+  96 }
+  97 
+ΓåÆ 98 const user = await prisma.user.create({
+       data: {
+         firebaseUid: "65mlmibAiHb1kPe28bGxdmStwU72",
+         email: "drisya.purchase.sahakar@gmail.com",
+         displayName: "Drisya",
+         role: "PURCHASE_STAFF",
+     +   name: String
+       }
+     })
+
+Argument `name` is missing.
+Γ¥î Failed to process Drisya
+
+≡ƒô¥ Processing: Jamsheera (jamsheera.purchase.sahakar@gmail.com)
+Γ£ô User jamsheera.purchase.sahakar@gmail.com already exists in Firebase (UID: u1JEGCXNaiUfbbNGbJwwCBoVG912)
+Γ£ù Failed to create database user jamsheera.purchase.sahakar@gmail.com: 
+Invalid `prisma.user.create()` invocation in
+D:\K4NN4N\Sahakar-PPO\apps\api\scripts\seed-users.js:98:40
+
+  95     return existingUser;
+  96 }
+  97 
+ΓåÆ 98 const user = await prisma.user.create({
+       data: {
+         firebaseUid: "u1JEGCXNaiUfbbNGbJwwCBoVG912",
+         email: "jamsheera.purchase.sahakar@gmail.com",
+         displayName: "Jamsheera",
+         role: "PURCHASE_STAFF",
+     +   name: String
+       }
+     })
+
+Argument `name` is missing.
+Γ¥î Failed to process Jamsheera
+
+≡ƒô¥ Processing: Sujitha (sujitha.purchase.sahakar@gmail.com)
+Γ£ô User sujitha.purchase.sahakar@gmail.com already exists in Firebase (UID: RbVa0lDl5fhAOyOv7IWkEtJgrde2)
+Γ£ù Failed to create database user sujitha.purchase.sahakar@gmail.com: 
+Invalid `prisma.user.create()` invocation in
+D:\K4NN4N\Sahakar-PPO\apps\api\scripts\seed-users.js:98:40
+
+  95     return existingUser;
+  96 }
+  97 
+ΓåÆ 98 const user = await prisma.user.create({
+       data: {
+         firebaseUid: "RbVa0lDl5fhAOyOv7IWkEtJgrde2",
+         email: "sujitha.purchase.sahakar@gmail.com",
+         displayName: "Sujitha",
+         role: "PURCHASE_STAFF",
+     +   name: String
+       }
+     })
+
+Argument `name` is missing.
+Γ¥î Failed to process Sujitha
+
+≡ƒô¥ Processing: Abhi (abhi.billinghead.sahakar@gmail.com)
+Γ£ô User abhi.billinghead.sahakar@gmail.com already exists in Firebase (UID: wDXVxjyYasS984que75AWk7Se6H2)
+Γ£ù Failed to create database user abhi.billinghead.sahakar@gmail.com: 
+Invalid `prisma.user.create()` invocation in
+D:\K4NN4N\Sahakar-PPO\apps\api\scripts\seed-users.js:98:40
+
+  95     return existingUser;
+  96 }
+  97 
+ΓåÆ 98 const user = await prisma.user.create({
+       data: {
+         firebaseUid: "wDXVxjyYasS984que75AWk7Se6H2",
+         email: "abhi.billinghead.sahakar@gmail.com",
+         displayName: "Abhi",
+         role: "BILLING_HEAD",
+     +   name: String
+       }
+     })
+
+Argument `name` is missing.
+Γ¥î Failed to process Abhi
+
+≡ƒô¥ Processing: Sujeev (sujeev.billing.sahakar@gmail.com)
+Γ£ô User sujeev.billing.sahakar@gmail.com already exists in Firebase (UID: lrqkf0TIdTRcWHVCIAqCEYyQ57p1)
+Γ£ù Failed to create database user sujeev.billing.sahakar@gmail.com: 
+Invalid `prisma.user.create()` invocation in
+D:\K4NN4N\Sahakar-PPO\apps\api\scripts\seed-users.js:98:40
+
+  95     return existingUser;
+  96 }
+  97 
+ΓåÆ 98 const user = await prisma.user.create({
+       data: {
+         firebaseUid: "lrqkf0TIdTRcWHVCIAqCEYyQ57p1",
+         email: "sujeev.billing.sahakar@gmail.com",
+         displayName: "Sujeev",
+         role: "BILLING_STAFF",
+     +   name: String
+       }
+     })
+
+Argument `name` is missing.
+Γ¥î Failed to process Sujeev
+
+≡ƒô¥ Processing: Shafi (shafi.billing.sahakar@gmail.com)
+Γ£ô User shafi.billing.sahakar@gmail.com already exists in Firebase (UID: x80RpPp3JnROmeCCJx40GIcK9Fo1)
+Γ£ù Failed to create database user shafi.billing.sahakar@gmail.com: 
+Invalid `prisma.user.create()` invocation in
+D:\K4NN4N\Sahakar-PPO\apps\api\scripts\seed-users.js:98:40
+
+  95     return existingUser;
+  96 }
+  97 
+ΓåÆ 98 const user = await prisma.user.create({
+       data: {
+         firebaseUid: "x80RpPp3JnROmeCCJx40GIcK9Fo1",
+         email: "shafi.billing.sahakar@gmail.com",
+         displayName: "Shafi",
+         role: "BILLING_STAFF",
+     +   name: String
+       }
+     })
+
+Argument `name` is missing.
+Γ¥î Failed to process Shafi
+
+≡ƒô¥ Processing: Shiji (shiji.billing.sahakar@gmail.com)
+Γ£ô User shiji.billing.sahakar@gmail.com already exists in Firebase (UID: eERlGrMl9tOmz6wK4c5NXnsCaKY2)
+Γ£ù Failed to create database user shiji.billing.sahakar@gmail.com: 
+Invalid `prisma.user.create()` invocation in
+D:\K4NN4N\Sahakar-PPO\apps\api\scripts\seed-users.js:98:40
+
+  95     return existingUser;
+  96 }
+  97 
+ΓåÆ 98 const user = await prisma.user.create({
+       data: {
+         firebaseUid: "eERlGrMl9tOmz6wK4c5NXnsCaKY2",
+         email: "shiji.billing.sahakar@gmail.com",
+         displayName: "Shiji",
+         role: "BILLING_STAFF",
+     +   name: String
+       }
+     })
+
+Argument `name` is missing.
+Γ¥î Failed to process Shiji
+
+≡ƒô¥ Processing: Vivek (vivek.billing.sahakar@gmail.com)
+Γ£ô User vivek.billing.sahakar@gmail.com already exists in Firebase (UID: pS4vOe4qUSZa8l4VQrYfxfs9Nek1)
+Γ£ù Failed to create database user vivek.billing.sahakar@gmail.com: 
+Invalid `prisma.user.create()` invocation in
+D:\K4NN4N\Sahakar-PPO\apps\api\scripts\seed-users.js:98:40
+
+  95     return existingUser;
+  96 }
+  97 
+ΓåÆ 98 const user = await prisma.user.create({
+       data: {
+         firebaseUid: "pS4vOe4qUSZa8l4VQrYfxfs9Nek1",
+         email: "vivek.billing.sahakar@gmail.com",
+         displayName: "Vivek",
+         role: "BILLING_STAFF",
+     +   name: String
+       }
+     })
+
+Argument `name` is missing.
+Γ¥î Failed to process Vivek
+
+≡ƒô¥ Processing: Jalvan (jalvan.billing.sahakar@gmail.com)
+Γ£ô User jalvan.billing.sahakar@gmail.com already exists in Firebase (UID: dAzmdvGT1KVR7MdhS1oIVoFp7RI2)
+Γ£ù Failed to create database user jalvan.billing.sahakar@gmail.com: 
+Invalid `prisma.user.create()` invocation in
+D:\K4NN4N\Sahakar-PPO\apps\api\scripts\seed-users.js:98:40
+
+  95     return existingUser;
+  96 }
+  97 
+ΓåÆ 98 const user = await prisma.user.create({
+       data: {
+         firebaseUid: "dAzmdvGT1KVR7MdhS1oIVoFp7RI2",
+         email: "jalvan.billing.sahakar@gmail.com",
+         displayName: "Jalvan",
+         role: "BILLING_STAFF",
+     +   name: String
+       }
+     })
+
+Argument `name` is missing.
+Γ¥î Failed to process Jalvan
+
+≡ƒô¥ Processing: Suhail (suhail.billing.sahakar@gmail.com)
+Γ£ô User suhail.billing.sahakar@gmail.com already exists in Firebase (UID: hp8keD1VPaPYY8jc6BexOSFRcI32)
+Γ£ù Failed to create database user suhail.billing.sahakar@gmail.com: 
+Invalid `prisma.user.create()` invocation in
+D:\K4NN4N\Sahakar-PPO\apps\api\scripts\seed-users.js:98:40
+
+  95     return existingUser;
+  96 }
+  97 
+ΓåÆ 98 const user = await prisma.user.create({
+       data: {
+         firebaseUid: "hp8keD1VPaPYY8jc6BexOSFRcI32",
+         email: "suhail.billing.sahakar@gmail.com",
+         displayName: "Suhail",
+         role: "BILLING_STAFF",
+     +   name: String
+       }
+     })
+
+Argument `name` is missing.
+Γ¥î Failed to process Suhail
+
+≡ƒô¥ Processing: Fayis (fayis.billing.sahakar@gmail.com)
+Γ£ô User fayis.billing.sahakar@gmail.com already exists in Firebase (UID: 8qnB3pSOm1R9JZ8Rq2GYqn9uiJl2)
+
+Γ£ù Failed to create database user fayis.billing.sahakar@gmail.com: 
+≡ƒô¥ Processing: Ashiq (ashiqmohammedmannarppil@gmail.com)
+Invalid `prisma.user.create()` invocation in
+D:\K4NN4N\Sahakar-PPO\apps\api\scripts\seed-users.js:98:40
+
+  95     return existingUser;
+  96 }
+  97 
+ΓåÆ 98 const user = await prisma.user.create({
+       data: {
+         firebaseUid: "8qnB3pSOm1R9JZ8Rq2GYqn9uiJl2",
+         email: "fayis.billing.sahakar@gmail.com",
+         displayName: "Fayis",
+         role: "BILLING_STAFF",
+     +   name: String
+       }
+     })
+
+Argument `name` is missing.
+Γ¥î Failed to process Fayis
+Γ£ô User ashiqmohammedmannarppil@gmail.com already exists in Firebase (UID: wkX2keD4sLQSHog1H8a2a5SyjuD3)
+Γ£ù Failed to create database user ashiqmohammedmannarppil@gmail.com: 
+Invalid `prisma.user.create()` invocation in
+D:\K4NN4N\Sahakar-PPO\apps\api\scripts\seed-users.js:98:40
+
+  95     return existingUser;
+  96 }
+  97 
+ΓåÆ 98 const user = await prisma.user.create({
+       data: {
+         firebaseUid: "wkX2keD4sLQSHog1H8a2a5SyjuD3",
+         email: "ashiqmohammedmannarppil@gmail.com",
+         displayName: "Ashiq",
+         role: "ADMIN",
+     +   name: String
+       }
+     })
+
+Argument `name` is missing.
+Γ¥î Failed to process Ashiq
+
+≡ƒô¥ Processing: Sarath (sarath.purchase.sahakar@gmail.com)
+Γ£ô User sarath.purchase.sahakar@gmail.com already exists in Firebase (UID: QyPNGFoQGTVZMgSLOXHBD4cpqns2)
+Γ£ù Failed to create database user sarath.purchase.sahakar@gmail.com: 
+Invalid `prisma.user.create()` invocation in
+D:\K4NN4N\Sahakar-PPO\apps\api\scripts\seed-users.js:98:40
+
+  95     return existingUser;
+  96 }
+  97 
+ΓåÆ 98 const user = await prisma.user.create({
+       data: {
+         firebaseUid: "QyPNGFoQGTVZMgSLOXHBD4cpqns2",
+         email: "sarath.purchase.sahakar@gmail.com",
+         displayName: "Sarath",
+         role: "ADMIN",
+     +   name: String
+       }
+     })
+
+Argument `name` is missing.
+Γ¥î Failed to process Sarath
+
+≡ƒô¥ Processing: Rahul (frpboy12@gmail.com)
+Γ£ô User frpboy12@gmail.com already exists in Firebase (UID: jaQy18NlsAXFUQmLaSZohli3dY23)
+Γ£ù Failed to create database user frpboy12@gmail.com: 
+Invalid `prisma.user.create()` invocation in
+D:\K4NN4N\Sahakar-PPO\apps\api\scripts\seed-users.js:98:40
+
+  95     return existingUser;
+  96 }
+  97 
+ΓåÆ 98 const user = await prisma.user.create({
+       data: {
+         firebaseUid: "jaQy18NlsAXFUQmLaSZohli3dY23",
+         email: "frpboy12@gmail.com",
+         displayName: "Rahul",
+         role: "SUPER_ADMIN",
+     +   name: String
+       }
+     })
+
+Argument `name` is missing.
+Γ¥î Failed to process Rahul
+
+≡ƒô¥ Processing: Zabnix (sahakarhoit@gmail.com)
+Γ£ô User sahakarhoit@gmail.com already exists in Firebase (UID: 2D6RnjBFdkWwssXh0ozrEO3onTi1)
+Γ£ù Failed to create database user sahakarhoit@gmail.com: 
+Invalid `prisma.user.create()` invocation in
+D:\K4NN4N\Sahakar-PPO\apps\api\scripts\seed-users.js:98:40
+
+  95     return existingUser;
+  96 }
+  97 
+ΓåÆ 98 const user = await prisma.user.create({
+       data: {
+         firebaseUid: "2D6RnjBFdkWwssXh0ozrEO3onTi1",
+         email: "sahakarhoit@gmail.com",
+         displayName: "Zabnix",
+         role: "SUPER_ADMIN",
+     +   name: String
+       }
+     })
+
+Argument `name` is missing.
+Γ¥î Failed to process Zabnix
+
+≡ƒô¥ Processing: Zabnix Corp (zabnixprivatelimited@gmail.com)
+Γ£ô User zabnixprivatelimited@gmail.com already exists in Firebase (UID: MpCuzbCQm9PLe8xGVPz0ONO54Qr1)
+Γ£ù Failed to create database user zabnixprivatelimited@gmail.com: 
+Invalid `prisma.user.create()` invocation in
+D:\K4NN4N\Sahakar-PPO\apps\api\scripts\seed-users.js:98:40
+
+  95     return existingUser;
+  96 }
+  97 
+ΓåÆ 98 const user = await prisma.user.create({
+       data: {
+         firebaseUid: "MpCuzbCQm9PLe8xGVPz0ONO54Qr1",
+         email: "zabnixprivatelimited@gmail.com",
+         displayName: "Zabnix Corp",
+         role: "SUPER_ADMIN",
+     +   name: String
+       }
+     })
+
+Argument `name` is missing.
+Γ¥î Failed to process Zabnix Corp
+
+≡ƒô¥ Processing: Vipeesh (vipeesh.purchase.sahakar@gmail.com)
+Γ£ô User vipeesh.purchase.sahakar@gmail.com already exists in Firebase (UID: OqlI8EzTPoXOjIB1BJt6pUhxcLq1)
+Γ£ù Failed to create database user vipeesh.purchase.sahakar@gmail.com: 
+Invalid `prisma.user.create()` invocation in
+D:\K4NN4N\Sahakar-PPO\apps\api\scripts\seed-users.js:98:40
+
+  95     return existingUser;
+  96 }
+  97 
+ΓåÆ 98 const user = await prisma.user.create({
+       data: {
+         firebaseUid: "OqlI8EzTPoXOjIB1BJt6pUhxcLq1",
+         email: "vipeesh.purchase.sahakar@gmail.com",
+         displayName: "Vipeesh",
+         role: "PROCUREMENT_HEAD",
+     +   name: String
+       }
+     })
+
+Argument `name` is missing.
+Γ¥î Failed to process Vipeesh
+
+============================================================
+≡ƒôè SEED SUMMARY
+============================================================
+Γ£à Successful: 0
+Γ¥î Failed: 17
+≡ƒôê Total: 17
+============================================================
+
+≡ƒæÑ USER BREAKDOWN BY ROLE:
+   PURCHASE_STAFF: 3
+   BILLING_HEAD: 1
+   BILLING_STAFF: 7
+   ADMIN: 2
+   SUPER_ADMIN: 3
+   PROCUREMENT_HEAD: 1
+
+Γ£ô Database connection closed
