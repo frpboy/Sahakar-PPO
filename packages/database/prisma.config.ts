@@ -1,0 +1,9 @@
+import { defineConfig } from 'prisma/config';
+
+export default defineConfig({
+    datasources: {
+        db: {
+            url: process.env.DATABASE_URL || 'postgres://postgres:Zabnix2025@34.100.175.185:5432/postgres'
+        }
+    }
+});

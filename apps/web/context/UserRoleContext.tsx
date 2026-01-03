@@ -47,7 +47,8 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
                 // For now, we'll try to get it from the backend if available
                 try {
                     const idToken = await user.getIdToken();
-                    const res = await fetch('http://localhost:8080/auth/me', {
+                    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://asia-south1-sahakar-ppo.cloudfunctions.net/api';
+                    const res = await fetch(`${apiUrl}/auth/me`, {
                         headers: { 'Authorization': `Bearer ${idToken}` }
                     });
                     if (res.ok) {

@@ -28,7 +28,7 @@ export default function OrderImportPage() {
         formData.append('userEmail', currentUser.email || 'unknown@sahakar.com');
 
         try {
-            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://asia-south1-sahakar-ppo.cloudfunctions.net/api';
             const res = await fetch(`${apiUrl}/order-requests/import`, {
                 method: 'POST',
                 body: formData,
@@ -67,23 +67,23 @@ export default function OrderImportPage() {
             <header className="mb-10 flex items-center justify-between">
                 <div>
                     <h1 className="text-3xl font-extrabold text-neutral-900 tracking-tight flex items-center gap-4">
-                        <div className="w-12 h-12 bg-white rounded-2xl shadow-soft flex items-center justify-center border border-neutral-200/60">
+                        <div className="w-12 h-12 bg-white rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.1)] flex items-center justify-center border border-neutral-200/80">
                             <Upload size={28} className="text-brand-600" />
                         </div>
                         PPO Input & Ingestion
                     </h1>
-                    <p className="text-sm text-neutral-500 font-medium mt-2">Bulk import purchase orders and convert them into system-tracked allocations.</p>
+                    <p className="text-sm text-neutral-400 font-medium mt-2">Bulk import purchase orders and convert them into system-tracked allocations.</p>
                 </div>
             </header>
 
             <main className="space-y-10">
-                <section className="saas-card p-10 bg-white">
-                    <div className="max-w-2xl mx-auto text-center">
-                        <div className="w-20 h-20 bg-brand-50 rounded-3xl flex items-center justify-center mx-auto mb-6">
-                            <FileText size={40} className="text-brand-600" />
+                <section className="saas-card p-12 bg-white flex flex-col items-center">
+                    <div className="max-w-2xl w-full text-center">
+                        <div className="w-16 h-16 bg-neutral-100 border border-neutral-200 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                            <FileText size={32} className="text-brand-600" />
                         </div>
-                        <h2 className="text-xl font-bold text-neutral-900 mb-2">Upload Purchase Orders</h2>
-                        <p className="text-sm text-neutral-500 mb-8">Select one or multiple PPO files to begin the ingestion process.</p>
+                        <h2 className="text-xl font-bold text-neutral-900 mb-2 tracking-tight">Upload Purchase Orders</h2>
+                        <p className="text-sm text-neutral-400 font-medium mb-10">Select one or multiple PPO files to begin the ingestion process.</p>
 
                         <div className="flex items-center justify-center">
                             <input
@@ -148,17 +148,19 @@ export default function OrderImportPage() {
                             />
                         </div>
 
-                        <div className="flex items-center gap-3 px-2">
-                            <div className="w-8 h-8 bg-brand-50 rounded-lg flex items-center justify-center text-brand-600">
-                                <ListChecks size={18} />
+                        <div className="flex items-center justify-between px-2 mb-1">
+                            <div className="flex items-center gap-3">
+                                <h2 className="text-sm font-semibold text-neutral-800">Processed Items Preview</h2>
+                                <span className="text-[10px] text-neutral-400 uppercase tracking-widest font-medium">Data Validation Registry</span>
                             </div>
-                            <h3 className="text-lg font-bold text-neutral-900">Processed Items Preview</h3>
                         </div>
 
-                        <DataGrid
-                            data={result.preview || []}
-                            columns={columns}
-                        />
+                        <div className="saas-card overflow-hidden bg-white">
+                            <DataGrid
+                                data={result.preview || []}
+                                columns={columns}
+                            />
+                        </div>
 
                         {/* Error Log */}
                         {result.errors && result.errors.length > 0 && (
@@ -197,17 +199,31 @@ export default function OrderImportPage() {
 }
 
 function SummaryCard({ label, value, icon, color }: { label: string, value: any, icon: React.ReactNode, color: 'brand' | 'success' }) {
-    const isBrand = color === 'brand';
+    const statusConfig = {
+        brand: { badge: 'bg-brand-50 text-brand-700 border-brand-100', icon: 'text-brand-600' },
+        success: { badge: 'bg-success-50 text-success-700 border-success-100', icon: 'text-success-600' },
+    }[color];
+
     return (
-        <div className={`p-6 rounded-2xl border border-neutral-200/60 shadow-soft smooth-transition hover:shadow-hover ${isBrand ? 'bg-gradient-to-br from-brand-600 to-brand-700 text-white' : 'bg-white text-neutral-900'}`}>
-            <div className="flex items-center justify-between mb-4">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isBrand ? 'bg-white/20' : 'bg-success-50 text-success-600'}`}>
-                    {icon}
+        <div className="saas-card p-6 flex flex-col gap-4 group">
+            <div className="flex items-start justify-between">
+                <div className="w-10 h-10 rounded-xl bg-neutral-100 border border-neutral-200 flex items-center justify-center smooth-transition group-hover:border-brand-200 group-hover:bg-brand-50/50">
+                    <div className={statusConfig.icon}>
+                        {icon}
+                    </div>
+                </div>
+                <div className="text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-neutral-50 text-neutral-400 border border-neutral-200/60">
+                    SaaS Meta
                 </div>
             </div>
-            <div className="flex flex-col gap-1">
-                <div className={`text-[10px] font-bold uppercase tracking-widest ${isBrand ? 'text-brand-100' : 'text-neutral-400'}`}>{label}</div>
-                <div className="text-3xl font-extrabold tracking-tight tabular-nums">{value || 0}</div>
+
+            <div className="flex flex-col">
+                <div className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1">
+                    {label}
+                </div>
+                <div className="text-3xl font-extrabold text-neutral-900 tabular-nums tracking-tight">
+                    {value || 0}
+                </div>
             </div>
         </div>
     );

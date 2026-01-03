@@ -45,7 +45,7 @@ export default function PendingOrdersPage() {
     const [filters, setFilters] = useState<Record<string, string>>({});
     const [searchTerm, setSearchTerm] = useState('');
 
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://asia-south1-sahakar-ppo.cloudfunctions.net/api';
 
     const { data: items, isLoading } = useQuery({
         queryKey: ['pending-items'],
@@ -268,12 +268,12 @@ export default function PendingOrdersPage() {
             <header className="mb-10 flex items-center justify-between">
                 <div>
                     <h1 className="text-3xl font-extrabold text-neutral-900 tracking-tight flex items-center gap-4">
-                        <div className="w-12 h-12 bg-white rounded-2xl shadow-soft flex items-center justify-center border border-neutral-200/60">
+                        <div className="w-12 h-12 bg-white rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.1)] flex items-center justify-center border border-neutral-200/80">
                             <ClipboardList size={28} className="text-brand-600" />
                         </div>
                         Pending PO Ledger
                     </h1>
-                    <p className="text-sm text-neutral-500 font-medium mt-2">Awaiting supplier confirmation and inventory mapping for incoming orders.</p>
+                    <p className="text-sm text-neutral-400 font-medium mt-2">Awaiting supplier confirmation and inventory mapping for incoming orders.</p>
                 </div>
                 <div className="flex items-center gap-4">
                     <FilterBar
@@ -287,8 +287,14 @@ export default function PendingOrdersPage() {
                 </div>
             </header>
 
-            <main className="space-y-6">
-                <div className="saas-card bg-white p-2">
+            <main className="space-y-4">
+                <div className="flex items-center justify-between px-2 mb-1">
+                    <div className="flex items-center gap-3">
+                        <h2 className="text-sm font-semibold text-neutral-800">Supply Chain Reconciliation</h2>
+                        <span className="text-[10px] text-neutral-400 uppercase tracking-widest font-medium">Pending Allocations</span>
+                    </div>
+                </div>
+                <div className="saas-card bg-white overflow-hidden">
                     <DataGrid
                         data={filteredItems}
                         columns={columns}

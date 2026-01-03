@@ -86,12 +86,12 @@ export default function AnalysisPage() {
             <header className="mb-10 flex items-center justify-between">
                 <div>
                     <h1 className="text-3xl font-extrabold text-neutral-900 tracking-tight flex items-center gap-4">
-                        <div className="w-12 h-12 bg-white rounded-2xl shadow-soft flex items-center justify-center border border-neutral-200/60">
+                        <div className="w-12 h-12 bg-white rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.1)] flex items-center justify-center border border-neutral-200/80">
                             <BarChart3 size={28} className="text-brand-600" />
                         </div>
                         System Performance Analysis
                     </h1>
-                    <p className="text-sm text-neutral-500 font-medium mt-2">Statistical deep-dive and supply chain reconciliation intelligence.</p>
+                    <p className="text-sm text-neutral-400 font-medium mt-2">Statistical deep-dive and supply chain reconciliation intelligence.</p>
                 </div>
             </header>
 
@@ -130,17 +130,15 @@ export default function AnalysisPage() {
 
                 <div className="grid grid-cols-1">
                     {/* Gap Analysis Table */}
-                    <section className="flex flex-col gap-6">
-                        <div className="flex items-center justify-between px-2">
+                    <section className="flex flex-col gap-4">
+                        <div className="flex items-center justify-between px-2 mb-1">
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-danger-50 rounded-xl flex items-center justify-center text-danger-600">
-                                    <DatabaseZap size={20} />
-                                </div>
-                                <h2 className="text-base font-bold text-neutral-900 tracking-tight">Comprehensive Gap Analysis</h2>
+                                <h2 className="text-sm font-semibold text-neutral-800">Comprehensive Gap Analysis</h2>
+                                <span className="text-[10px] text-neutral-400 uppercase tracking-widest font-medium">Discrepancy Audit</span>
                             </div>
-                            <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Discrepancy audit for all SKU requests</span>
+                            <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Global SKU Registry</span>
                         </div>
-                        <div className="saas-card bg-white p-2">
+                        <div className="saas-card overflow-hidden bg-white">
                             <DataGrid
                                 data={gap || []}
                                 columns={gapColumns}
@@ -154,32 +152,54 @@ export default function AnalysisPage() {
     );
 }
 
-function AnalysisCard({ title, value, desc, icon, color }: { title: string, value: string | number, desc: string, icon: React.ReactNode, color: 'brand' | 'success' | 'danger' }) {
-    const colorClasses = {
-        brand: 'text-brand-600 bg-brand-50/50 border-brand-100/50',
-        success: 'text-success-600 bg-success-50/50 border-success-100/50',
-        danger: 'text-danger-600 bg-danger-50/50 border-danger-100/50',
+function AnalysisCard({
+    title,
+    value,
+    desc,
+    icon,
+    color
+}: {
+    title: string,
+    value: string | number,
+    desc: string,
+    icon: React.ReactNode,
+    color: 'brand' | 'success' | 'danger'
+}) {
+    const statusConfig = {
+        brand: { badge: 'bg-brand-50 text-brand-700 border-brand-100', icon: 'text-brand-600' },
+        success: { badge: 'bg-success-50 text-success-700 border-success-100', icon: 'text-success-600' },
+        danger: { badge: 'bg-danger-50 text-danger-700 border-danger-100', icon: 'text-danger-600' },
     }[color];
 
     return (
-        <div className="saas-card bg-white p-6 smooth-transition hover:shadow-hover hover:-translate-y-1">
-            <div className="flex items-start justify-between mb-6">
-                <div className={`w-10 h-10 rounded-xl border flex items-center justify-center ${colorClasses}`}>
-                    {icon}
+        <div className="saas-card p-6 flex flex-col gap-4 group">
+            <div className="flex items-start justify-between">
+                <div className="w-10 h-10 rounded-xl bg-neutral-100 border border-neutral-200 flex items-center justify-center smooth-transition group-hover:border-brand-200 group-hover:bg-brand-50/50">
+                    <div className={statusConfig.icon}>
+                        {icon}
+                    </div>
                 </div>
-                <div className="px-2.5 py-1 bg-neutral-50 text-neutral-400 rounded-lg text-[9px] font-bold uppercase tracking-widest">Live Audit</div>
+                <div className="text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-neutral-50 text-neutral-400 border border-neutral-200/60">
+                    Live Audit
+                </div>
             </div>
 
-            <div className="flex flex-col gap-1">
-                <div className="text-[10px] font-bold uppercase tracking-[0.1em] text-neutral-400">{title}</div>
-                <div className="text-3xl font-extrabold tabular-nums tracking-tight text-neutral-900 mb-4">{value}</div>
-            </div>
-
-            <div className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest border-t border-neutral-100 pt-4 flex items-center gap-2">
-                <div className={`w-1.5 h-1.5 rounded-full ${color === 'danger' ? 'bg-danger-500' : color === 'success' ? 'bg-success-500' : 'bg-brand-500'}`} />
-                {desc}
+            <div className="flex flex-col">
+                <div className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1">
+                    {title}
+                </div>
+                <div className="text-3xl font-extrabold text-neutral-900 tabular-nums tracking-tight">
+                    {value}
+                </div>
+                <div className="mt-1 text-[11px] text-neutral-400 font-medium flex items-center gap-2">
+                    <div className={`w-1.5 h-1.5 rounded-full ${color === 'danger' ? 'bg-danger-500' : color === 'success' ? 'bg-success-500' : 'bg-brand-500'}`} />
+                    {desc}
+                </div>
             </div>
         </div>
     );
 }
+
+// Update the main return to include section headers as per Fix #5
+// ... [Lines 84-154 will be updated in the caller]
 

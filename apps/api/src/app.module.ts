@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { PrismaModule } from './prisma.module';
+import { DatabaseModule } from './database/database.module';
 import { OrderRequestsModule } from './modules/order-requests/order-requests.module';
 import { PendingItemsModule } from './modules/pending-items/pending-items.module';
 import { RepItemsModule } from './modules/rep-items/rep-items.module';
@@ -10,7 +10,7 @@ import { AuthModule } from './modules/auth/auth.module';
 
 @Module({
     imports: [
-        PrismaModule,
+        DatabaseModule,
         AuthModule,
         OrderRequestsModule,
         PendingItemsModule,

@@ -40,7 +40,7 @@ export default function RepAllocationPage() {
     const [returnId, setReturnId] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
 
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://asia-south1-sahakar-ppo.cloudfunctions.net/api';
 
     const { data: items, isLoading } = useQuery({
         queryKey: ['rep-items'],
@@ -199,12 +199,12 @@ export default function RepAllocationPage() {
             <header className="mb-10 flex items-center justify-between">
                 <div>
                     <h1 className="text-3xl font-extrabold text-neutral-900 tracking-tight flex items-center gap-4">
-                        <div className="w-12 h-12 bg-white rounded-2xl shadow-soft flex items-center justify-center border border-neutral-200/60">
+                        <div className="w-12 h-12 bg-white rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.1)] flex items-center justify-center border border-neutral-200/80">
                             <UserCircle size={28} className="text-brand-600" />
                         </div>
                         Representation Allocation
                     </h1>
-                    <p className="text-sm text-neutral-500 font-medium mt-2">Final representative validation and stock assignment for fulfillment.</p>
+                    <p className="text-sm text-neutral-400 font-medium mt-2">Final representative validation and stock assignment for fulfillment.</p>
                 </div>
                 <div className="flex items-center gap-4">
                     <FilterBar
@@ -218,43 +218,34 @@ export default function RepAllocationPage() {
 
             <main className="space-y-10">
                 {Object.entries(groupedItems).map(([productName, groupItems]: [string, any[]]) => (
-                    <section key={productName} className="saas-card bg-white overflow-hidden p-2">
-                        <div className="bg-brand-50/50 px-6 py-4 rounded-xl border border-brand-100/50 mb-2 flex justify-between items-center">
-                            <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center text-brand-600 border border-brand-200/30">
-                                    <Info size={20} />
-                                </div>
-                                <div className="flex flex-col">
-                                    <h2 className="text-base font-bold text-neutral-900 tracking-tight">
-                                        {productName}
-                                    </h2>
-                                    <div className="flex items-center gap-2">
-                                        <StatusBadge status="REP_ALLOCATION" className="scale-75 origin-left" />
-                                        <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest">{groupItems.length} Allocations</span>
-                                    </div>
-                                </div>
+                    <section key={productName} className="flex flex-col gap-4">
+                        <div className="flex items-center justify-between px-2 mb-1">
+                            <div className="flex items-center gap-3">
+                                <h2 className="text-sm font-semibold text-neutral-800">{productName}</h2>
+                                <span className="text-[10px] text-neutral-400 uppercase tracking-widest font-medium">Product Allocation Group</span>
                             </div>
-                            <div className="flex items-center gap-8 pr-4">
-                                <div className="text-right">
-                                    <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest leading-tight">Total Required</p>
-                                    <p className="text-lg font-extrabold tabular-nums text-neutral-900 tracking-tighter">
+                            <div className="flex items-center gap-4">
+                                <div className="flex flex-col items-end">
+                                    <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">Target</span>
+                                    <span className="text-xs font-bold text-neutral-900 tabular-nums">
                                         {groupItems.reduce((acc, i) => acc + (i.pendingItem?.orderRequest?.reqQty || 0), 0)}
-                                    </p>
+                                    </span>
                                 </div>
-                                <div className="h-8 w-px bg-neutral-200/60" />
-                                <div className="text-right">
-                                    <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest leading-tight">Current Allocation</p>
-                                    <p className="text-lg font-extrabold tabular-nums text-brand-600 tracking-tighter">
+                                <div className="w-px h-6 bg-neutral-200" />
+                                <div className="flex flex-col items-end">
+                                    <span className="text-[9px] font-bold text-brand-500 uppercase tracking-widest">Allocated</span>
+                                    <span className="text-xs font-bold text-brand-600 tabular-nums">
                                         {groupItems.reduce((acc, i) => acc + (i.pendingItem?.orderedQty || 0), 0)}
-                                    </p>
+                                    </span>
                                 </div>
                             </div>
                         </div>
-
-                        <DataGrid
-                            data={groupItems}
-                            columns={columns}
-                        />
+                        <div className="saas-card overflow-hidden bg-white">
+                            <DataGrid
+                                data={groupItems}
+                                columns={columns}
+                            />
+                        </div>
                     </section>
                 ))}
 

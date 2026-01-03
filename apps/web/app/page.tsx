@@ -17,10 +17,12 @@ import {
 import { ColumnDef } from '@tanstack/react-table';
 
 export default function DashboardPage() {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://asia-south1-sahakar-ppo.cloudfunctions.net/api';
+
     const { data: stats, isLoading: statsLoading } = useQuery({
         queryKey: ['dashboard-stats'],
         queryFn: async () => {
-            const res = await fetch('http://localhost:8080/analysis/stats');
+            const res = await fetch(`${apiUrl}/analysis/stats`);
             if (!res.ok) throw new Error('Failed to fetch stats');
             return res.json();
         }
@@ -31,7 +33,7 @@ export default function DashboardPage() {
     const { data: ledger, isLoading: ledgerLoading } = useQuery({
         queryKey: ['dashboard-ledger'],
         queryFn: async () => {
-            const res = await fetch('http://localhost:8080/analysis/ledger?limit=10');
+            const res = await fetch(`${apiUrl}/analysis/ledger?limit=10`);
             if (!res.ok) throw new Error('Failed to fetch ledger');
             return res.json();
         }
@@ -40,7 +42,7 @@ export default function DashboardPage() {
     const { data: gap, isLoading: gapLoading } = useQuery({
         queryKey: ['dashboard-gap'],
         queryFn: async () => {
-            const res = await fetch('http://localhost:8080/analysis/gap');
+            const res = await fetch(`${apiUrl}/analysis/gap`);
             if (!res.ok) throw new Error('Failed to fetch gap analysis');
             return res.json();
         }
@@ -127,10 +129,21 @@ export default function DashboardPage() {
                     <p className="text-sm text-neutral-400 font-medium mt-2">Real-time supply chain intelligence and inventory reconciliation.</p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <div className="px-5 py-2.5 bg-success-50/50 backdrop-blur-sm rounded-xl border border-success-200/50 flex items-center gap-2 shadow-sm">
-                        <div className="w-2 h-2 bg-success-500 rounded-full animate-pulse shadow-glow shadow-success-500" />
-                        <span className="text-[10px] font-bold text-success-700 uppercase tracking-widest">System Operational</span>
-                    </div>
+                    <span className="
+                        text-[10px] 
+                        font-bold 
+                        uppercase 
+                        tracking-widest
+                        px-3 py-1
+                        rounded-full
+                        bg-success-50
+                        text-success-700
+                        border border-success-100
+                        flex items-center gap-2
+                    ">
+                        <div className="w-1.5 h-1.5 bg-success-500 rounded-full animate-pulse shadow-glow shadow-success-500" />
+                        System Operational
+                    </span>
                 </div>
             </header>
 
@@ -140,125 +153,156 @@ export default function DashboardPage() {
                     <StatCard
                         label="PO Ingestion"
                         value={stats?.raw}
-                        icon={<Archive size={20} />}
+                        icon={<Archive size={18} />}
                         trend="+12%"
                         variant="brand"
+                        subtitle="Queue → Processing"
                     />
                     <StatCard
                         label="Review Queue"
                         value={stats?.pending}
-                        icon={<Timer size={20} />}
+                        icon={<Timer size={18} />}
                         trend="Critical"
                         variant="warning"
+                        subtitle="Awaiting Validation"
                     />
                     <StatCard
                         label="Rep Capacity"
                         value={stats?.rep_allocation}
-                        icon={<BarChart3 size={20} />}
+                        icon={<BarChart3 size={18} />}
                         trend="Optimal"
                         variant="brand"
+                        subtitle="Fleet Utilization"
                     />
                     <StatCard
                         label="Billing Load"
                         value={stats?.slip_generated}
-                        icon={<DatabaseZap size={20} />}
+                        icon={<DatabaseZap size={18} />}
                         trend="Active"
                         variant="brand"
+                        subtitle="Slips Generating"
                     />
                     <StatCard
                         label="Duty Complete"
                         value={stats?.executed}
-                        icon={<CheckCircle size={20} />}
+                        icon={<CheckCircle size={18} />}
                         trend="Success"
                         variant="success"
+                        subtitle="Shift Completion"
                     />
                 </div>
+            </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                    {/* Live Ledger */}
-                    <section className="flex flex-col gap-6">
-                        <div className="flex items-center justify-between px-2">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-brand-50 rounded-xl flex items-center justify-center text-brand-600">
-                                    <Activity size={20} />
-                                </div>
-                                <h2 className="text-base font-bold text-neutral-900 tracking-tight">Recent Activity</h2>
-                            </div>
-                            <button className="text-[10px] font-bold text-brand-600 uppercase tracking-widest hover:underline">View All</button>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                {/* Live Ledger */}
+                <section className="flex flex-col gap-4">
+                    <div className="flex items-center justify-between px-2 mb-1">
+                        <div className="flex items-center gap-3">
+                            <h2 className="text-sm font-semibold text-neutral-800">Recent Activity</h2>
+                            <span className="text-[10px] text-neutral-400 uppercase tracking-widest font-medium">Live Audit Trail</span>
                         </div>
+                        <button className="text-[10px] font-bold text-brand-600 uppercase tracking-widest hover:underline">View Ledger</button>
+                    </div>
+                    <div className="saas-card overflow-hidden">
                         <DataGrid
                             data={ledger || []}
                             columns={ledgerColumns}
                             isLoading={ledgerLoading}
                         />
-                    </section>
+                    </div>
+                </section>
 
-                    {/* Gap Analysis */}
-                    <section className="flex flex-col gap-6">
-                        <div className="flex items-center justify-between px-2">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-danger-50 rounded-xl flex items-center justify-center text-danger-600">
-                                    <DatabaseZap size={20} />
-                                </div>
-                                <h2 className="text-base font-bold text-neutral-900 tracking-tight">Inventory Discrepancies</h2>
-                            </div>
-                            <div className="px-3 py-1 bg-danger-50 text-danger-600 rounded-full text-[9px] font-bold uppercase tracking-widest border border-danger-100">Action Required</div>
+                {/* Gap Analysis */}
+                <section className="flex flex-col gap-4">
+                    <div className="flex items-center justify-between px-2 mb-1">
+                        <div className="flex items-center gap-3">
+                            <h2 className="text-sm font-semibold text-neutral-800">Inventory Discrepancies</h2>
+                            <span className="text-[10px] text-neutral-400 uppercase tracking-widest font-medium">Discrepancy Audit</span>
                         </div>
+                        <span className="
+                                text-[9px] 
+                                font-bold 
+                                uppercase 
+                                tracking-widest
+                                px-2 py-0.5
+                                rounded-full
+                                bg-danger-50
+                                text-danger-700
+                                border border-danger-100
+                            ">
+                            Action Required
+                        </span>
+                    </div>
+                    <div className="saas-card overflow-hidden">
                         <DataGrid
                             data={gap || []}
                             columns={gapColumns}
                             isLoading={gapLoading}
                         />
-                    </section>
-                </div>
+                    </div>
+                </section>
             </div>
         </div>
     );
 }
 
-function StatCard({ label, value, icon, trend, variant }: { label: string, value: number, icon: React.ReactNode, trend: string, variant: 'brand' | 'warning' | 'success' }) {
-    const variantStyles = {
+function StatCard({
+    label,
+    value,
+    icon,
+    trend,
+    variant,
+    subtitle
+}: {
+    label: string,
+    value: number | string,
+    icon: React.ReactNode,
+    trend?: string,
+    variant: 'brand' | 'warning' | 'success',
+    subtitle?: string
+}) {
+    const statusConfig = {
         brand: {
-            bg: 'bg-gradient-to-br from-brand-600 to-brand-700',
-            iconBg: 'bg-white/20',
-            text: 'text-white',
-            label: 'text-brand-100',
-            trendBg: 'bg-white/10 text-white',
+            badge: 'bg-brand-50 text-brand-700 border-brand-100',
+            icon: 'text-brand-600'
         },
         success: {
-            bg: 'bg-white',
-            iconBg: 'bg-success-50',
-            text: 'text-neutral-900',
-            label: 'text-neutral-400',
-            trendBg: 'bg-success-50 text-success-600',
-            iconColor: 'text-success-600'
+            badge: 'bg-success-50 text-success-700 border-success-100',
+            icon: 'text-success-600'
         },
         warning: {
-            bg: 'bg-white',
-            iconBg: 'bg-warning-50',
-            text: 'text-neutral-900',
-            label: 'text-neutral-400',
-            trendBg: 'bg-warning-50 text-warning-600',
-            iconColor: 'text-warning-600'
+            badge: 'bg-warning-50 text-warning-700 border-warning-100',
+            icon: 'text-warning-600'
         },
     }[variant];
 
     return (
-        <div className={`p-6 rounded-2xl border border-neutral-200/60 shadow-soft smooth-transition hover:shadow-hover hover:-translate-y-1 ${variant === 'brand' ? variantStyles.bg : 'bg-white'}`}>
-            <div className="flex items-start justify-between mb-6">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${variantStyles.iconBg} ${variantStyles.iconColor || 'text-white'}`}>
-                    {icon}
+        <div className="saas-card p-6 flex flex-col gap-4 group">
+            <div className="flex items-start justify-between">
+                <div className="w-10 h-10 rounded-xl bg-neutral-100 border border-neutral-200 flex items-center justify-center smooth-transition group-hover:border-brand-200 group-hover:bg-brand-50/50">
+                    <div className={statusConfig.icon}>
+                        {icon}
+                    </div>
                 </div>
                 {trend && (
-                    <div className={`px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-widest ${variantStyles.trendBg}`}>
+                    <div className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-widest border ${statusConfig.badge}`}>
                         {trend}
                     </div>
                 )}
             </div>
 
-            <div className="flex flex-col gap-1">
-                <div className={`text-[10px] font-bold uppercase tracking-widest ${variantStyles.label}`}>{label}</div>
-                <div className={`text-3xl font-extrabold tabular-nums tracking-tight ${variantStyles.text}`}>{value || 0}</div>
+            <div className="flex flex-col">
+                <div className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1">
+                    {label}
+                </div>
+                <div className="text-3xl font-extrabold text-neutral-900 tabular-nums tracking-tight">
+                    {value || 0}
+                </div>
+                {subtitle && (
+                    <div className="mt-1 text-[11px] text-neutral-400 font-medium whitespace-nowrap overflow-hidden text-ellipsis">
+                        {subtitle}
+                    </div>
+                )}
             </div>
         </div>
     )
