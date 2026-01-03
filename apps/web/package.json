@@ -13,6 +13,7 @@
     "@tanstack/react-table": "^8.21.3",
     "@tanstack/react-virtual": "^3.13.15",
     "@types/lodash": "^4.17.21",
+    "dexie": "^4.2.1",
     "firebase": "^12.7.0",
     "lodash": "^4.17.21",
     "lucide-react": "^0.562.0",

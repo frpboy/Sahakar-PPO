@@ -6,8 +6,10 @@ import { FilterBar } from '../../components/FilterBar';
 import { StatusBadge } from '../../components/StatusBadge';
 import { ConfirmModal } from '../../components/ConfirmModal';
 import { useToast } from '../../components/Toast';
-import { Clock, Edit, Send, Info } from 'lucide-react';
+import { ClipboardList, Edit, Send, Info, CheckCircle2, XCircle } from 'lucide-react';
 import { ColumnDef } from '@tanstack/react-table';
+import { useUserRole } from '../../context/UserRoleContext';
+import { useOfflineSync } from '../../hooks/useOfflineSync';
 
 // Types
 type PendingItem = {
@@ -29,6 +31,8 @@ type PendingItem = {
 };
 
 export default function PendingOrdersPage() {
+    const { currentUser } = useUserRole();
+    const { isOnline } = useOfflineSync();
     const queryClient = useQueryClient();
     const { showToast } = useToast();
 
@@ -41,10 +45,12 @@ export default function PendingOrdersPage() {
     const [filters, setFilters] = useState<Record<string, string>>({});
     const [searchTerm, setSearchTerm] = useState('');
 
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+
     const { data: items, isLoading } = useQuery({
         queryKey: ['pending-items'],
         queryFn: async () => {
-            const res = await fetch('http://localhost:8080/pending-items');
+            const res = await fetch(`${apiUrl}/pending-items`);
             if (!res.ok) throw new Error('Network response was not ok');
             return res.json();
         },
@@ -52,7 +58,7 @@ export default function PendingOrdersPage() {
 
     const updateMutation = useMutation({
         mutationFn: async (data: { id: string; payload: any }) => {
-            const res = await fetch(`http://localhost:8080/pending-items/${data.id}`, {
+            const res = await fetch(`${apiUrl}/pending-items/${data.id}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data.payload),
@@ -72,10 +78,10 @@ export default function PendingOrdersPage() {
 
     const moveToRepMutation = useMutation({
         mutationFn: async (id: string) => {
-            const res = await fetch(`http://localhost:8080/pending-items/${id}/move-to-rep`, {
+            const res = await fetch(`${apiUrl}/pending-items/${id}/move-to-rep`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userEmail: 'admin@sahakar.com' }),
+                body: JSON.stringify({ userEmail: currentUser?.email || 'unknown@sahakar.com' }),
             });
             if (!res.ok) throw new Error('Move failed');
             return res.json();
@@ -139,8 +145,8 @@ export default function PendingOrdersPage() {
                 const item = row.original;
                 return (
                     <div className="flex flex-col">
-                        <span className="font-bold text-gray-900 group-hover:text-indigo-600 transition-colors uppercase text-[11px] tracking-tight">{item.orderRequest.productName}</span>
-                        <span className="text-[10px] text-gray-400 font-bold">{item.orderRequest.primarySupplier}</span>
+                        <span className="font-bold text-primary-900 group-hover:text-primary-700 transition-colors uppercase text-[11px] tracking-tight">{item.orderRequest.productName}</span>
+                        <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-tighter">{item.orderRequest.primarySupplier}</span>
                     </div>
                 );
             }
@@ -152,8 +158,8 @@ export default function PendingOrdersPage() {
                 const item = row.original;
                 return (
                     <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-indigo-600">{item.orderRequest.customerId}</span>
-                        <span className="text-[10px] text-gray-400 font-medium">{item.orderRequest.orderId}</span>
+                        <span className="text-[10px] font-bold text-primary-700">{item.orderRequest.customerId}</span>
+                        <span className="text-[10px] text-neutral-400 font-bold">{item.orderRequest.orderId}</span>
                     </div>
                 );
             }
@@ -162,7 +168,7 @@ export default function PendingOrdersPage() {
             header: 'Req',
             accessorKey: 'orderRequest.reqQty',
             size: 60,
-            cell: (info) => <span className="tabular-nums font-bold text-gray-500">{info.getValue() as number}</span>
+            cell: (info) => <span className="tabular-nums font-bold text-neutral-400">{info.getValue() as number}</span>
         },
         {
             header: 'Ordered',
@@ -172,11 +178,11 @@ export default function PendingOrdersPage() {
                 return editingId === item.id ? (
                     <input
                         type="number"
-                        className="w-full bg-white border border-indigo-300 rounded px-1 py-0.5 text-xs font-bold tabular-nums focus:ring-1 focus:ring-indigo-500 outline-none"
+                        className="w-full bg-white border border-primary-500 rounded px-1 py-1 text-xs font-bold tabular-nums focus:ring-2 focus:ring-primary-500/20 outline-none"
                         value={editFormData.orderedQty}
                         onChange={(e) => handleInputChange('orderedQty', parseInt(e.target.value))}
                     />
-                ) : <span className="tabular-nums font-bold text-gray-900">{item.orderedQty}</span>;
+                ) : <span className="tabular-nums font-bold text-primary-900">{item.orderedQty}</span>;
             }
         },
         {
@@ -187,11 +193,11 @@ export default function PendingOrdersPage() {
                 return editingId === item.id ? (
                     <input
                         type="number"
-                        className="w-full bg-white border border-indigo-300 rounded px-1 py-0.5 text-xs font-bold tabular-nums focus:ring-1 focus:ring-indigo-500 outline-none"
+                        className="w-full bg-white border border-primary-500 rounded px-1 py-1 text-xs font-bold tabular-nums focus:ring-2 focus:ring-primary-500/20 outline-none"
                         value={editFormData.stockQty}
                         onChange={(e) => handleInputChange('stockQty', parseInt(e.target.value))}
                     />
-                ) : <span className="tabular-nums font-bold text-gray-900">{item.stockQty}</span>;
+                ) : <span className="tabular-nums font-bold text-primary-900">{item.stockQty}</span>;
             }
         },
         {
@@ -202,11 +208,11 @@ export default function PendingOrdersPage() {
                 return editingId === item.id ? (
                     <input
                         type="number"
-                        className="w-full bg-white border border-indigo-300 rounded px-1 py-0.5 text-xs font-bold tabular-nums focus:ring-1 focus:ring-indigo-500 outline-none"
+                        className="w-full bg-white border border-primary-500 rounded px-1 py-1 text-xs font-bold tabular-nums focus:ring-2 focus:ring-primary-500/20 outline-none"
                         value={editFormData.offerQty}
                         onChange={(e) => handleInputChange('offerQty', parseInt(e.target.value))}
                     />
-                ) : <span className="tabular-nums font-bold text-gray-900">{item.offerQty}</span>;
+                ) : <span className="tabular-nums font-bold text-primary-900">{item.offerQty}</span>;
             }
         },
         {
@@ -215,39 +221,39 @@ export default function PendingOrdersPage() {
             cell: ({ row }) => {
                 const item = row.original;
                 return (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3">
                         {editingId === item.id ? (
                             <>
                                 <button
                                     onClick={() => handleSave(item.id)}
-                                    className="p-1 text-green-600 hover:bg-green-50 rounded transition-colors"
+                                    className="p-1 text-accent-600 hover:bg-accent-100 rounded transition-colors"
                                     title="Save Changes"
                                 >
-                                    <CheckCircle className="w-4 h-4" />
+                                    <CheckCircle2 size={18} />
                                 </button>
                                 <button
                                     onClick={() => setEditingId(null)}
-                                    className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
+                                    className="p-1 text-error-600 hover:bg-error-100 rounded transition-colors"
                                     title="Cancel"
                                 >
-                                    <Cancel className="w-4 h-4" />
+                                    <XCircle size={18} />
                                 </button>
                             </>
                         ) : (
                             <>
                                 <button
                                     onClick={() => handleEditClick(item)}
-                                    className="p-1 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+                                    className="text-neutral-400 hover:text-primary-700 transition-colors"
                                     title="Edit Row"
                                 >
-                                    <Edit className="w-4 h-4" />
+                                    <Edit size={18} />
                                 </button>
                                 <button
                                     onClick={() => setConfirmMoveId(item.id)}
-                                    className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                    className="text-neutral-400 hover:text-accent-600 transition-colors"
                                     title="Move to Rep"
                                 >
-                                    <Send className="w-4 h-4" />
+                                    <Send size={18} />
                                 </button>
                             </>
                         )}
@@ -258,14 +264,15 @@ export default function PendingOrdersPage() {
     ], [editingId, editFormData]);
 
     return (
-        <div className="flex flex-col h-full bg-[var(--background)]">
-            <header className="bg-white border-b border-[var(--border)] px-8 py-4 sticky top-0 z-10">
+        <div className="flex flex-col h-full bg-neutral-50">
+            <header className="bg-white border-b border-neutral-200 px-8 py-4 sticky top-0 z-10 shadow-sm">
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-lg font-bold text-gray-900 tracking-tight flex items-center gap-2 uppercase">
-                            <Clock className="w-5 h-5 text-indigo-600" />
+                        <h1 className="text-xl font-bold text-primary-900 tracking-tight flex items-center gap-3 uppercase">
+                            <ClipboardList size={24} className="text-primary-700" />
                             Pending PO Ledger
                         </h1>
+                        <p className="text-[10px] text-neutral-400 font-bold mt-1 uppercase tracking-widest leading-none">Awaiting supplier confirmation & inventory mapping</p>
                     </div>
                     <div className="flex items-center gap-4">
                         <FilterBar
@@ -301,7 +308,3 @@ export default function PendingOrdersPage() {
         </div>
     );
 }
-
-// Dummy components for missing icons/imports if any
-function CheckCircle(props: any) { return <svg {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg> }
-function Cancel(props: any) { return <svg {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg> }

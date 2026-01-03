@@ -3,26 +3,33 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-    Home,
-    Import,
-    Clock,
-    UserCircle,
-    FileSearch,
-    Box,
-    TrendingUp,
-    Settings
+    LayoutDashboard,
+    Upload,
+    ClipboardList,
+    Truck,
+    FileText,
+    Receipt,
+    ListChecks,
+    BarChart3,
+    Factory,
+    Package,
+    Users,
+    Settings,
+    LogOut,
+    ArrowLeft,
+    ChevronRight
 } from 'lucide-react';
 import { useUserRole } from '../context/UserRoleContext';
 
 const MENU_ITEMS = [
-    { label: 'Dashboard', href: '/', icon: Home },
-    { label: 'PPO Input', href: '/order-import', icon: Import },
-    { label: 'Pending', href: '/pending-orders', icon: Clock },
-    { label: 'Rep Alloc', href: '/rep-allocation', icon: UserCircle },
-    { label: 'Order Slips', href: '/order-slips', icon: FileSearch },
-    { label: 'Warehouse', href: '/warehouse', icon: Box },
-    // { label: 'Analysis', href: '/analysis', icon: GraphUp }, // Merged into Dashboard basically, but keeping placeholder if needed
-    // { label: 'Masters', href: '/masters', icon: Settings }, // Not implemented yet
+    { label: 'Dashboard', href: '/', icon: LayoutDashboard },
+    { label: 'PPO Input', href: '/order-import', icon: Upload },
+    { label: 'Pending', href: '/pending-orders', icon: ClipboardList },
+    { label: 'Rep Alloc', href: '/rep-allocation', icon: Truck },
+    { label: 'Order Slips', href: '/order-slips', icon: FileText },
+    { label: 'Warehouse', href: '/warehouse', icon: Package },
+    { label: 'Status Ledger', href: '/ledger', icon: ListChecks },
+    { label: 'Analysis', href: '/analysis', icon: BarChart3 },
 ];
 
 export function Sidebar() {
@@ -30,12 +37,18 @@ export function Sidebar() {
     const { role, can } = useUserRole();
 
     return (
-        <aside className="w-64 h-screen bg-white border-r border-gray-200 fixed left-0 top-0 flex flex-col z-30">
-            <div className="h-16 flex items-center px-6 border-b border-gray-100">
-                <span className="text-xl font-bold text-gray-800 tracking-tight">Sahakar PPO</span>
+        <aside className="w-64 h-screen bg-white border-r border-neutral-200/60 fixed left-0 top-0 flex flex-col z-30 smooth-transition">
+            <div className="h-20 flex items-center px-8">
+                <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 bg-brand-600 rounded-xl flex items-center justify-center shadow-lg shadow-brand-500/30">
+                        <Package className="text-white w-5 h-5" />
+                    </div>
+                    <span className="text-xl font-bold text-neutral-900 tracking-tight">Sahakar <span className="text-brand-600">PPO</span></span>
+                </div>
             </div>
 
-            <nav className="flex-1 py-6 space-y-1">
+            <nav className="flex-1 px-4 py-4 space-y-1">
+                <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest px-4 mb-4">Main Menu</div>
                 {MENU_ITEMS.map((item) => {
                     const isActive = pathname === item.href;
                     const Icon = item.icon;
@@ -44,8 +57,6 @@ export function Sidebar() {
                     if (item.label === 'PPO Input' && !can('view_ppo_input')) return null;
                     if (item.label === 'Rep Alloc' && !can('view_rep')) return null;
                     if (item.label === 'Order Slips' && !can('view_slips')) return null;
-                    // Pending and Warehouse generally visible but actions restricted, though spec says Purchase Staff shouldn't see Warehouse/Slips?
-                    // Spec: "Billing Staff: Order Slips only".
                     if (role === 'BILLING_STAFF' && !['Order Slips', 'Warehouse', 'Dashboard'].includes(item.label)) return null;
                     if (role === 'PURCHASE_STAFF' && ['Order Slips', 'Warehouse', 'PPO Input'].includes(item.label)) return null;
 
@@ -54,31 +65,30 @@ export function Sidebar() {
                             key={item.href}
                             href={item.href}
                             className={`
-                flex items-center gap-3 px-6 py-2.5 text-sm font-medium transition-all relative group
-                ${isActive
-                                    ? 'text-indigo-600 bg-indigo-50/50'
-                                    : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
-                                }
-              `}
+                                flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 group
+                                ${isActive
+                                    ? 'bg-brand-50 text-brand-700 shadow-sm'
+                                    : 'text-neutral-500 hover:bg-neutral-50 hover:text-brand-600'}
+                            `}
                         >
-                            {isActive && (
-                                <div className="absolute left-0 top-1 bottom-1 w-1 bg-indigo-600 rounded-r-full shadow-[0_0_8px_rgba(79,70,229,0.4)]" />
-                            )}
-                            <Icon className={`w-5 h-5 transition-transform group-hover:scale-110 ${isActive ? 'stroke-2' : 'stroke-1.5'}`} />
-                            <span className={isActive ? 'font-semibold' : ''}>{item.label}</span>
+                            <div className="flex items-center gap-3">
+                                <Icon size={20} className={`smooth-transition ${isActive ? 'text-brand-600' : 'text-neutral-400 group-hover:text-brand-500'}`} />
+                                <span>{item.label}</span>
+                            </div>
+                            {isActive && <div className="w-1.5 h-1.5 rounded-full bg-brand-600 shadow-glow shadow-brand-500/50" />}
                         </Link>
                     );
                 })}
             </nav>
 
-            <div className="p-4 border-t border-gray-100">
-                <div className="flex items-center gap-3 px-2 py-2">
-                    <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 text-xs font-bold">
-                        JD
+            <div className="p-4 border-t border-neutral-200/60">
+                <div className="bg-neutral-50 rounded-2xl p-4 flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-brand-100 flex items-center justify-center text-brand-700 font-bold">
+                        ?
                     </div>
                     <div className="flex-1">
-                        <div className="text-sm font-medium text-gray-900">John Doe</div>
-                        <div className="text-xs text-gray-500">Purchase Dept</div>
+                        <div className="text-xs font-bold text-neutral-900">Need help?</div>
+                        <div className="text-[10px] text-neutral-500 font-medium">Check documentation</div>
                     </div>
                 </div>
             </div>

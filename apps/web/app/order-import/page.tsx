@@ -1,10 +1,12 @@
 'use client';
 import { useState, useMemo } from 'react';
-import { Import, CheckCircle, AlertTriangle, Info } from 'lucide-react';
+import { Upload, CheckCircle, AlertTriangle, Info } from 'lucide-react';
 import { DataGrid } from '../../components/DataGrid';
 import { ColumnDef } from '@tanstack/react-table';
+import { useUserRole } from '../../context/UserRoleContext';
 
 export default function OrderImportPage() {
+    const { currentUser } = useUserRole();
     const [file, setFile] = useState<File | null>(null);
     const [uploading, setUploading] = useState(false);
     const [result, setResult] = useState<any>(null);
@@ -16,17 +18,18 @@ export default function OrderImportPage() {
     };
 
     const handleUpload = async () => {
-        if (!file) return;
+        if (!file || !currentUser) return;
 
         setUploading(true);
         setResult(null);
 
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('userEmail', 'admin@sahakar.com'); // TODO: Context auth
+        formData.append('userEmail', currentUser.email || 'unknown@sahakar.com');
 
         try {
-            const res = await fetch('http://localhost:8080/order-requests/import', {
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+            const res = await fetch(`${apiUrl}/order-requests/import`, {
                 method: 'POST',
                 body: formData,
             });
@@ -51,7 +54,7 @@ export default function OrderImportPage() {
                 const status = info.getValue() as string;
                 const isError = status.toLowerCase().includes('error');
                 return (
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isError ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isError ? 'bg-error-100 text-error-600' : 'bg-accent-100 text-accent-600'}`}>
                         {status.toUpperCase()}
                     </span>
                 );
@@ -60,30 +63,31 @@ export default function OrderImportPage() {
     ], []);
 
     return (
-        <div className="flex flex-col h-full bg-[var(--background)]">
+        <div className="flex flex-col h-full bg-neutral-50">
             {/* Header Area */}
-            <header className="bg-white border-b border-[var(--border)] px-8 py-6 sticky top-0 z-10">
+            <header className="bg-white border-b border-neutral-200 px-8 py-6 sticky top-0 z-10 shadow-sm">
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
-                            <Import className="w-6 h-6 text-indigo-600" />
-                            PPO Input
+                        <h1 className="text-xl font-bold text-primary-900 tracking-tight flex items-center gap-3 uppercase">
+                            <Upload size={24} className="text-primary-700" />
+                            PPO Ingestion
                         </h1>
-                        <p className="text-sm text-gray-500 font-medium mt-1">
-                            Upload and ingestion of pharmaceutical purchase orders
+                        <p className="text-[10px] text-neutral-400 font-bold mt-1 uppercase tracking-widest leading-none">
+                            High-volume pharmaceutical purchase order validation
                         </p>
                     </div>
                 </div>
             </header>
 
-            <main className="flex-1 p-8 overflow-auto">
-                <div className="bg-white rounded-lg shadow-sm border border-[var(--border)] p-6 mb-8 max-w-2xl">
-                    <h2 className="text-sm font-bold uppercase tracking-wider text-gray-400 mb-6">
-                        File Ingestion
+            <main className="flex-1 p-8 overflow-auto space-y-8">
+                <div className="bg-white erp-card p-8 max-w-2xl mx-auto shadow-sm">
+                    <h2 className="text-[11px] font-bold uppercase tracking-widest text-primary-900 mb-6 flex items-center gap-2">
+                        <Upload size={16} className="text-primary-700" />
+                        File Ingestion Core
                     </h2>
 
                     <div className="space-y-6">
-                        <div className="relative border-2 border-dashed border-gray-200 rounded-lg p-8 transition-colors hover:border-indigo-400 group">
+                        <div className="relative border-2 border-dashed border-neutral-200 rounded-lg p-10 transition-all hover:border-primary-500 bg-neutral-50/50 group">
                             <input
                                 type="file"
                                 accept=".xlsx"
@@ -91,88 +95,73 @@ export default function OrderImportPage() {
                                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                             />
                             <div className="text-center">
-                                <Import className="mx-auto h-12 w-12 text-gray-300 group-hover:text-indigo-500 transition-colors" />
-                                <div className="mt-4 flex text-sm text-gray-600 justify-center">
-                                    <span className="relative rounded-md font-bold text-indigo-600 hover:text-indigo-500">
-                                        {file ? file.name : 'Upload PO file'}
+                                <Upload className="mx-auto h-12 w-12 text-neutral-300 group-hover:text-primary-700 transition-colors" />
+                                <div className="mt-4 flex text-sm text-neutral-600 justify-center">
+                                    <span className="relative rounded-md font-bold text-primary-700">
+                                        {file ? file.name : 'Select PO SpreadSheet'}
                                     </span>
                                 </div>
-                                <p className="text-xs text-gray-500 mt-1">XLSX up to 10MB</p>
+                                <p className="text-[10px] text-neutral-400 mt-2 font-bold uppercase tracking-wide">XLSX Maximum 10MB</p>
                             </div>
                         </div>
 
                         <button
                             onClick={handleUpload}
                             disabled={!file || uploading}
-                            className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 transition-all uppercase tracking-wide"
+                            className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-bold text-white bg-primary-700 hover:bg-primary-900 transition-all uppercase tracking-widest disabled:opacity-50"
                         >
-                            {uploading ? 'Processing Data...' : 'Validate & Import Orders'}
+                            {uploading ? 'Validating Ingestion...' : 'Execute Import Pipeline'}
                         </button>
                     </div>
                 </div>
 
                 {result && (
-                    <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
+                    <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500 max-w-[1400px] mx-auto">
                         {/* Summary Cards */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div className="bg-white p-6 rounded-lg border border-[var(--border)] shadow-sm">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-indigo-50 rounded-md">
-                                        <Info className="w-5 h-5 text-indigo-600" />
-                                    </div>
-                                    <div>
-                                        <p className="text-xs font-bold text-gray-400 uppercase">Total Rows</p>
-                                        <p className="text-2xl font-bold tabular-nums">{result.total || 0}</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="bg-white p-6 rounded-lg border border-[var(--border)] shadow-sm">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-green-50 rounded-md">
-                                        <CheckCircle className="w-5 h-5 text-green-600" />
-                                    </div>
-                                    <div>
-                                        <p className="text-xs font-bold text-gray-400 uppercase">Imported</p>
-                                        <p className="text-2xl font-bold tabular-nums text-green-600">{result.imported || 0}</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="bg-white p-6 rounded-lg border border-[var(--border)] shadow-sm">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-amber-50 rounded-md">
-                                        <AlertTriangle className="w-5 h-5 text-amber-600" />
-                                    </div>
-                                    <div>
-                                        <p className="text-xs font-bold text-gray-400 uppercase">Duplicates</p>
-                                        <p className="text-2xl font-bold tabular-nums text-amber-600">{result.skipped || 0}</p>
-                                    </div>
-                                </div>
-                            </div>
+                            <SummaryCard
+                                label="Total Rows"
+                                value={result.total || 0}
+                                icon={<Info size={20} />}
+                                variant="neutral"
+                            />
+                            <SummaryCard
+                                label="Imported"
+                                value={result.imported || 0}
+                                icon={<CheckCircle size={20} />}
+                                variant="accent"
+                            />
+                            <SummaryCard
+                                label="Duplicates"
+                                value={result.skipped || 0}
+                                icon={<AlertTriangle size={20} />}
+                                variant="warning"
+                            />
                         </div>
 
                         {/* Error Log */}
                         {result.errors && result.errors.length > 0 && (
-                            <div className="bg-white rounded-lg border border-red-100 overflow-hidden shadow-sm">
-                                <div className="bg-red-50/50 px-6 py-3 border-b border-red-100">
-                                    <h3 className="text-sm font-bold text-red-800 uppercase tracking-wider flex items-center gap-2">
-                                        <AlertTriangle className="w-4 h-4" />
-                                        Error Report
+                            <div className="bg-white erp-card shadow-sm border-error-100">
+                                <div className="bg-error-100/30 px-6 py-4 border-b border-error-100">
+                                    <h3 className="text-[11px] font-bold text-error-600 uppercase tracking-widest flex items-center gap-2">
+                                        <AlertTriangle size={18} />
+                                        Ingestion Error Report
                                     </h3>
                                 </div>
-                                <div className="max-h-60 overflow-auto">
+                                <div className="max-h-80 overflow-auto">
                                     <table className="w-full text-sm">
-                                        <thead className="bg-gray-50 text-[10px] text-gray-400 font-bold uppercase">
+                                        <thead className="bg-neutral-50 text-[10px] text-neutral-400 font-bold uppercase sticky top-0 shadow-sm">
                                             <tr>
-                                                <th className="px-6 py-2 text-left">Row</th>
-                                                <th className="px-6 py-2 text-left">Issue</th>
+                                                <th className="px-6 py-3 text-left">Excel Row</th>
+                                                <th className="px-6 py-3 text-left">Validation Issue</th>
                                             </tr>
                                         </thead>
-                                        <tbody className="divide-y divide-gray-100">
+                                        <tbody className="divide-y divide-neutral-100">
                                             {result.errors.map((err: any, i: number) => (
-                                                <li key={i} className="px-6 py-2 flex items-center gap-4 text-xs font-medium text-red-600">
-                                                    <span className="w-12 tabular-nums">{err.row}</span>
-                                                    <span>{err.error}</span>
-                                                </li>
+                                                <tr key={i} className="hover:bg-error-100/10 transition-colors">
+                                                    <td className="px-6 py-3 tabular-nums font-bold text-error-600">{err.row}</td>
+                                                    <td className="px-6 py-3 text-neutral-700 text-xs">{err.error}</td>
+                                                </tr>
                                             ))}
                                         </tbody>
                                     </table>
@@ -182,6 +171,28 @@ export default function OrderImportPage() {
                     </div>
                 )}
             </main>
+        </div>
+    );
+}
+
+function SummaryCard({ label, value, icon, variant }: { label: string, value: number, icon: React.ReactNode, variant: 'neutral' | 'accent' | 'warning' }) {
+    const colors = {
+        neutral: 'text-primary-700 border-neutral-200 bg-white',
+        accent: 'text-accent-600 border-accent-100 bg-accent-100/20',
+        warning: 'text-warning-600 border-warning-100 bg-warning-100/20',
+    }[variant];
+
+    return (
+        <div className={`p-6 rounded-md border shadow-sm ${colors} flex items-center justify-between`}>
+            <div className="flex items-center gap-4">
+                <div className="p-3 rounded-md bg-white border border-neutral-100 shadow-sm">
+                    {icon}
+                </div>
+                <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest opacity-70">{label}</p>
+                    <p className="text-3xl font-bold tabular-nums tracking-tighter">{value}</p>
+                </div>
+            </div>
         </div>
     );
 }

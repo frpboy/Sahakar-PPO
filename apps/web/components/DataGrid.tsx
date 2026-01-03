@@ -61,7 +61,7 @@ export function DataGrid<TData>({
         return (
             <div className="w-full space-y-2 p-4">
                 {[...Array(5)].map((_, i) => (
-                    <div key={i} className="h-9 w-full bg-gray-100 animate-pulse rounded-sm" />
+                    <div key={i} className="h-9 w-full bg-neutral-50 animate-pulse rounded-sm" />
                 ))}
             </div>
         );
@@ -70,21 +70,21 @@ export function DataGrid<TData>({
     return (
         <div
             ref={parentRef}
-            className="spreadsheet-grid overflow-auto max-h-[calc(100vh-200px)] relative w-full"
+            className="spreadsheet-grid overflow-auto max-h-[calc(100vh-200px)] relative w-full rounded-md border-neutral-200 shadow-sm bg-white"
         >
             <div style={{ height: `${virtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
-                <table className="w-full border-collapse text-sm">
-                    <thead className={stickyHeader ? 'sticky top-0 z-20 bg-[var(--background)] shadow-sm' : ''}>
+                <table className="w-full border-collapse text-[13px]">
+                    <thead className={stickyHeader ? 'sticky top-0 z-20 bg-neutral-50 shadow-sm' : ''}>
                         {table.getHeaderGroups().map((headerGroup) => (
-                            <tr key={headerGroup.id} className="border-b border-[var(--border)]">
+                            <tr key={headerGroup.id} className="border-b border-neutral-200/60">
                                 {headerGroup.headers.map((header, index) => {
                                     const isFrozen = index < frozenColumns;
                                     return (
                                         <th
                                             key={header.id}
                                             className={`
-                        px-4 py-2 text-left font-semibold text-[var(--text-secondary)] bg-gray-50/50 uppercase tracking-wider text-[10px]
-                        ${isFrozen ? 'sticky left-0 z-10 bg-gray-50' : ''}
+                        px-6 py-4 text-[11px] font-bold text-neutral-500 uppercase tracking-widest
+                        ${isFrozen ? 'sticky left-0 z-10 bg-neutral-50' : ''}
                       `}
                                             style={{
                                                 width: header.getSize(),
@@ -106,7 +106,7 @@ export function DataGrid<TData>({
                                     key={row.id}
                                     onClick={() => onRowClick?.(row.original)}
                                     className={`
-                    border-b border-[var(--border)] hover:bg-gray-50/50 transition-colors cursor-default group
+                    border-b border-neutral-200 hover:bg-neutral-50 transition-colors cursor-default group
                     ${onRowClick ? 'cursor-pointer' : ''}
                   `}
                                     style={{
@@ -124,8 +124,8 @@ export function DataGrid<TData>({
                                             <td
                                                 key={cell.id}
                                                 className={`
-                          px-4 py-1.5 whitespace-nowrap overflow-hidden text-ellipsis
-                          ${isFrozen ? 'sticky left-0 z-10 bg-white group-hover:bg-gray-50' : ''}
+                          px-4 py-2 whitespace-nowrap overflow-hidden text-ellipsis text-neutral-700
+                          ${isFrozen ? 'sticky left-0 z-10 bg-white group-hover:bg-neutral-50' : ''}
                         `}
                                             >
                                                 {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -139,7 +139,7 @@ export function DataGrid<TData>({
                 </table>
             </div>
             {data.length === 0 && !isLoading && (
-                <div className="p-8 text-center text-[var(--text-secondary)] italic">
+                <div className="p-8 text-center text-neutral-400 italic text-sm">
                     No records found.
                 </div>
             )}

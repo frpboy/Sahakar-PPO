@@ -3,6 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { DataGrid } from '../components/DataGrid';
 import { StatusBadge } from '../components/StatusBadge';
+import { RoleBadge } from '../components/RoleBadge';
+import { useUserRole } from '../context/UserRoleContext';
 import {
     TrendingUp,
     Archive,
@@ -23,6 +25,8 @@ export default function DashboardPage() {
             return res.json();
         }
     });
+
+    const { role } = useUserRole();
 
     const { data: ledger, isLoading: ledgerLoading } = useQuery({
         queryKey: ['dashboard-ledger'],
@@ -111,141 +115,150 @@ export default function DashboardPage() {
     ], []);
 
     return (
-        <div className="flex flex-col h-full bg-[var(--background)]">
-            <header className="bg-white border-b border-[var(--border)] px-8 py-5 sticky top-0 z-10">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-xl font-bold text-gray-900 tracking-tight flex items-center gap-2 uppercase">
-                            <Activity className="w-6 h-6 text-indigo-600" />
-                            Operations Command Center
-                        </h1>
-                        <p className="text-[10px] text-gray-400 font-bold mt-1 uppercase tracking-widest leading-none">Real-time Supply Chain Analytics & Reconciliation</p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 rounded-full border border-green-100">
-                            <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-                            <span className="text-[9px] font-bold text-green-700 uppercase tracking-widest">System Live</span>
+        <div className="flex flex-col h-full bg-transparent font-sans">
+            <header className="mb-10 flex items-center justify-between">
+                <div>
+                    <h1 className="text-3xl font-extrabold text-neutral-900 tracking-tight flex items-center gap-4">
+                        <div className="w-12 h-12 bg-white rounded-2xl shadow-soft flex items-center justify-center border border-neutral-200/60">
+                            <Activity size={28} className="text-brand-600" />
                         </div>
+                        Operations Command Center
+                    </h1>
+                    <p className="text-sm text-neutral-400 font-medium mt-2">Real-time supply chain intelligence and inventory reconciliation.</p>
+                </div>
+                <div className="flex items-center gap-3">
+                    <div className="px-5 py-2.5 bg-success-50/50 backdrop-blur-sm rounded-xl border border-success-200/50 flex items-center gap-2 shadow-sm">
+                        <div className="w-2 h-2 bg-success-500 rounded-full animate-pulse shadow-glow shadow-success-500" />
+                        <span className="text-[10px] font-bold text-success-700 uppercase tracking-widest">System Operational</span>
                     </div>
                 </div>
             </header>
 
-            <main className="flex-1 p-8 overflow-auto space-y-8">
-                {/* Stats Grid */}
+            <div className="space-y-10">
+                {/* Dashboard Stats */}
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
                     <StatCard
                         label="PO Ingestion"
                         value={stats?.raw}
-                        icon={<Archive className="w-5 h-5" />}
+                        icon={<Archive size={20} />}
                         trend="+12%"
-                        variant="neutral"
+                        variant="brand"
                     />
                     <StatCard
                         label="Review Queue"
                         value={stats?.pending}
-                        icon={<Timer className="w-5 h-5 text-amber-500" />}
+                        icon={<Timer size={20} />}
                         trend="Critical"
                         variant="warning"
                     />
                     <StatCard
                         label="Rep Capacity"
                         value={stats?.rep_allocation}
-                        icon={<BarChart3 className="w-5 h-5 text-indigo-500" />}
+                        icon={<BarChart3 size={20} />}
                         trend="Optimal"
-                        variant="info"
+                        variant="brand"
                     />
                     <StatCard
                         label="Billing Load"
                         value={stats?.slip_generated}
-                        icon={<DatabaseZap className="w-5 h-5 text-cyan-500" />}
+                        icon={<DatabaseZap size={20} />}
                         trend="Active"
-                        variant="success"
+                        variant="brand"
                     />
                     <StatCard
                         label="Duty Complete"
                         value={stats?.executed}
-                        icon={<CheckCircle className="w-5 h-5 text-green-500" />}
+                        icon={<CheckCircle size={20} />}
                         trend="Success"
                         variant="success"
                     />
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
                     {/* Live Ledger */}
-                    <section className="bg-white rounded-lg border border-[var(--border)] shadow-sm flex flex-col h-[500px]">
-                        <div className="px-6 py-4 border-b border-[var(--border)] bg-gray-50/50 flex items-center justify-between">
-                            <h2 className="text-[11px] font-bold text-gray-900 uppercase tracking-widest flex items-center gap-2">
-                                <Activity className="w-4 h-4 text-indigo-500" />
-                                Real-time Transaction Ledger
-                            </h2>
-                            <span className="text-[9px] font-bold text-gray-400 uppercase tracking-tighter">Latest 10 Events</span>
+                    <section className="flex flex-col gap-6">
+                        <div className="flex items-center justify-between px-2">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-brand-50 rounded-xl flex items-center justify-center text-brand-600">
+                                    <Activity size={20} />
+                                </div>
+                                <h2 className="text-base font-bold text-neutral-900 tracking-tight">Recent Activity</h2>
+                            </div>
+                            <button className="text-[10px] font-bold text-brand-600 uppercase tracking-widest hover:underline">View All</button>
                         </div>
-                        <div className="flex-1">
-                            <DataGrid
-                                data={ledger || []}
-                                columns={ledgerColumns}
-                                isLoading={ledgerLoading}
-                            />
-                        </div>
+                        <DataGrid
+                            data={ledger || []}
+                            columns={ledgerColumns}
+                            isLoading={ledgerLoading}
+                        />
                     </section>
 
                     {/* Gap Analysis */}
-                    <section className="bg-white rounded-lg border border-[var(--border)] shadow-sm flex flex-col h-[500px]">
-                        <div className="px-6 py-4 border-b border-[var(--border)] bg-gray-50/50 flex items-center justify-between">
-                            <h2 className="text-[11px] font-bold text-gray-900 uppercase tracking-widest flex items-center gap-2">
-                                <DatabaseZap className="w-4 h-4 text-red-500" />
-                                Inventory Variance (Gap Analysis)
-                            </h2>
-                            <span className="text-[9px] font-bold text-red-400 uppercase tracking-tighter">Action Required</span>
+                    <section className="flex flex-col gap-6">
+                        <div className="flex items-center justify-between px-2">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-danger-50 rounded-xl flex items-center justify-center text-danger-600">
+                                    <DatabaseZap size={20} />
+                                </div>
+                                <h2 className="text-base font-bold text-neutral-900 tracking-tight">Inventory Discrepancies</h2>
+                            </div>
+                            <div className="px-3 py-1 bg-danger-50 text-danger-600 rounded-full text-[9px] font-bold uppercase tracking-widest border border-danger-100">Action Required</div>
                         </div>
-                        <div className="flex-1">
-                            <DataGrid
-                                data={gap || []}
-                                columns={gapColumns}
-                                isLoading={gapLoading}
-                            />
-                        </div>
+                        <DataGrid
+                            data={gap || []}
+                            columns={gapColumns}
+                            isLoading={gapLoading}
+                        />
                     </section>
                 </div>
-            </main>
+            </div>
         </div>
     );
 }
 
-function StatCard({ label, value, icon, trend, variant }: { label: string, value: number, icon: React.ReactNode, trend: string, variant: 'neutral' | 'warning' | 'info' | 'success' }) {
-    const bgColor = {
-        neutral: 'bg-white border-gray-200',
-        warning: 'bg-amber-50/50 border-amber-100',
-        info: 'bg-indigo-50/50 border-indigo-100',
-        success: 'bg-green-50/50 border-green-100',
-    }[variant];
-
-    const trendColor = {
-        neutral: 'text-gray-400',
-        warning: 'text-amber-600',
-        info: 'text-indigo-600',
-        success: 'text-green-600',
+function StatCard({ label, value, icon, trend, variant }: { label: string, value: number, icon: React.ReactNode, trend: string, variant: 'brand' | 'warning' | 'success' }) {
+    const variantStyles = {
+        brand: {
+            bg: 'bg-gradient-to-br from-brand-600 to-brand-700',
+            iconBg: 'bg-white/20',
+            text: 'text-white',
+            label: 'text-brand-100',
+            trendBg: 'bg-white/10 text-white',
+        },
+        success: {
+            bg: 'bg-white',
+            iconBg: 'bg-success-50',
+            text: 'text-neutral-900',
+            label: 'text-neutral-400',
+            trendBg: 'bg-success-50 text-success-600',
+            iconColor: 'text-success-600'
+        },
+        warning: {
+            bg: 'bg-white',
+            iconBg: 'bg-warning-50',
+            text: 'text-neutral-900',
+            label: 'text-neutral-400',
+            trendBg: 'bg-warning-50 text-warning-600',
+            iconColor: 'text-warning-600'
+        },
     }[variant];
 
     return (
-        <div className={`${bgColor} p-6 rounded-xl border shadow-sm transition-all hover:shadow-md group relative overflow-hidden`}>
-            {/* Visual accent */}
-            <div className={`absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity`}>
-                {icon}
-            </div>
-
-            <div className="flex items-center gap-3 mb-4">
-                <div className={`p-2 rounded-lg bg-white shadow-sm border border-gray-100`}>
+        <div className={`p-6 rounded-2xl border border-neutral-200/60 shadow-soft smooth-transition hover:shadow-hover hover:-translate-y-1 ${variant === 'brand' ? variantStyles.bg : 'bg-white'}`}>
+            <div className="flex items-start justify-between mb-6">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${variantStyles.iconBg} ${variantStyles.iconColor || 'text-white'}`}>
                     {icon}
                 </div>
-                <div className={`text-[10px] font-bold uppercase tracking-widest text-gray-500`}>{label}</div>
+                {trend && (
+                    <div className={`px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-widest ${variantStyles.trendBg}`}>
+                        {trend}
+                    </div>
+                )}
             </div>
 
-            <div className="flex items-end justify-between">
-                <div className="text-3xl font-bold tabular-nums text-gray-900 tracking-tighter">{value || 0}</div>
-                <div className={`text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border bg-white ${trendColor}`}>
-                    {trend}
-                </div>
+            <div className="flex flex-col gap-1">
+                <div className={`text-[10px] font-bold uppercase tracking-widest ${variantStyles.label}`}>{label}</div>
+                <div className={`text-3xl font-extrabold tabular-nums tracking-tight ${variantStyles.text}`}>{value || 0}</div>
             </div>
         </div>
     )

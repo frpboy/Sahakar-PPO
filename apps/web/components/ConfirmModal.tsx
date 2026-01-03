@@ -10,7 +10,9 @@ interface ConfirmModalProps {
     cancelLabel?: string;
     onConfirm: () => void;
     onCancel: () => void;
-    variant?: 'danger' | 'primary';
+    variant?: 'danger' | 'primary' | 'accent';
+    children?: React.ReactNode;
+    showFooter?: boolean;
 }
 
 export function ConfirmModal({
@@ -22,49 +24,61 @@ export function ConfirmModal({
     onConfirm,
     onCancel,
     variant = 'primary',
+    children,
+    showFooter = true,
 }: ConfirmModalProps) {
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-primary-900/40 backdrop-blur-[2px] p-4 transition-all duration-300">
             <div
-                className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200"
+                className="bg-white rounded border border-neutral-200 shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200"
                 role="dialog"
                 aria-modal="true"
             >
-                <div className="p-6 border-b border-gray-100/10">
-                    <h3 className="text-lg font-bold text-gray-900 leading-6">
+                <div className="p-8 pb-6">
+                    <h3 className="text-lg font-bold text-primary-900 uppercase tracking-tight">
                         {title}
                     </h3>
-                    <div className="mt-3">
-                        <p className="text-sm text-gray-500 font-medium">
+                    <div className="mt-2">
+                        <p className="text-[11px] text-neutral-400 font-bold uppercase tracking-widest leading-relaxed">
                             {message}
                         </p>
                     </div>
                 </div>
 
-                <div className="bg-gray-50 px-6 py-4 flex flex-row-reverse gap-3">
-                    <button
-                        type="button"
-                        onClick={onConfirm}
-                        className={`
-              inline-flex justify-center rounded-md px-4 py-2 text-sm font-bold text-white shadow-sm transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2
-              ${variant === 'danger'
-                                ? 'bg-red-600 hover:bg-red-500 focus-visible:outline-red-600'
-                                : 'bg-indigo-600 hover:bg-indigo-500 focus-visible:outline-indigo-600'
-                            }
-            `}
-                    >
-                        {confirmLabel}
-                    </button>
-                    <button
-                        type="button"
-                        onClick={onCancel}
-                        className="inline-flex justify-center rounded-md bg-white px-4 py-2 text-sm font-bold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 transition-all"
-                    >
-                        {cancelLabel}
-                    </button>
-                </div>
+                {children && (
+                    <div className="px-8 pb-8">
+                        {children}
+                    </div>
+                )}
+
+                {showFooter && (
+                    <div className="bg-neutral-50 px-8 py-5 flex flex-row-reverse gap-4 border-t border-neutral-200">
+                        <button
+                            type="button"
+                            onClick={onConfirm}
+                            className={`
+                px-6 py-2.5 text-[11px] font-bold text-white rounded uppercase tracking-widest shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-offset-2
+                ${variant === 'danger'
+                                    ? 'bg-error-600 hover:bg-error-700 focus:ring-error-500/20'
+                                    : variant === 'accent'
+                                        ? 'bg-accent-600 hover:bg-accent-700 focus:ring-accent-500/20'
+                                        : 'bg-primary-700 hover:bg-primary-900 focus:ring-primary-500/20'
+                                }
+              `}
+                        >
+                            {confirmLabel}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={onCancel}
+                            className="px-6 py-2.5 text-[11px] font-bold text-neutral-600 border border-neutral-200 rounded uppercase tracking-widest hover:bg-white hover:border-neutral-300 transition-all focus:outline-none"
+                        >
+                            {cancelLabel}
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     );

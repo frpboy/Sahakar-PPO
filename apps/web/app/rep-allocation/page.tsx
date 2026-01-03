@@ -8,7 +8,7 @@ import { ConfirmModal } from '../../components/ConfirmModal';
 import { StatusBadge } from '../../components/StatusBadge';
 import { useToast } from '../../components/Toast';
 import { useUserRole } from '../../context/UserRoleContext';
-import { UserCircle, Edit, Undo, Info } from 'lucide-react';
+import { UserCircle, Edit, Undo, Info, CheckCircle2, XCircle } from 'lucide-react';
 import { ColumnDef } from '@tanstack/react-table';
 
 // Types
@@ -31,19 +31,21 @@ type RepItem = {
 };
 
 export default function RepAllocationPage() {
+    const { currentUser, can } = useUserRole();
     const queryClient = useQueryClient();
     const { showToast } = useToast();
-    const { can } = useUserRole();
 
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editFormData, setEditFormData] = useState<any>({});
     const [returnId, setReturnId] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
 
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+
     const { data: items, isLoading } = useQuery({
         queryKey: ['rep-items'],
         queryFn: async () => {
-            const res = await fetch('http://localhost:8080/rep-items');
+            const res = await fetch(`${apiUrl}/rep-items`);
             if (!res.ok) throw new Error('Failed to fetch');
             return res.json();
         },
@@ -51,7 +53,7 @@ export default function RepAllocationPage() {
 
     const updateMutation = useMutation({
         mutationFn: async (data: { id: string; payload: any }) => {
-            const res = await fetch(`http://localhost:8080/rep-items/${data.id}`, {
+            const res = await fetch(`${apiUrl}/rep-items/${data.id}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data.payload),
@@ -69,10 +71,10 @@ export default function RepAllocationPage() {
 
     const returnToPendingMutation = useMutation({
         mutationFn: async (id: string) => {
-            const res = await fetch(`http://localhost:8080/rep-items/${id}/return`, {
+            const res = await fetch(`${apiUrl}/rep-items/${id}/return`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userEmail: 'admin@sahakar.com' }),
+                body: JSON.stringify({ userEmail: currentUser?.email || 'unknown@sahakar.com' }),
             });
             if (!res.ok) throw new Error('Return failed');
             return res.json();
@@ -123,8 +125,8 @@ export default function RepAllocationPage() {
                 const item = row.original;
                 return (
                     <div className="flex flex-col">
-                        <span className="font-bold text-gray-900 text-[10px] uppercase">{item.pendingItem.orderRequest.customerId}</span>
-                        <span className="text-[9px] text-gray-400 font-bold font-mono tracking-tighter">{item.pendingItem.orderRequest.orderId}</span>
+                        <span className="font-bold text-primary-900 text-[11px] uppercase tracking-tight">{item.pendingItem.orderRequest.customerId}</span>
+                        <span className="text-[10px] text-neutral-400 font-bold tracking-widest">{item.pendingItem.orderRequest.orderId}</span>
                     </div>
                 );
             }
@@ -132,7 +134,7 @@ export default function RepAllocationPage() {
         {
             header: 'Req',
             size: 60,
-            cell: ({ row }) => <span className="tabular-nums font-bold text-gray-400">{row.original.pendingItem.orderRequest.reqQty}</span>
+            cell: ({ row }) => <span className="tabular-nums font-bold text-neutral-400">{row.original.pendingItem.orderRequest.reqQty}</span>
         },
         {
             header: 'Buy Qty',
@@ -142,11 +144,11 @@ export default function RepAllocationPage() {
                 return editingId === item.id ? (
                     <input
                         type="number"
-                        className="w-full bg-white border border-indigo-300 rounded px-1 py-0.5 text-xs font-bold tabular-nums"
+                        className="w-full bg-white border border-primary-500 rounded px-1 py-1 text-xs font-bold tabular-nums focus:ring-2 focus:ring-primary-500/20 outline-none"
                         value={editFormData.orderedQty}
                         onChange={(e) => handleInputChange('orderedQty', parseInt(e.target.value))}
                     />
-                ) : <span className="tabular-nums font-bold text-indigo-600">{item.pendingItem.orderedQty}</span>;
+                ) : <span className="tabular-nums font-bold text-primary-700">{item.pendingItem.orderedQty}</span>;
             }
         },
         {
@@ -157,11 +159,11 @@ export default function RepAllocationPage() {
                 return editingId === item.id ? (
                     <input
                         type="number"
-                        className="w-full bg-white border border-indigo-300 rounded px-1 py-0.5 text-xs font-bold tabular-nums"
+                        className="w-full bg-white border border-primary-500 rounded px-1 py-1 text-xs font-bold tabular-nums focus:ring-2 focus:ring-primary-500/20 outline-none"
                         value={editFormData.stockQty}
                         onChange={(e) => handleInputChange('stockQty', parseInt(e.target.value))}
                     />
-                ) : <span className="tabular-nums font-bold text-gray-700">{item.pendingItem.stockQty}</span>;
+                ) : <span className="tabular-nums font-bold text-primary-900">{item.pendingItem.stockQty}</span>;
             }
         },
         {
@@ -170,19 +172,19 @@ export default function RepAllocationPage() {
             cell: ({ row }) => {
                 const item = row.original;
                 return (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3">
                         {editingId === item.id ? (
                             <>
-                                <button onClick={() => handleSave(item.id)} className="p-1 text-green-600 hover:bg-green-50 rounded"><CheckCircle className="w-4 h-4" /></button>
-                                <button onClick={() => setEditingId(null)} className="p-1 text-red-600 hover:bg-red-50 rounded"><Cancel className="w-4 h-4" /></button>
+                                <button onClick={() => handleSave(item.id)} className="p-1 text-accent-600 hover:bg-accent-100 rounded transition-colors"><CheckCircle2 size={18} /></button>
+                                <button onClick={() => setEditingId(null)} className="p-1 text-error-600 hover:bg-error-100 rounded transition-colors"><XCircle size={18} /></button>
                             </>
                         ) : (
                             <>
                                 {can('edit_rep') && (
-                                    <button onClick={() => handleEditClick(item)} className="p-1 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded" title="Edit Allocation"><Edit className="w-4 h-4" /></button>
+                                    <button onClick={() => handleEditClick(item)} className="text-neutral-400 hover:text-primary-700 transition-colors" title="Edit Allocation"><Edit size={18} /></button>
                                 )}
                                 {can('return_to_pending') && (
-                                    <button onClick={() => setReturnId(item.id)} className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded" title="Return to Pending"><Undo className="w-4 h-4" /></button>
+                                    <button onClick={() => setReturnId(item.id)} className="text-neutral-400 hover:text-error-600 transition-colors" title="Return to Pending"><Undo size={18} /></button>
                                 )}
                             </>
                         )}
@@ -193,13 +195,16 @@ export default function RepAllocationPage() {
     ], [editingId, editFormData, can]);
 
     return (
-        <div className="flex flex-col h-full bg-[var(--background)]">
-            <header className="bg-white border-b border-[var(--border)] px-8 py-4 sticky top-0 z-10">
+        <div className="flex flex-col h-full bg-neutral-50 font-sans antialiased">
+            <header className="bg-white border-b border-neutral-200 px-8 py-4 sticky top-0 z-10 shadow-sm">
                 <div className="flex items-center justify-between">
-                    <h1 className="text-lg font-bold text-gray-900 tracking-tight flex items-center gap-2 uppercase">
-                        <UserCircle className="w-5 h-5 text-indigo-600" />
-                        Representation Allocation
-                    </h1>
+                    <div>
+                        <h1 className="text-xl font-bold text-primary-900 tracking-tight flex items-center gap-3 uppercase">
+                            <UserCircle size={24} className="text-primary-700" />
+                            Representation Allocation
+                        </h1>
+                        <p className="text-[10px] text-neutral-400 font-bold mt-1 uppercase tracking-widest leading-none">Final representative validation & Stock assignment</p>
+                    </div>
                     <div className="flex items-center gap-4">
                         <FilterBar
                             filters={[]}
@@ -213,22 +218,22 @@ export default function RepAllocationPage() {
 
             <main className="flex-1 p-8 space-y-8 overflow-auto">
                 {Object.entries(groupedItems).map(([productName, groupItems]: [string, any[]]) => (
-                    <div key={productName} className="bg-white rounded-lg border border-[var(--border)] overflow-hidden shadow-sm">
-                        <div className="bg-gray-50/50 px-6 py-3 border-b border-[var(--border)] flex justify-between items-center">
+                    <div key={productName} className="bg-white erp-card overflow-hidden shadow-sm border-neutral-200">
+                        <div className="bg-neutral-50 px-6 py-4 border-b border-neutral-200 flex justify-between items-center">
                             <div className="flex items-center gap-3">
-                                <h2 className="text-[11px] font-bold text-indigo-900 uppercase tracking-widest leading-none">
+                                <h2 className="text-[11px] font-bold text-primary-900 uppercase tracking-widest leading-none">
                                     {productName}
                                 </h2>
                                 <StatusBadge status="REP_ALLOCATION" className="scale-90 origin-left" />
                             </div>
-                            <div className="flex items-center gap-6">
+                            <div className="flex items-center gap-8">
                                 <div className="text-right">
-                                    <p className="text-[9px] font-bold text-gray-400 uppercase tracking-tighter">Total Required</p>
-                                    <p className="text-sm font-bold tabular-nums text-gray-900">{groupItems.reduce((acc, i) => acc + i.pendingItem.orderRequest.reqQty, 0)}</p>
+                                    <p className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">Total Required</p>
+                                    <p className="text-sm font-bold tabular-nums text-primary-900">{groupItems.reduce((acc, i) => acc + i.pendingItem.orderRequest.reqQty, 0)}</p>
                                 </div>
-                                <div className="text-right border-l border-gray-200 pl-6">
-                                    <p className="text-[9px] font-bold text-gray-400 uppercase tracking-tighter">Allocated</p>
-                                    <p className="text-sm font-bold tabular-nums text-green-600">{groupItems.reduce((acc, i) => acc + (i.pendingItem.orderedQty || 0), 0)}</p>
+                                <div className="text-right border-l border-neutral-200 pl-8">
+                                    <p className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">Allocated</p>
+                                    <p className="text-sm font-bold tabular-nums text-accent-600">{groupItems.reduce((acc, i) => acc + (i.pendingItem.orderedQty || 0), 0)}</p>
                                 </div>
                             </div>
                         </div>
@@ -241,11 +246,11 @@ export default function RepAllocationPage() {
                 ))}
 
                 {Object.keys(groupedItems).length === 0 && !isLoading && (
-                    <div className="bg-white rounded-lg border border-[var(--border)] p-20 text-center shadow-sm">
+                    <div className="bg-white erp-card p-20 text-center shadow-sm">
                         <div className="max-w-xs mx-auto">
-                            <Info className="w-12 h-12 text-gray-200 mx-auto mb-4" />
-                            <h3 className="text-sm font-bold text-gray-900 uppercase">No Allocations Found</h3>
-                            <p className="text-xs text-gray-500 mt-1 font-medium italic">Adjust filters or check pending orders to process new items.</p>
+                            <Info size={48} className="text-neutral-200 mx-auto mb-4" />
+                            <h3 className="text-sm font-bold text-primary-900 uppercase tracking-wider">No Allocations Found</h3>
+                            <p className="text-[10px] text-neutral-400 mt-2 font-bold uppercase tracking-widest leading-relaxed">Adjust filters or check pending orders to process new items.</p>
                         </div>
                     </div>
                 )}
@@ -263,7 +268,3 @@ export default function RepAllocationPage() {
         </div>
     );
 }
-
-// Helpers
-function CheckCircle(props: any) { return <svg {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg> }
-function Cancel(props: any) { return <svg {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg> }
