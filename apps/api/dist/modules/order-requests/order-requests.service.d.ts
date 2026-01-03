@@ -1,0 +1,13 @@
+import { PrismaService } from '../../prisma.service';
+export declare class OrderRequestsService {
+    private prisma;
+    private readonly logger;
+    constructor(prisma: PrismaService);
+    importOrderFile(file: Express.Multer.File, userEmail: string): Promise<{
+        total: number;
+        imported: number;
+        skipped: number;
+        errors: any[];
+    }>;
+    private processRow;
+}

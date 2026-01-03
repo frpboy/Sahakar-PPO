@@ -1,0 +1,189 @@
+// packages/database/schema.prisma
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  PURCHASE
+  BILLING_HEAD
+  BILLING
+}
+
+enum OrderStage {
+  RAW_INGESTED
+  PENDING
+  REP_ALLOCATION
+  SLIP_GENERATED
+  EXECUTED
+}
+
+enum ItemStatus {
+  PENDING
+  BILLED
+  NOT_BILLED
+  PARTIALLY_BILLED
+  PRODUCT_CHANGED
+  SUPPLIER_ITEM_DAMAGED
+  SUPPLIER_ITEM_MISSING
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  role      Role
+  name      String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+model OrderRequest {
+  id                String      @id @default(uuid())
+  acceptDatetime    DateTime    @map("accept_datetime")
+  customerId        String      @map("customer_id")
+  orderId           String      @map("order_id")
+  productId         String      @map("product_id")
+  productName       String      @map("product_name")
+  packing           String?
+  subcategory       String?
+  primarySupplier   String?     @map("primary_supplier")
+  secondarySupplier String?     @map("secondary_supplier")
+  rep               String?
+  mobile            String?
+  mrp               Decimal?    @db.Decimal(10, 2)
+  reqQty            Int         @map("req_qty")
+  stage             OrderStage  @default(RAW_INGESTED)
+  hash              String      @unique
+  createdBy         String      @map("created_by")
+  createdAt         DateTime    @default(now()) @map("created_at")
+
+  pendingItems      PendingItem[]
+
+  @@unique([customerId, orderId, productId]) // Composite key inference from requirements
+  @@map("order_requests")
+}
+
+model PendingItem {
+  id              String   @id @default(uuid())
+  orderRequestId  String   @map("order_request_id")
+  orderRequest    OrderRequest @relation(fields: [orderRequestId], references: [id])
+  
+  orderedQty      Int?     @map("ordered_qty")
+  stockQty        Int?     @map("stock_qty")
+  offerQty        Int?     @map("offer_qty")
+  notes           String?
+  itemNameChange  String?  @map("item_name_change")
+  
+  orderedSupplier String?  @map("ordered_supplier")
+  decidedSupplier String?  @map("decided_supplier")
+  
+  moveToRep       Boolean  @default(false) @map("move_to_rep")
+  acceptDate      DateTime? @map("accept_date") // Can be derived, but requirements say specific fields
+  
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  repItems        RepItem[]
+
+  @@map("pending_items")
+}
+
+model RepItem {
+  id            String   @id @default(uuid())
+  pendingItemId String   @map("pending_item_id")
+  pendingItem   PendingItem @relation(fields: [pendingItemId], references: [id])
+  
+  orderStatus   String?  @map("order_status") // e.g. "Allocated"
+  rep           String?
+  mobile        String?
+  
+  movedBy       String   @map("moved_by")
+  movedAt       DateTime @default(now()) @map("moved_at")
+
+  @@map("rep_items")
+}
+
+model OrderSlip {
+  id        String   @id @default(uuid())
+  supplier  String
+  slipDate  DateTime @map("slip_date")
+  createdBy String   @map("created_by")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  items     OrderSlipItem[]
+
+  @@map("order_slips")
+}
+
+model OrderSlipItem {
+  id          String   @id @default(uuid())
+  orderSlipId String   @map("order_slip_id")
+  orderSlip   OrderSlip @relation(fields: [orderSlipId], references: [id])
+  
+  customerId  String   @map("customer_id")
+  orderId     String   @map("order_id")
+  itemName    String   @map("item_name")
+  qty         Int
+  remarks     String?
+  
+  status      ItemStatus @default(PENDING)
+  
+  qtyReceived Int      @default(0) @map("qty_received")
+  qtyDamaged  Int      @default(0) @map("qty_damaged")
+  qtyPending  Int      @default(0) @map("qty_pending")
+  
+  invoiceId   String?  @map("invoice_id")
+  newItemName String?  @map("new_item_name")
+  notes       String?
+  
+  updatedBy   String?  @map("updated_by")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("order_slip_items")
+}
+
+model StatusEvent {
+  id           String   @id @default(uuid())
+  eventDatetime DateTime @default(now()) @map("event_datetime")
+  supplier     String
+  customerId   String   @map("customer_id")
+  orderId      String   @map("order_id")
+  
+  itemOld      String?  @map("item_old")
+  itemNew      String?  @map("item_new")
+  
+  qty          Int?
+  status       ItemStatus?
+  
+  receivedQty  Int?     @map("received_qty")
+  badQty       Int?     @map("bad_qty")
+  pendingQty   Int?     @map("pending_qty")
+  
+  invoiceId    String?  @map("invoice_id")
+  notes        String?
+  
+  staff        String
+
+  @@map("status_events")
+}
+
+model AuditEvent {
+  id          String   @id @default(uuid())
+  entityType  String   @map("entity_type")
+  entityId    String   @map("entity_id")
+  action      String
+  beforeState Json?    @map("before_state")
+  afterState  Json?    @map("after_state")
+  actor       String
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("audit_events")
+}
