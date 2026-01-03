@@ -264,36 +264,38 @@ export default function PendingOrdersPage() {
     ], [editingId, editFormData]);
 
     return (
-        <div className="flex flex-col h-full bg-neutral-50">
-            <header className="bg-white border-b border-neutral-200 px-8 py-4 sticky top-0 z-10 shadow-sm">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-xl font-bold text-primary-900 tracking-tight flex items-center gap-3 uppercase">
-                            <ClipboardList size={24} className="text-primary-700" />
-                            Pending PO Ledger
-                        </h1>
-                        <p className="text-[10px] text-neutral-400 font-bold mt-1 uppercase tracking-widest leading-none">Awaiting supplier confirmation & inventory mapping</p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                        <FilterBar
-                            filters={[
-                                { key: 'supplier', label: 'Supplier', options: uniqueSuppliers }
-                            ]}
-                            onFilterChange={(key, val) => setFilters(prev => ({ ...prev, [key]: val }))}
-                            onSearch={setSearchTerm}
-                            onReset={() => { setFilters({}); setSearchTerm(''); }}
-                        />
-                    </div>
+        <div className="flex flex-col h-full bg-transparent font-sans">
+            <header className="mb-10 flex items-center justify-between">
+                <div>
+                    <h1 className="text-3xl font-extrabold text-neutral-900 tracking-tight flex items-center gap-4">
+                        <div className="w-12 h-12 bg-white rounded-2xl shadow-soft flex items-center justify-center border border-neutral-200/60">
+                            <ClipboardList size={28} className="text-brand-600" />
+                        </div>
+                        Pending PO Ledger
+                    </h1>
+                    <p className="text-sm text-neutral-500 font-medium mt-2">Awaiting supplier confirmation and inventory mapping for incoming orders.</p>
+                </div>
+                <div className="flex items-center gap-4">
+                    <FilterBar
+                        filters={[
+                            { key: 'supplier', label: 'Supplier', options: uniqueSuppliers }
+                        ]}
+                        onFilterChange={(key, val) => setFilters(prev => ({ ...prev, [key]: val }))}
+                        onSearch={setSearchTerm}
+                        onReset={() => { setFilters({}); setSearchTerm(''); }}
+                    />
                 </div>
             </header>
 
-            <main className="flex-1 p-6 relative">
-                <DataGrid
-                    data={filteredItems}
-                    columns={columns}
-                    isLoading={isLoading}
-                    frozenColumns={1}
-                />
+            <main className="space-y-6">
+                <div className="saas-card bg-white p-2">
+                    <DataGrid
+                        data={filteredItems}
+                        columns={columns}
+                        isLoading={isLoading}
+                        onRowClick={(item) => !editingId && handleEditClick(item)}
+                    />
+                </div>
             </main>
 
             <ConfirmModal
@@ -305,6 +307,74 @@ export default function PendingOrdersPage() {
                 confirmLabel="Confirm Move"
                 variant="primary"
             />
+
+            {/* Edit Drawer Overlay Placeholder (Actually a modal/overlay in SaaS) */}
+            {editingId && (
+                <div className="fixed inset-0 bg-neutral-900/40 backdrop-blur-[2px] z-[60] flex items-center justify-center animate-in fade-in duration-200">
+                    <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl p-8 animate-in slide-in-from-bottom-4 duration-300">
+                        <h3 className="text-xl font-bold text-neutral-900 mb-6 flex items-center gap-2">
+                            <Edit size={20} className="text-brand-600" />
+                            Update Allocation
+                        </h3>
+
+                        <div className="space-y-5">
+                            <div>
+                                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block mb-1.5">Ordered Quantity</label>
+                                <input
+                                    type="number"
+                                    className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 text-sm font-bold tabular-nums focus:ring-2 focus:ring-brand-500/20 outline-none transition-all"
+                                    value={editFormData.orderedQty}
+                                    onChange={(e) => handleInputChange('orderedQty', parseInt(e.target.value))}
+                                />
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block mb-1.5">Stock Available</label>
+                                <input
+                                    type="number"
+                                    className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 text-sm font-bold tabular-nums focus:ring-2 focus:ring-brand-500/20 outline-none transition-all"
+                                    value={editFormData.stockQty}
+                                    onChange={(e) => handleInputChange('stockQty', parseInt(e.target.value))}
+                                />
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block mb-1.5">Special Offer Qty</label>
+                                <input
+                                    type="number"
+                                    className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 text-sm font-bold tabular-nums focus:ring-2 focus:ring-brand-500/20 outline-none transition-all"
+                                    value={editFormData.offerQty}
+                                    onChange={(e) => handleInputChange('offerQty', parseInt(e.target.value))}
+                                />
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block mb-1.5">Allocator Notes</label>
+                                <textarea
+                                    className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-brand-500/20 outline-none transition-all"
+                                    rows={3}
+                                    value={editFormData.notes}
+                                    onChange={(e) => handleInputChange('notes', e.target.value)}
+                                    placeholder="Add any internal remarks here..."
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex gap-4 mt-8">
+                            <button
+                                onClick={() => handleSave(editingId)}
+                                className="flex-1 btn-brand shadow-lg shadow-brand-500/20"
+                            >
+                                {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
+                            </button>
+                            <button
+                                onClick={() => setEditingId(null)}
+                                className="flex-1 px-4 py-3 rounded-xl border border-neutral-200 text-sm font-bold text-neutral-500 hover:bg-neutral-50 smooth-transition"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
+

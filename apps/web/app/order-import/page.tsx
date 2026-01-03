@@ -1,6 +1,6 @@
 'use client';
 import { useState, useMemo } from 'react';
-import { Upload, CheckCircle, AlertTriangle, Info } from 'lucide-react';
+import { Upload, CheckCircle, AlertTriangle, Info, FileText, LayoutDashboard, Archive, Package, BarChart3, ListChecks } from 'lucide-react';
 import { DataGrid } from '../../components/DataGrid';
 import { ColumnDef } from '@tanstack/react-table';
 import { useUserRole } from '../../context/UserRoleContext';
@@ -63,104 +63,125 @@ export default function OrderImportPage() {
     ], []);
 
     return (
-        <div className="flex flex-col h-full bg-neutral-50">
-            {/* Header Area */}
-            <header className="bg-white border-b border-neutral-200 px-8 py-6 sticky top-0 z-10 shadow-sm">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-xl font-bold text-primary-900 tracking-tight flex items-center gap-3 uppercase">
-                            <Upload size={24} className="text-primary-700" />
-                            PPO Ingestion
-                        </h1>
-                        <p className="text-[10px] text-neutral-400 font-bold mt-1 uppercase tracking-widest leading-none">
-                            High-volume pharmaceutical purchase order validation
-                        </p>
-                    </div>
+        <div className="flex flex-col h-full bg-transparent font-sans">
+            <header className="mb-10 flex items-center justify-between">
+                <div>
+                    <h1 className="text-3xl font-extrabold text-neutral-900 tracking-tight flex items-center gap-4">
+                        <div className="w-12 h-12 bg-white rounded-2xl shadow-soft flex items-center justify-center border border-neutral-200/60">
+                            <Upload size={28} className="text-brand-600" />
+                        </div>
+                        PPO Input & Ingestion
+                    </h1>
+                    <p className="text-sm text-neutral-500 font-medium mt-2">Bulk import purchase orders and convert them into system-tracked allocations.</p>
                 </div>
             </header>
 
-            <main className="flex-1 p-8 overflow-auto space-y-8">
-                <div className="bg-white erp-card p-8 max-w-2xl mx-auto shadow-sm">
-                    <h2 className="text-[11px] font-bold uppercase tracking-widest text-primary-900 mb-6 flex items-center gap-2">
-                        <Upload size={16} className="text-primary-700" />
-                        File Ingestion Core
-                    </h2>
+            <main className="space-y-10">
+                <section className="saas-card p-10 bg-white">
+                    <div className="max-w-2xl mx-auto text-center">
+                        <div className="w-20 h-20 bg-brand-50 rounded-3xl flex items-center justify-center mx-auto mb-6">
+                            <FileText size={40} className="text-brand-600" />
+                        </div>
+                        <h2 className="text-xl font-bold text-neutral-900 mb-2">Upload Purchase Orders</h2>
+                        <p className="text-sm text-neutral-500 mb-8">Select one or multiple PPO files to begin the ingestion process.</p>
 
-                    <div className="space-y-6">
-                        <div className="relative border-2 border-dashed border-neutral-200 rounded-lg p-10 transition-all hover:border-primary-500 bg-neutral-50/50 group">
+                        <div className="flex items-center justify-center">
                             <input
                                 type="file"
                                 accept=".xlsx"
                                 onChange={handleFileChange}
-                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                className="hidden"
+                                id="file-upload"
                             />
-                            <div className="text-center">
-                                <Upload className="mx-auto h-12 w-12 text-neutral-300 group-hover:text-primary-700 transition-colors" />
-                                <div className="mt-4 flex text-sm text-neutral-600 justify-center">
-                                    <span className="relative rounded-md font-bold text-primary-700">
-                                        {file ? file.name : 'Select PO SpreadSheet'}
-                                    </span>
+                            <label
+                                htmlFor="file-upload"
+                                className="btn-brand cursor-pointer flex items-center gap-3 shadow-xl shadow-brand-500/20"
+                            >
+                                <LayoutDashboard size={20} />
+                                Select PPO SpreadSheet
+                            </label>
+                        </div>
+                        {file && (
+                            <div className="mt-6 flex flex-col items-center gap-4 animate-in fade-in zoom-in-95 duration-200">
+                                <div className="px-4 py-2 bg-neutral-50 border border-neutral-200 rounded-lg text-sm font-semibold text-neutral-700 flex items-center gap-2">
+                                    <FileText size={16} className="text-brand-600" />
+                                    {file.name}
                                 </div>
-                                <p className="text-[10px] text-neutral-400 mt-2 font-bold uppercase tracking-wide">XLSX Maximum 10MB</p>
+                                <button
+                                    onClick={handleUpload}
+                                    disabled={uploading}
+                                    className="btn-brand w-full max-w-xs"
+                                >
+                                    {uploading ? 'Processing Pipeline...' : 'Execute Ingestion'}
+                                </button>
                             </div>
-                        </div>
-
-                        <button
-                            onClick={handleUpload}
-                            disabled={!file || uploading}
-                            className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-bold text-white bg-primary-700 hover:bg-primary-900 transition-all uppercase tracking-widest disabled:opacity-50"
-                        >
-                            {uploading ? 'Validating Ingestion...' : 'Execute Import Pipeline'}
-                        </button>
+                        )}
                     </div>
-                </div>
+                </section>
 
-                {result && (
-                    <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500 max-w-[1400px] mx-auto">
-                        {/* Summary Cards */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {result && !result.error && (
+                    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                             <SummaryCard
-                                label="Total Rows"
-                                value={result.total || 0}
-                                icon={<Info size={20} />}
-                                variant="neutral"
+                                label="Total Orders"
+                                value={result.totalOrders}
+                                icon={<Archive size={20} />}
+                                color="brand"
                             />
                             <SummaryCard
-                                label="Imported"
-                                value={result.imported || 0}
-                                icon={<CheckCircle size={20} />}
-                                variant="accent"
+                                label="Total Items"
+                                value={result.totalItems}
+                                icon={<Package size={20} />}
+                                color="brand"
                             />
                             <SummaryCard
-                                label="Duplicates"
-                                value={result.skipped || 0}
-                                icon={<AlertTriangle size={20} />}
-                                variant="warning"
+                                label="Total Quantity"
+                                value={result.totalQty}
+                                icon={<BarChart3 size={20} />}
+                                color="success"
+                            />
+                            <SummaryCard
+                                label="Suppliers Found"
+                                value={result.suppliers?.length}
+                                icon={<ListChecks size={20} />}
+                                color="brand"
                             />
                         </div>
+
+                        <div className="flex items-center gap-3 px-2">
+                            <div className="w-8 h-8 bg-brand-50 rounded-lg flex items-center justify-center text-brand-600">
+                                <ListChecks size={18} />
+                            </div>
+                            <h3 className="text-lg font-bold text-neutral-900">Processed Items Preview</h3>
+                        </div>
+
+                        <DataGrid
+                            data={result.preview || []}
+                            columns={columns}
+                        />
 
                         {/* Error Log */}
                         {result.errors && result.errors.length > 0 && (
-                            <div className="bg-white erp-card shadow-sm border-error-100">
-                                <div className="bg-error-100/30 px-6 py-4 border-b border-error-100">
-                                    <h3 className="text-[11px] font-bold text-error-600 uppercase tracking-widest flex items-center gap-2">
+                            <div className="saas-card overflow-hidden border-danger-200/50">
+                                <div className="bg-danger-50 px-6 py-4 border-b border-danger-200/50">
+                                    <h3 className="text-sm font-bold text-danger-700 flex items-center gap-2 uppercase tracking-wide">
                                         <AlertTriangle size={18} />
-                                        Ingestion Error Report
+                                        Validation Error Report
                                     </h3>
                                 </div>
                                 <div className="max-h-80 overflow-auto">
                                     <table className="w-full text-sm">
-                                        <thead className="bg-neutral-50 text-[10px] text-neutral-400 font-bold uppercase sticky top-0 shadow-sm">
+                                        <thead className="bg-neutral-50 text-[10px] text-neutral-400 font-bold uppercase sticky top-0 shadow-sm border-b border-neutral-200/60">
                                             <tr>
                                                 <th className="px-6 py-3 text-left">Excel Row</th>
                                                 <th className="px-6 py-3 text-left">Validation Issue</th>
                                             </tr>
                                         </thead>
-                                        <tbody className="divide-y divide-neutral-100">
+                                        <tbody className="divide-y divide-neutral-100/60">
                                             {result.errors.map((err: any, i: number) => (
-                                                <tr key={i} className="hover:bg-error-100/10 transition-colors">
-                                                    <td className="px-6 py-3 tabular-nums font-bold text-error-600">{err.row}</td>
-                                                    <td className="px-6 py-3 text-neutral-700 text-xs">{err.error}</td>
+                                                <tr key={i} className="hover:bg-danger-50 transition-colors">
+                                                    <td className="px-6 py-3 tabular-nums font-bold text-danger-600">{err.row}</td>
+                                                    <td className="px-6 py-3 text-neutral-600 text-xs font-medium">{err.error}</td>
                                                 </tr>
                                             ))}
                                         </tbody>
@@ -175,23 +196,18 @@ export default function OrderImportPage() {
     );
 }
 
-function SummaryCard({ label, value, icon, variant }: { label: string, value: number, icon: React.ReactNode, variant: 'neutral' | 'accent' | 'warning' }) {
-    const colors = {
-        neutral: 'text-primary-700 border-neutral-200 bg-white',
-        accent: 'text-accent-600 border-accent-100 bg-accent-100/20',
-        warning: 'text-warning-600 border-warning-100 bg-warning-100/20',
-    }[variant];
-
+function SummaryCard({ label, value, icon, color }: { label: string, value: any, icon: React.ReactNode, color: 'brand' | 'success' }) {
+    const isBrand = color === 'brand';
     return (
-        <div className={`p-6 rounded-md border shadow-sm ${colors} flex items-center justify-between`}>
-            <div className="flex items-center gap-4">
-                <div className="p-3 rounded-md bg-white border border-neutral-100 shadow-sm">
+        <div className={`p-6 rounded-2xl border border-neutral-200/60 shadow-soft smooth-transition hover:shadow-hover ${isBrand ? 'bg-gradient-to-br from-brand-600 to-brand-700 text-white' : 'bg-white text-neutral-900'}`}>
+            <div className="flex items-center justify-between mb-4">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isBrand ? 'bg-white/20' : 'bg-success-50 text-success-600'}`}>
                     {icon}
                 </div>
-                <div>
-                    <p className="text-[10px] font-bold uppercase tracking-widest opacity-70">{label}</p>
-                    <p className="text-3xl font-bold tabular-nums tracking-tighter">{value}</p>
-                </div>
+            </div>
+            <div className="flex flex-col gap-1">
+                <div className={`text-[10px] font-bold uppercase tracking-widest ${isBrand ? 'text-brand-100' : 'text-neutral-400'}`}>{label}</div>
+                <div className="text-3xl font-extrabold tracking-tight tabular-nums">{value || 0}</div>
             </div>
         </div>
     );

@@ -102,44 +102,49 @@ export default function OrderSlipsPage() {
     ], []);
 
     return (
-        <div className="flex flex-col h-full bg-neutral-50">
-            <header className="bg-white border-b border-neutral-200 px-8 py-5 sticky top-0 z-10 shadow-sm">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-xl font-bold text-primary-900 tracking-tight flex items-center gap-3 uppercase">
-                            <Printer size={24} className="text-primary-700" />
-                            Order Slips Ledger
-                        </h1>
-                        <p className="text-[10px] text-neutral-400 font-bold mt-1 uppercase tracking-widest leading-none">Billing consolidation & Dispatch readiness</p>
-                    </div>
-
-                    {can('generate_slips') && (
-                        <button
-                            onClick={() => setIsGenerateModalOpen(true)}
-                            className="bg-primary-700 text-white px-6 py-2.5 rounded hover:bg-primary-900 disabled:opacity-50 text-[11px] font-bold shadow-sm transition-all flex items-center gap-2 uppercase tracking-widest"
-                            disabled={generateMutation.isPending}
-                        >
-                            <Plus size={16} />
-                            {generateMutation.isPending ? 'Generating...' : 'Batch Generate Slips'}
-                        </button>
-                    )}
+        <div className="flex flex-col h-full bg-transparent font-sans">
+            <header className="mb-10 flex items-center justify-between">
+                <div>
+                    <h1 className="text-3xl font-extrabold text-neutral-900 tracking-tight flex items-center gap-4">
+                        <div className="w-12 h-12 bg-white rounded-2xl shadow-soft flex items-center justify-center border border-neutral-200/60">
+                            <Printer size={28} className="text-brand-600" />
+                        </div>
+                        Order Slips Ledger
+                    </h1>
+                    <p className="text-sm text-neutral-500 font-medium mt-2">Billing consolidation and dispatch readiness for supplier orders.</p>
                 </div>
+
+                {can('generate_slips') && (
+                    <button
+                        onClick={() => setIsGenerateModalOpen(true)}
+                        className="btn-brand shadow-lg shadow-brand-500/20"
+                        disabled={generateMutation.isPending}
+                    >
+                        <Plus size={18} />
+                        {generateMutation.isPending ? 'Processing...' : 'Batch Generate Slips'}
+                    </button>
+                )}
             </header>
 
-            <main className="flex-1 p-8 overflow-auto">
-                <div className="bg-white erp-card shadow-sm border-neutral-200 overflow-hidden">
+            <main className="space-y-6">
+                <div className="saas-card bg-white p-2">
                     <DataGrid
                         data={slips || []}
                         columns={columns}
                         isLoading={isLoading}
+                        onRowClick={(row) => router.push(`/order-slips/${row.id}`)}
                     />
                 </div>
 
                 {!isLoading && slips?.length === 0 && (
-                    <div className="mt-8 bg-white erp-card border-dashed p-20 text-center shadow-sm">
-                        <Info size={48} className="text-neutral-200 mx-auto mb-4" />
-                        <h3 className="text-sm font-bold text-primary-900 uppercase tracking-wider">No Active Slips</h3>
-                        <p className="text-[10px] text-neutral-400 mt-2 font-bold uppercase tracking-widest leading-relaxed">Generate slips from the REP Allocation ledger to see them here.</p>
+                    <div className="saas-card bg-white p-20 text-center">
+                        <div className="max-w-xs mx-auto">
+                            <div className="w-16 h-16 bg-neutral-100/50 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                                <Info size={32} className="text-neutral-300" />
+                            </div>
+                            <h3 className="text-base font-bold text-neutral-900">No Active Slips Found</h3>
+                            <p className="text-xs text-neutral-400 mt-2 font-medium">Generate slips from the REP Allocation ledger to begin processing.</p>
+                        </div>
                     </div>
                 )}
             </main>
@@ -156,4 +161,5 @@ export default function OrderSlipsPage() {
         </div>
     );
 }
+
 

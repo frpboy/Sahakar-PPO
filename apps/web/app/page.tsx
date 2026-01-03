@@ -51,7 +51,7 @@ export default function DashboardPage() {
             header: 'Timestamp',
             size: 140,
             cell: ({ row }) => (
-                <span className="tabular-nums text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
+                <span className="tabular-nums text-[10px] font-bold text-neutral-400 uppercase tracking-tighter">
                     {new Date(row.original.eventDatetime).toLocaleString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                 </span>
             )
@@ -61,8 +61,8 @@ export default function DashboardPage() {
             size: 200,
             cell: ({ row }) => (
                 <div className="flex flex-col">
-                    <span className="text-[10px] font-bold text-gray-900 uppercase truncate max-w-[180px]">{row.original.itemNew}</span>
-                    <span className="text-[9px] text-gray-400 font-bold uppercase tracking-tighter">{row.original.supplier}</span>
+                    <span className="text-[10px] font-bold text-neutral-900 uppercase truncate max-w-[180px]">{row.original.itemNew}</span>
+                    <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-tighter">{row.original.supplier}</span>
                 </div>
             )
         },
@@ -78,7 +78,7 @@ export default function DashboardPage() {
         {
             header: 'Owner',
             size: 100,
-            cell: ({ row }) => <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-tighter">{row.original.staff?.split('@')[0]}</span>
+            cell: ({ row }) => <span className="text-[10px] font-bold text-brand-600 uppercase tracking-tighter">{row.original.staff?.split('@')[0]}</span>
         }
     ], []);
 
@@ -87,7 +87,7 @@ export default function DashboardPage() {
             header: 'Critical Item',
             size: 200,
             cell: ({ row }) => (
-                <span className="font-bold text-[10px] text-gray-900 uppercase truncate block">{row.original.itemName}</span>
+                <span className="font-bold text-[10px] text-neutral-900 uppercase truncate block">{row.original.itemName}</span>
             )
         },
         {
@@ -98,9 +98,9 @@ export default function DashboardPage() {
                 const isUnder = item.qtyReceived < item.qty;
                 return (
                     <div className="flex items-center gap-1.5 tabular-nums">
-                        <span className="text-[10px] font-bold text-gray-400">{item.qty}</span>
-                        <TrendingUp className="w-3 h-3 text-gray-300" />
-                        <span className={`text-[11px] font-bold ${isUnder ? 'text-red-500' : 'text-green-600'}`}>
+                        <span className="text-[10px] font-bold text-neutral-400">{item.qty}</span>
+                        <TrendingUp className="w-3 h-3 text-neutral-300" />
+                        <span className={`text-[11px] font-bold ${isUnder ? 'text-danger-500' : 'text-success-600'}`}>
                             {item.qtyReceived || 0}
                         </span>
                     </div>

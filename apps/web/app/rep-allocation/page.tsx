@@ -195,45 +195,58 @@ export default function RepAllocationPage() {
     ], [editingId, editFormData, can]);
 
     return (
-        <div className="flex flex-col h-full bg-neutral-50 font-sans antialiased">
-            <header className="bg-white border-b border-neutral-200 px-8 py-4 sticky top-0 z-10 shadow-sm">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-xl font-bold text-primary-900 tracking-tight flex items-center gap-3 uppercase">
-                            <UserCircle size={24} className="text-primary-700" />
-                            Representation Allocation
-                        </h1>
-                        <p className="text-[10px] text-neutral-400 font-bold mt-1 uppercase tracking-widest leading-none">Final representative validation & Stock assignment</p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                        <FilterBar
-                            filters={[]}
-                            onFilterChange={() => { }}
-                            onSearch={setSearchTerm}
-                            onReset={() => setSearchTerm('')}
-                        />
-                    </div>
+        <div className="flex flex-col h-full bg-transparent font-sans">
+            <header className="mb-10 flex items-center justify-between">
+                <div>
+                    <h1 className="text-3xl font-extrabold text-neutral-900 tracking-tight flex items-center gap-4">
+                        <div className="w-12 h-12 bg-white rounded-2xl shadow-soft flex items-center justify-center border border-neutral-200/60">
+                            <UserCircle size={28} className="text-brand-600" />
+                        </div>
+                        Representation Allocation
+                    </h1>
+                    <p className="text-sm text-neutral-500 font-medium mt-2">Final representative validation and stock assignment for fulfillment.</p>
+                </div>
+                <div className="flex items-center gap-4">
+                    <FilterBar
+                        filters={[]}
+                        onFilterChange={() => { }}
+                        onSearch={setSearchTerm}
+                        onReset={() => setSearchTerm('')}
+                    />
                 </div>
             </header>
 
-            <main className="flex-1 p-8 space-y-8 overflow-auto">
+            <main className="space-y-10">
                 {Object.entries(groupedItems).map(([productName, groupItems]: [string, any[]]) => (
-                    <div key={productName} className="bg-white erp-card overflow-hidden shadow-sm border-neutral-200">
-                        <div className="bg-neutral-50 px-6 py-4 border-b border-neutral-200 flex justify-between items-center">
-                            <div className="flex items-center gap-3">
-                                <h2 className="text-[11px] font-bold text-primary-900 uppercase tracking-widest leading-none">
-                                    {productName}
-                                </h2>
-                                <StatusBadge status="REP_ALLOCATION" className="scale-90 origin-left" />
-                            </div>
-                            <div className="flex items-center gap-8">
-                                <div className="text-right">
-                                    <p className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">Total Required</p>
-                                    <p className="text-sm font-bold tabular-nums text-primary-900">{groupItems.reduce((acc, i) => acc + i.pendingItem.orderRequest.reqQty, 0)}</p>
+                    <section key={productName} className="saas-card bg-white overflow-hidden p-2">
+                        <div className="bg-brand-50/50 px-6 py-4 rounded-xl border border-brand-100/50 mb-2 flex justify-between items-center">
+                            <div className="flex items-center gap-4">
+                                <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center text-brand-600 border border-brand-200/30">
+                                    <Info size={20} />
                                 </div>
-                                <div className="text-right border-l border-neutral-200 pl-8">
-                                    <p className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">Allocated</p>
-                                    <p className="text-sm font-bold tabular-nums text-accent-600">{groupItems.reduce((acc, i) => acc + (i.pendingItem.orderedQty || 0), 0)}</p>
+                                <div className="flex flex-col">
+                                    <h2 className="text-base font-bold text-neutral-900 tracking-tight">
+                                        {productName}
+                                    </h2>
+                                    <div className="flex items-center gap-2">
+                                        <StatusBadge status="REP_ALLOCATION" className="scale-75 origin-left" />
+                                        <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest">{groupItems.length} Allocations</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-8 pr-4">
+                                <div className="text-right">
+                                    <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest leading-tight">Total Required</p>
+                                    <p className="text-lg font-extrabold tabular-nums text-neutral-900 tracking-tighter">
+                                        {groupItems.reduce((acc, i) => acc + (i.pendingItem?.orderRequest?.reqQty || 0), 0)}
+                                    </p>
+                                </div>
+                                <div className="h-8 w-px bg-neutral-200/60" />
+                                <div className="text-right">
+                                    <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest leading-tight">Current Allocation</p>
+                                    <p className="text-lg font-extrabold tabular-nums text-brand-600 tracking-tighter">
+                                        {groupItems.reduce((acc, i) => acc + (i.pendingItem?.orderedQty || 0), 0)}
+                                    </p>
                                 </div>
                             </div>
                         </div>
@@ -242,15 +255,17 @@ export default function RepAllocationPage() {
                             data={groupItems}
                             columns={columns}
                         />
-                    </div>
+                    </section>
                 ))}
 
                 {Object.keys(groupedItems).length === 0 && !isLoading && (
-                    <div className="bg-white erp-card p-20 text-center shadow-sm">
+                    <div className="saas-card bg-white p-20 text-center">
                         <div className="max-w-xs mx-auto">
-                            <Info size={48} className="text-neutral-200 mx-auto mb-4" />
-                            <h3 className="text-sm font-bold text-primary-900 uppercase tracking-wider">No Allocations Found</h3>
-                            <p className="text-[10px] text-neutral-400 mt-2 font-bold uppercase tracking-widest leading-relaxed">Adjust filters or check pending orders to process new items.</p>
+                            <div className="w-16 h-16 bg-neutral-50 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                                <Info size={32} className="text-neutral-300" />
+                            </div>
+                            <h3 className="text-base font-bold text-neutral-900">No Allocations Found</h3>
+                            <p className="text-xs text-neutral-400 mt-2 font-medium">Try adjusting your search criteria or check the pending orders queue.</p>
                         </div>
                     </div>
                 )}
@@ -265,6 +280,65 @@ export default function RepAllocationPage() {
                 confirmLabel="Confirm Rollback"
                 variant="danger"
             />
+
+            {/* Edit Modal same as PendingOrders */}
+            {editingId && (
+                <div className="fixed inset-0 bg-neutral-900/40 backdrop-blur-[2px] z-[60] flex items-center justify-center animate-in fade-in duration-200">
+                    <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl p-8 animate-in slide-in-from-bottom-4 duration-300">
+                        <h3 className="text-xl font-bold text-neutral-900 mb-6 flex items-center gap-2">
+                            <Edit size={20} className="text-brand-600" />
+                            Update Allocation
+                        </h3>
+
+                        <div className="space-y-5">
+                            <div>
+                                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block mb-1.5">Consolidated Buy Qty</label>
+                                <input
+                                    type="number"
+                                    className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 text-sm font-bold tabular-nums focus:ring-2 focus:ring-brand-500/20 outline-none transition-all"
+                                    value={editFormData.orderedQty}
+                                    onChange={(e) => handleInputChange('orderedQty', parseInt(e.target.value))}
+                                />
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block mb-1.5">Direct Stock</label>
+                                <input
+                                    type="number"
+                                    className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 text-sm font-bold tabular-nums focus:ring-2 focus:ring-brand-500/20 outline-none transition-all"
+                                    value={editFormData.stockQty}
+                                    onChange={(e) => handleInputChange('stockQty', parseInt(e.target.value))}
+                                />
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block mb-1.5">Allocator Notes</label>
+                                <textarea
+                                    className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-brand-500/20 outline-none transition-all"
+                                    rows={3}
+                                    value={editFormData.notes}
+                                    onChange={(e) => handleInputChange('notes', e.target.value)}
+                                    placeholder="Final remarks for this allocation..."
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex gap-4 mt-8">
+                            <button
+                                onClick={() => handleSave(editingId)}
+                                className="flex-1 btn-brand shadow-lg shadow-brand-500/20"
+                            >
+                                {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
+                            </button>
+                            <button
+                                onClick={() => setEditingId(null)}
+                                className="flex-1 px-4 py-3 rounded-xl border border-neutral-200 text-sm font-bold text-neutral-500 hover:bg-neutral-50 smooth-transition"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
+
