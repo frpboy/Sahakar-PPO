@@ -1,0 +1,386 @@
+🧱 DATABASE PRINCIPLES (LOCKED)
+
+PostgreSQL only
+
+No hard deletes on transactional tables
+
+Append-only logs for audit & status
+
+Row-level versioning for conflict detection
+
+Snapshot values stored where legally required
+
+Foreign keys enforced
+
+Indexes defined upfront
+
+1️⃣ USERS, ROLES & AUTH
+1.1 users
+CREATE TABLE users (
+  id UUID PRIMARY KEY,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  designation VARCHAR(255),
+  role VARCHAR(50) NOT NULL,
+  active BOOLEAN DEFAULT TRUE,
+
+  created_at TIMESTAMP NOT NULL DEFAULT now(),
+  updated_at TIMESTAMP NOT NULL DEFAULT now()
+);
+
+
+Roles:
+SUPER_ADMIN, ADMIN, PROCUREMENT_HEAD, PURCHASE_STAFF, BILLING_HEAD, BILLING_STAFF
+
+2️⃣ MASTER DATA
+2.1 suppliers
+CREATE TABLE suppliers (
+  id UUID PRIMARY KEY,
+  supplier_code VARCHAR(50),
+  supplier_name VARCHAR(255) NOT NULL UNIQUE,
+
+  contact_person VARCHAR(255),
+  mobile VARCHAR(50),
+  email VARCHAR(255),
+  gst_number VARCHAR(50),
+  address TEXT,
+  credit_days INT,
+
+  active BOOLEAN DEFAULT TRUE,
+
+  created_by UUID REFERENCES users(id),
+  created_at TIMESTAMP DEFAULT now(),
+  updated_at TIMESTAMP DEFAULT now()
+);
+
+2.2 products
+CREATE TABLE products (
+  id UUID PRIMARY KEY, -- ERP product ID
+  product_code VARCHAR(100),
+  item_name VARCHAR(255) NOT NULL,
+  packing VARCHAR(100),
+  category VARCHAR(100),
+  subcategory VARCHAR(100),
+  mrp NUMERIC(10,2),
+
+  active BOOLEAN DEFAULT TRUE,
+
+  created_at TIMESTAMP DEFAULT now(),
+  updated_at TIMESTAMP DEFAULT now()
+);
+
+2.3 product_name_changes
+CREATE TABLE product_name_changes (
+  id UUID PRIMARY KEY,
+  product_id UUID REFERENCES products(id),
+  supplier_id UUID REFERENCES suppliers(id),
+
+  old_name VARCHAR(255),
+  new_name VARCHAR(255) NOT NULL,
+
+  reason TEXT,
+  effective_from DATE,
+  effective_to DATE,
+
+  active BOOLEAN DEFAULT TRUE,
+
+  created_by UUID REFERENCES users(id),
+  created_at TIMESTAMP DEFAULT now()
+);
+
+2.4 rep_master
+CREATE TABLE rep_master (
+  id UUID PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  mobile VARCHAR(50),
+  email VARCHAR(255),
+  designation VARCHAR(255),
+
+  active BOOLEAN DEFAULT TRUE,
+
+  created_by UUID REFERENCES users(id),
+  created_at TIMESTAMP DEFAULT now(),
+  updated_at TIMESTAMP DEFAULT now()
+);
+
+3️⃣ PPO INPUT (IMMUTABLE INGESTION)
+3.1 ppo_input_files
+CREATE TABLE ppo_input_files (
+  id UUID PRIMARY KEY,
+  original_filename VARCHAR(255),
+  uploaded_by UUID REFERENCES users(id),
+  uploaded_at TIMESTAMP DEFAULT now(),
+
+  file_hash VARCHAR(64) UNIQUE,
+  total_rows INT,
+  duplicate_rows INT
+);
+
+3.2 order_requests (RAW INPUT ROWS)
+CREATE TABLE order_requests (
+  id UUID PRIMARY KEY,
+  input_file_id UUID REFERENCES ppo_input_files(id),
+
+  accept_date DATE,
+  accept_time TIME,
+
+  customer_id VARCHAR(100),
+  order_id VARCHAR(100),
+
+  product_id UUID REFERENCES products(id),
+  product_name_snapshot VARCHAR(255),
+
+  req_qty INT,
+  mrp NUMERIC(10,2),
+
+  primary_supplier VARCHAR(255),
+  secondary_supplier VARCHAR(255),
+
+  hash VARCHAR(64) UNIQUE,
+
+  created_at TIMESTAMP DEFAULT now()
+);
+
+
+🔒 Never edited. Never deleted.
+
+4️⃣ PPO PENDING (PO STAGE – ALLOCATOR LIVES HERE)
+4.1 po_pending_items
+CREATE TABLE po_pending_items (
+  id UUID PRIMARY KEY,
+  product_id UUID REFERENCES products(id),
+
+  total_req_qty INT NOT NULL,
+
+  ordered_qty INT DEFAULT 0,
+  stock_qty INT DEFAULT 0,
+  offer_qty INT DEFAULT 0,
+
+  allocator_notes TEXT, -- system generated only
+
+  decided_supplier_id UUID REFERENCES suppliers(id),
+
+  done BOOLEAN DEFAULT FALSE,
+  moved_to_rep BOOLEAN DEFAULT FALSE,
+
+  version INT DEFAULT 1,
+
+  created_by UUID REFERENCES users(id),
+  created_at TIMESTAMP DEFAULT now(),
+  updated_at TIMESTAMP DEFAULT now()
+);
+
+
+Rules enforced at API:
+
+ordered + stock + offer <= total_req_qty
+
+5️⃣ REP ORDERS (NO QUANTITIES)
+5.1 rep_orders
+CREATE TABLE rep_orders (
+  id UUID PRIMARY KEY,
+  po_pending_id UUID REFERENCES po_pending_items(id),
+
+  product_id UUID REFERENCES products(id),
+
+  req_qty INT NOT NULL, -- reference only
+
+  notes TEXT, -- procurement notes
+
+  item_name_change VARCHAR(255),
+
+  ordered_supplier_id UUID REFERENCES suppliers(id),
+
+  rep_id UUID REFERENCES rep_master(id),
+  mobile VARCHAR(50),
+
+  done BOOLEAN DEFAULT FALSE,
+
+  returned_to_pending BOOLEAN DEFAULT FALSE,
+
+  version INT DEFAULT 1,
+
+  created_by UUID REFERENCES users(id),
+  created_at TIMESTAMP DEFAULT now(),
+  updated_at TIMESTAMP DEFAULT now()
+);
+
+6️⃣ ORDER SLIPS (ONE PER SUPPLIER PER DAY)
+6.1 order_slips
+CREATE TABLE order_slips (
+  id UUID PRIMARY KEY,
+  supplier_id UUID REFERENCES suppliers(id),
+
+  slip_date DATE NOT NULL,
+
+  generated_by UUID REFERENCES users(id),
+  generated_at TIMESTAMP DEFAULT now(),
+
+  regenerated_from UUID REFERENCES order_slips(id),
+
+  UNIQUE (supplier_id, slip_date)
+);
+
+6.2 order_slip_items
+CREATE TABLE order_slip_items (
+  id UUID PRIMARY KEY,
+  order_slip_id UUID REFERENCES order_slips(id),
+
+  customer_id VARCHAR(100),
+  order_id VARCHAR(100),
+
+  product_id UUID REFERENCES products(id),
+
+  item_name_snapshot VARCHAR(255), -- final name used for billing
+
+  qty INT NOT NULL,
+
+  remarks TEXT,
+
+  current_status VARCHAR(50),
+
+  version INT DEFAULT 1,
+
+  created_at TIMESTAMP DEFAULT now()
+);
+
+7️⃣ BILLING DUTY CONTROL
+7.1 duty_sessions
+CREATE TABLE duty_sessions (
+  id UUID PRIMARY KEY,
+  user_id UUID REFERENCES users(id),
+
+  start_time TIMESTAMP DEFAULT now(),
+  end_time TIMESTAMP,
+
+  active BOOLEAN DEFAULT TRUE
+);
+
+8️⃣ ORDER SLIP STATUS EVENTS (IMMUTABLE LEDGER)
+8.1 status_events
+CREATE TABLE status_events (
+  id UUID PRIMARY KEY,
+
+  order_slip_item_id UUID REFERENCES order_slip_items(id),
+
+  event_time TIMESTAMP DEFAULT now(),
+
+  status VARCHAR(50) NOT NULL,
+
+  ordered_qty INT,
+  received_qty INT,
+  damaged_qty INT,
+  missing_qty INT,
+  pending_qty INT,
+
+  invoice_id VARCHAR(100),
+
+  old_item_name VARCHAR(255),
+  new_item_name VARCHAR(255),
+
+  notes TEXT,
+
+  performed_by UUID REFERENCES users(id),
+  duty_session_id UUID REFERENCES duty_sessions(id),
+
+  override BOOLEAN DEFAULT FALSE,
+  override_reason TEXT
+);
+
+
+🔒 Append-only. Legal record.
+
+9️⃣ AUDIT & SYSTEM LOGS
+9.1 audit_events
+CREATE TABLE audit_events (
+  id UUID PRIMARY KEY,
+
+  entity_type VARCHAR(50),
+  entity_id UUID,
+
+  action VARCHAR(100),
+
+  before_state JSONB,
+  after_state JSONB,
+
+  performed_by UUID REFERENCES users(id),
+  performed_at TIMESTAMP DEFAULT now()
+);
+
+9.2 system_events
+CREATE TABLE system_events (
+  id UUID PRIMARY KEY,
+  event_type VARCHAR(100),
+  payload JSONB,
+  created_at TIMESTAMP DEFAULT now()
+);
+
+🔟 OFFLINE & CONFLICT HANDLING
+10.1 offline_mutations
+CREATE TABLE offline_mutations (
+  id UUID PRIMARY KEY,
+  user_id UUID REFERENCES users(id),
+
+  entity_type VARCHAR(50),
+  entity_id UUID,
+
+  base_version INT,
+  payload JSONB,
+
+  status VARCHAR(30), -- PENDING / APPLIED / CONFLICT
+
+  created_at TIMESTAMP DEFAULT now()
+);
+
+10.2 conflicts
+CREATE TABLE conflicts (
+  id UUID PRIMARY KEY,
+
+  entity_type VARCHAR(50),
+  entity_id UUID,
+
+  local_payload JSONB,
+  server_payload JSONB,
+
+  detected_at TIMESTAMP DEFAULT now(),
+
+  resolved BOOLEAN DEFAULT FALSE,
+  resolved_by UUID REFERENCES users(id),
+  resolved_at TIMESTAMP,
+  resolution VARCHAR(50), -- KEEP_SYSTEM / FORCE_OVERRIDE
+  resolution_reason TEXT
+);
+
+1️⃣1️⃣ SYSTEM SETTINGS
+11.1 system_settings
+CREATE TABLE system_settings (
+  key VARCHAR(100) PRIMARY KEY,
+  value TEXT,
+  updated_by UUID REFERENCES users(id),
+  updated_at TIMESTAMP DEFAULT now()
+);
+
+
+Examples:
+
+slip_generation_time = 16:00
+
+allow_rep_supplier_change = true
+
+🔚 FINAL CHECK (IMPORTANT)
+
+This schema guarantees:
+
+✅ Allocator only in PO Pending
+
+✅ REP has no quantities
+
+✅ One slip per supplier per day
+
+✅ Regeneration is traceable
+
+✅ Billing is duty-bound
+
+✅ Conflicts escalated only to heads/admin
+
+✅ Audits are court-defensible

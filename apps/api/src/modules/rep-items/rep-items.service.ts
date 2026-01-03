@@ -1,65 +1,62 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma.service';
-import { OrderStage } from '@sahakar/database';
+import { OrderStage } from '@prisma/client';
 
 @Injectable()
-export class RepItemsService {
+export class RepItemsService { // Keeping class name same
     constructor(private prisma: PrismaService) { }
 
     async findAll() {
-        return this.prisma.repItem.findMany({
+        return this.prisma.repOrder.findMany({
             where: {
-                pendingItem: {
+                poPendingItem: {
                     orderRequest: {
                         stage: OrderStage.REP_ALLOCATION
                     }
                 }
             },
             include: {
-                pendingItem: {
+                poPendingItem: {
                     include: {
-                        orderRequest: true
+                        orderRequest: true,
+                        product: true
                     }
-                }
+                },
+                orderedSupplier: true,
+                rep: true
             },
             orderBy: {
-                pendingItem: {
-                    orderRequest: {
-                        productName: 'asc'
-                    }
-                }
+                createdAt: 'desc'
             }
         });
     }
 
     async updateAllocation(id: string, data: any) {
-        // id is RepItem id
-        const repItem = await this.prisma.repItem.findUnique({
-            where: { id },
-            include: { pendingItem: true }
-        });
+        // Here we assign Reps
+        const { repId, notes } = data;
 
-        if (!repItem) throw new NotFoundException('Rep item not found');
-
-        // We update the underlying PendingItem quantities as they are the source of truth for "Ordered" vs "Stock"
-        const { orderedQty, stockQty, offerQty, notes, orderStatus } = data;
-
-        return this.prisma.$transaction([
-            this.prisma.pendingItem.update({
-                where: { id: repItem.pendingItemId },
-                data: {
-                    orderedQty: orderedQty !== undefined ? Number(orderedQty) : undefined,
-                    stockQty: stockQty !== undefined ? Number(stockQty) : undefined,
-                    offerQty: offerQty !== undefined ? Number(offerQty) : undefined,
-                    notes: notes
-                }
-            }),
-            this.prisma.repItem.update({
+        return this.prisma.$transaction(async (tx) => {
+            const updated = await tx.repOrder.update({
                 where: { id },
                 data: {
-                    orderStatus: orderStatus
+                    repId: repId,
+                    notes: notes
                 }
-            })
-        ]);
+            });
+
+            // Confirm Allocation? Or is it dynamic? 
+            // Audit Log
+            await tx.auditEvent.create({
+                data: {
+                    entityType: 'RepOrder',
+                    entityId: id,
+                    action: 'ASSIGN_REP',
+                    afterState: data,
+                    // actor: 'system'
+                }
+            });
+
+            return updated;
+        });
     }
 }

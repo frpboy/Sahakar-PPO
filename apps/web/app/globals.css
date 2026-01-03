@@ -1,3 +1,56 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+    :root {
+        --background: #F8F9FB;
+        --surface: #FFFFFF;
+        --text-primary: #1F2937;
+        --text-secondary: #6B7280;
+        --border: #E5E7EB;
+
+        /* Status Colors */
+        --status-billed-bg: #DCFCE7;
+        --status-billed-text: #166534;
+        --status-not-billed-bg: #FEE2E2;
+        --status-not-billed-text: #991B1B;
+        --status-partial-bg: #FEF3C7;
+        --status-partial-text: #92400E;
+        --status-changed-bg: #DBEAFE;
+        --status-changed-text: #1E40AF;
+        --status-damaged-bg: #FFEDD5;
+        --status-damaged-text: #9A3412;
+        --status-missing-bg: #F3E8FF;
+        --status-missing-text: #6B21A8;
+    }
+
+    body {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        color: var(--text-primary);
+        background-color: var(--background);
+        font-feature-settings: "tnum" 1, "lnum" 1;
+    }
+}
+
+@layer components {
+    .spreadsheet-grid {
+        border: 1px solid var(--border);
+        border-radius: 0.125rem;
+        overflow: hidden;
+        background-color: var(--surface);
+    }
+
+    .tabular-nums {
+        font-variant-numeric: tabular-nums;
+    }
+
+    .sticky-header {
+        position: sticky;
+        top: 0;
+        background-color: var(--background);
+        z-index: 10;
+        box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+    }
+}

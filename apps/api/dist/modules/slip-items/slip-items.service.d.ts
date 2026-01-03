@@ -4,20 +4,15 @@ export declare class SlipItemsService {
     constructor(prisma: PrismaService);
     updateStatus(id: string, data: any, userEmail: string): Promise<{
         id: string;
-        orderSlipId: string;
-        customerId: string;
-        orderId: string;
-        itemName: string;
+        orderSlipId: string | null;
+        customerId: string | null;
+        orderId: string | null;
+        productId: string | null;
+        itemNameSnapshot: string | null;
         qty: number;
         remarks: string | null;
-        status: import(".prisma/client").$Enums.ItemStatus;
-        qtyReceived: number;
-        qtyDamaged: number;
-        qtyPending: number;
-        invoiceId: string | null;
-        newItemName: string | null;
-        notes: string | null;
-        updatedBy: string | null;
-        updatedAt: Date;
+        currentStatus: string | null;
+        version: number;
+        createdAt: Date;
     }>;
 }

@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma.service';
 import * as xlsx from 'xlsx';
 import * as crypto from 'crypto';
-import { OrderStage } from '@sahakar/database';
+import { OrderStage } from '@prisma/client';
 
 @Injectable()
 export class OrderRequestsService {
@@ -40,91 +40,88 @@ export class OrderRequestsService {
             }
         }
 
-        // 3. Log Audit Event (TODO)
-
         return results;
     }
 
     private async processRow(row: any, userEmail: string) {
-        // Map columns (adjusting based on typical PPO format or heuristics)
-        // Assuming keys match requirements or basic sanitization needed
-
-        // Required fields based on schema:
-        // customerId, orderId, productId, productName, reqQty
-
-        // Sanitize keys (simple normalization)
+        // Sanitize keys
         const cleanRow: any = {};
         Object.keys(row).forEach(key => {
             cleanRow[key.trim().toLowerCase().replace(/[\s\.]/g, '_')] = row[key];
         });
 
-        // Mapping logic - needs specific column names from 'follow this...' doc if available, else standard infer
-        // "Accept Date", "Cust", "Order", "Product", "Qty"
-        const acceptDate = new Date(); // Or parse from row if provided
+        const acceptDate = new Date();
         const customerId = String(cleanRow['customer_id'] || cleanRow['cust_code'] || cleanRow['cust']);
         const orderId = String(cleanRow['order_id'] || cleanRow['order_no']);
-        const productId = String(cleanRow['product_id'] || cleanRow['item_code']);
-        const productName = String(cleanRow['product_name'] || cleanRow['item_name']);
+
+        // Strict Mode: Upsert Product to get ID
+        const rawProductName = String(cleanRow['product_name'] || cleanRow['item_name']);
         const reqQty = parseInt(cleanRow['req_qty'] || cleanRow['qty'] || cleanRow['quantity'] || '0', 10);
 
-        if (!customerId || !orderId || !productId || !reqQty) {
-            throw new Error('Missing mandatory fields');
+        if (!customerId || !orderId || !rawProductName || !reqQty) {
+            throw new Error('Missing mandatory fields (cust, order, product, qty)');
         }
 
-        // Hash Generation: Order + Product + Date (as per doc)
-        // "Each line is hashed (Order + Product + Date)"
-        // Date typically means the import date or accept date? Doc says "Accept date & time" is ingested.
-        // If Accept Date is in file, use it. If not, maybe use today. 
-        // "Duplicate hashes are rejected"
-
-        const hashString = `${orderId}-${productId}-${acceptDate.toISOString().split('T')[0]}`;
-        // Note: Doc says "Order + Product + Date". 
-        // If multiple imports happen same day for same order/product, it should block? Yes.
-
+        const hashString = `${orderId}-${rawProductName}-${acceptDate.toISOString().split('T')[0]}`;
         const hash = crypto.createHash('sha256').update(hashString).digest('hex');
 
-        // Create OrderRequest
-        // Using transaction to ensure atomicity if we were doing more, but single record is atomic enough
-        // Create OrderRequest & PendingItem in transaction
         await this.prisma.$transaction(async (tx) => {
+            // 1. Resolve Product Master
+            let product = await tx.product.findFirst({
+                where: { itemName: { equals: rawProductName, mode: 'insensitive' } }
+            });
+
+            if (!product) {
+                product = await tx.product.create({
+                    data: {
+                        itemName: rawProductName,
+                        productCode: cleanRow['item_code'] || cleanRow['product_id'] || null
+                    }
+                });
+            }
+
+            // 2. Resolve Supplier Master (if provided)
+            let orderedSupplierId: string | null = null;
+            const supplierName = cleanRow['supplier'] || cleanRow['primary_supplier'];
+            if (supplierName) {
+                let supplier = await tx.supplier.findUnique({ where: { supplierName } });
+                if (!supplier) {
+                    supplier = await tx.supplier.create({ data: { supplierName } });
+                }
+                orderedSupplierId = supplier.id;
+            }
+
+            // 3. Create Order Request
             const orderRequest = await tx.orderRequest.create({
                 data: {
                     acceptDatetime: acceptDate,
                     customerId,
                     orderId,
-                    productId,
-                    productName,
+                    productId: product.id,
+                    productNameSnapshot: rawProductName,
                     reqQty,
                     hash,
-                    createdBy: userEmail,
-                    stage: OrderStage.RAW_INGESTED, // Initially raw
-
-                    // Optional fields
-                    packing: cleanRow['packing'],
-                    subcategory: cleanRow['subcategory'],
-                    primarySupplier: cleanRow['supplier'] || cleanRow['primary_supplier'],
-                    rep: cleanRow['rep'],
-                    mobile: String(cleanRow['mobile'] || ''),
-                    mrp: cleanRow['mrp'] ? parseFloat(cleanRow['mrp']) : null,
-                }
+                    stage: OrderStage.PENDING, // Directly to Pending
+                    created_at: new Date(),
+                    inputFileId: null, // TODO: Link to PpoInputFile if we created it
+                    primarySupplier: supplierName,
+                    // Store extra fields if needed in future or map to specific columns
+                } as any
             });
 
-            // Automatically promote to PendingItem (Stage 2)
-            await tx.pendingItem.create({
+            // 4. Create PoPendingItem (Strict 1:1 Traceability)
+            await tx.poPendingItem.create({
                 data: {
+                    productId: product.id,
                     orderRequestId: orderRequest.id,
-                    orderedQty: reqQty, // Default to requested
+                    totalReqQty: reqQty,
+                    orderedQty: reqQty,
                     stockQty: 0,
                     offerQty: 0,
-                    orderedSupplier: cleanRow['supplier'] || cleanRow['primary_supplier'],
-                    notes: '',
-                }
-            });
-
-            // Update stage to PENDING to reflect it's ready for review
-            await tx.orderRequest.update({
-                where: { id: orderRequest.id },
-                data: { stage: OrderStage.PENDING }
+                    decidedSupplierId: orderedSupplierId,
+                    allocatorNotes: '',
+                    creator: { connect: { email: userEmail } }
+                } as any
             });
         });
     }

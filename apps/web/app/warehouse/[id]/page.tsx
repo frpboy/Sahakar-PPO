@@ -2,6 +2,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { DataGrid } from '../../../components/DataGrid';
+import { StatusBadge } from '../../../components/StatusBadge';
+import { useToast } from '../../../components/Toast';
+import { ArrowLeft } from 'iconoir-react';
 
 const ITEM_STATUSES = [
     'PENDING',
@@ -17,6 +21,7 @@ export default function WarehouseExecutionPage() {
     const { id } = useParams();
     const router = useRouter();
     const queryClient = useQueryClient();
+    const { showToast } = useToast();
 
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editFormData, setEditFormData] = useState<any>({});
@@ -43,14 +48,16 @@ export default function WarehouseExecutionPage() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['order-slip', id] });
             setEditingId(null);
-        }
+            showToast('Item status updated', 'success');
+        },
+        onError: () => showToast('Failed to update status', 'error')
     });
 
     const handleEditClick = (item: any) => {
         setEditingId(item.id);
         setEditFormData({
             status: item.status,
-            receivedQty: item.qtyReceived || item.qty, // Default prepopulate
+            receivedQty: item.qtyReceived || item.qty,
             qtyDamaged: item.qtyDamaged,
             qtyPending: item.qtyPending,
             invoiceId: item.invoiceId,
@@ -69,98 +76,86 @@ export default function WarehouseExecutionPage() {
         setEditFormData((prev: any) => ({ ...prev, [field]: value }));
     };
 
+    const columns = [
+        {
+            header: 'Item',
+            cell: (item: any) => (
+                <div>
+                    <div className="font-medium text-gray-900">{item.itemName}</div>
+                    <div className="text-xs text-gray-500">{item.orderId}</div>
+                </div>
+            )
+        },
+        { header: 'Req Qty', accessorKey: 'qty' as any, className: 'font-bold' },
+        {
+            header: 'Status',
+            cell: (item: any) => editingId === item.id ? (
+                <select
+                    className="border rounded text-sm py-1 px-2 focus:ring-2 focus:ring-blue-500 bg-white"
+                    value={editFormData.status}
+                    onChange={(e) => handleInputChange('status', e.target.value)}
+                >
+                    {ITEM_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+            ) : <StatusBadge status={item.status} />
+        },
+        {
+            header: 'Recv Qty',
+            cell: (item: any) => editingId === item.id ? (
+                <input type="number" className="border rounded w-16 px-1 text-sm" value={editFormData.receivedQty} onChange={(e) => handleInputChange('receivedQty', e.target.value)} />
+            ) : item.qtyReceived
+        },
+        {
+            header: 'Bad Qty',
+            cell: (item: any) => editingId === item.id ? (
+                <input type="number" className="border rounded w-16 px-1 text-sm" value={editFormData.qtyDamaged} onChange={(e) => handleInputChange('qtyDamaged', e.target.value)} />
+            ) : item.qtyDamaged
+        },
+        {
+            header: 'Inv #',
+            cell: (item: any) => editingId === item.id ? (
+                <input type="text" className="border rounded w-20 px-1 text-sm" value={editFormData.invoiceId || ''} onChange={(e) => handleInputChange('invoiceId', e.target.value)} />
+            ) : item.invoiceId
+        },
+        {
+            header: 'Notes',
+            cell: (item: any) => editingId === item.id ? (
+                <input type="text" className="border rounded w-24 px-1 text-sm" value={editFormData.notes || ''} onChange={(e) => handleInputChange('notes', e.target.value)} />
+            ) : <span className="text-xs truncate max-w-[100px]" title={item.notes}>{item.notes}</span>
+        },
+        {
+            header: 'Action',
+            cell: (item: any) => editingId === item.id ? (
+                <div className="flex gap-2">
+                    <button onClick={() => handleSave(item.id)} className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded font-medium">Save</button>
+                    <button onClick={() => setEditingId(null)} className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded font-medium">Cancel</button>
+                </div>
+            ) : (
+                <button onClick={() => handleEditClick(item)} className="text-xs text-indigo-600 font-medium hover:underline">Update</button>
+            )
+        }
+    ];
+
     if (isLoading) return <div className="p-8">Loading...</div>;
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-6">
-            <div className="flex items-center gap-4 mb-4">
-                <button onClick={() => router.back()} className="text-gray-500 hover:text-gray-900">&larr; Back to List</button>
-                <h1 className="text-2xl font-bold">Execution: {slip.supplier}</h1>
+        <div className="p-8 space-y-6">
+            <div className="flex items-center gap-4 mb-2">
+                <button
+                    onClick={() => router.back()}
+                    className="flex items-center gap-1 text-gray-500 hover:text-gray-900 transition-colors text-sm font-medium"
+                >
+                    <ArrowLeft className="w-4 h-4" /> Back to List
+                </button>
             </div>
 
-            <div className="bg-white rounded shadow border overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                        <tr>
-                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Item Name</th>
-                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Req Qty</th>
+            <h1 className="text-2xl font-bold text-gray-800">Execution: {slip.supplier}</h1>
 
-                            {/* Execution Fields */}
-                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Status</th>
-                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Recv Qty</th>
-                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Bad Qty</th>
-                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Inv #</th>
-                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Notes</th>
-                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                        {slip.items.map((item: any) => {
-                            const isEditing = editingId === item.id;
-                            return (
-                                <tr key={item.id} className={isEditing ? 'bg-blue-50' : ''}>
-                                    <td className="px-4 py-3 text-sm font-medium">
-                                        {item.itemName} <br />
-                                        <span className="text-xs text-gray-500">{item.orderId}</span>
-                                    </td>
-                                    <td className="px-4 py-3 text-sm font-bold">{item.qty}</td>
-
-                                    <td className="px-4 py-3 text-sm">
-                                        {isEditing ? (
-                                            <select
-                                                className="border rounded text-sm py-1"
-                                                value={editFormData.status}
-                                                onChange={(e) => handleInputChange('status', e.target.value)}
-                                            >
-                                                {ITEM_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
-                                            </select>
-                                        ) : (
-                                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${item.status === 'BILLED' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-                                                {item.status}
-                                            </span>
-                                        )}
-                                    </td>
-
-                                    <td className="px-4 py-3 text-sm">
-                                        {isEditing ? (
-                                            <input type="number" className="border rounded w-16 px-1" value={editFormData.receivedQty} onChange={(e) => handleInputChange('receivedQty', e.target.value)} />
-                                        ) : item.qtyReceived}
-                                    </td>
-
-                                    <td className="px-4 py-3 text-sm">
-                                        {isEditing ? (
-                                            <input type="number" className="border rounded w-16 px-1" value={editFormData.qtyDamaged} onChange={(e) => handleInputChange('qtyDamaged', e.target.value)} />
-                                        ) : item.qtyDamaged}
-                                    </td>
-
-                                    <td className="px-4 py-3 text-sm">
-                                        {isEditing ? (
-                                            <input type="text" className="border rounded w-20 px-1" value={editFormData.invoiceId || ''} onChange={(e) => handleInputChange('invoiceId', e.target.value)} placeholder="Inv#" />
-                                        ) : item.invoiceId}
-                                    </td>
-
-                                    <td className="px-4 py-3 text-sm">
-                                        {isEditing ? (
-                                            <input type="text" className="border rounded w-24 px-1" value={editFormData.notes || ''} onChange={(e) => handleInputChange('notes', e.target.value)} />
-                                        ) : item.notes}
-                                    </td>
-
-                                    <td className="px-4 py-3 text-sm text-blue-600 cursor-pointer">
-                                        {isEditing ? (
-                                            <div className="flex flex-col gap-1">
-                                                <span onClick={() => handleSave(item.id)} className="font-semibold text-green-700">Save</span>
-                                                <span onClick={() => setEditingId(null)} className="text-gray-500">Cancel</span>
-                                            </div>
-                                        ) : (
-                                            <span onClick={() => handleEditClick(item)}>Update</span>
-                                        )}
-                                    </td>
-                                </tr>
-                            );
-                        })}
-                    </tbody>
-                </table>
-            </div>
+            <DataGrid
+                data={slip.items}
+                columns={columns}
+                keyExtractor={(item) => item.id}
+            />
         </div>
     );
 }

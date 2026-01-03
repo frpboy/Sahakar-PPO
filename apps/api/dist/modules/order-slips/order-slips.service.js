@@ -10,10 +10,20 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 };
 var OrderSlipsService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.OrderSlipsService = void 0;
+exports.OrderSlipsService = exports.ItemStatus = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../../prisma.service");
-const database_1 = require("@sahakar/database");
+const client_1 = require("@prisma/client");
+var ItemStatus;
+(function (ItemStatus) {
+    ItemStatus["PENDING"] = "PENDING";
+    ItemStatus["BILLED"] = "BILLED";
+    ItemStatus["NOT_BILLED"] = "NOT_BILLED";
+    ItemStatus["PARTIALLY_BILLED"] = "PARTIALLY_BILLED";
+    ItemStatus["PRODUCT_CHANGED"] = "PRODUCT_CHANGED";
+    ItemStatus["SUPPLIER_ITEM_DAMAGED"] = "SUPPLIER_ITEM_DAMAGED";
+    ItemStatus["SUPPLIER_ITEM_MISSING"] = "SUPPLIER_ITEM_MISSING";
+})(ItemStatus || (exports.ItemStatus = ItemStatus = {}));
 let OrderSlipsService = OrderSlipsService_1 = class OrderSlipsService {
     constructor(prisma) {
         this.prisma = prisma;
@@ -22,87 +32,99 @@ let OrderSlipsService = OrderSlipsService_1 = class OrderSlipsService {
     async findAll() {
         return this.prisma.orderSlip.findMany({
             include: {
+                supplier: true,
                 _count: {
                     select: { items: true }
                 }
             },
-            orderBy: { createdAt: 'desc' }
+            orderBy: { generatedAt: 'desc' }
         });
     }
     async findOne(id) {
         return this.prisma.orderSlip.findUnique({
             where: { id },
             include: {
-                items: true
+                items: {
+                    include: { product: true }
+                },
+                supplier: true
             }
         });
     }
     async generateSlips(userEmail) {
-        this.logger.log(`Generating Order Slips by ${userEmail}`);
-        const candidates = await this.prisma.pendingItem.findMany({
+        const candidates = await this.prisma.repOrder.findMany({
             where: {
-                AND: [
-                    { orderedQty: { gt: 0 } },
-                    {
-                        orderRequest: {
-                            stage: { in: [database_1.OrderStage.PENDING, database_1.OrderStage.REP_ALLOCATION] }
-                        }
-                    },
-                    {
-                        OR: [
-                            { decidedSupplier: { not: null } },
-                            { orderedSupplier: { not: null } }
-                        ]
+                poPendingItem: {
+                    orderRequest: {
+                        stage: client_1.OrderStage.REP_ALLOCATION
                     }
-                ]
+                },
+                orderedSupplierId: { not: null }
             },
             include: {
-                orderRequest: true
+                poPendingItem: {
+                    include: { orderRequest: true, product: true }
+                },
+                orderedSupplier: true
             }
         });
         if (candidates.length === 0) {
-            return { message: 'No eligible items found for slip generation', generated: 0 };
+            return { message: 'No eligible items found', generated: 0 };
         }
         const grouped = new Map();
         for (const item of candidates) {
-            const supplier = item.decidedSupplier || item.orderedSupplier;
-            if (!grouped.has(supplier)) {
-                grouped.set(supplier, []);
+            const supplierId = item.orderedSupplierId;
+            if (!grouped.has(supplierId)) {
+                grouped.set(supplierId, []);
             }
-            grouped.get(supplier).push(item);
+            grouped.get(supplierId).push(item);
         }
         let generatedCount = 0;
         await this.prisma.$transaction(async (tx) => {
+            var _a, _b, _c, _d, _e, _f, _g;
             const today = new Date();
-            for (const [supplier, items] of grouped) {
-                const slip = await tx.orderSlip.create({
-                    data: {
-                        supplier,
-                        slipDate: today,
-                        createdBy: userEmail
+            for (const [supplierId, items] of grouped) {
+                let slip = await tx.orderSlip.findUnique({
+                    where: {
+                        supplierId_slipDate: {
+                            supplierId,
+                            slipDate: today
+                        }
                     }
                 });
+                if (!slip) {
+                    slip = await tx.orderSlip.create({
+                        data: {
+                            supplierId,
+                            slipDate: today,
+                            generatedBy: null
+                        }
+                    });
+                }
                 generatedCount++;
                 for (const item of items) {
                     await tx.orderSlipItem.create({
                         data: {
                             orderSlipId: slip.id,
-                            customerId: item.orderRequest.customerId,
-                            orderId: item.orderRequest.orderId,
-                            itemName: item.itemNameChange || item.orderRequest.productName,
-                            qty: item.orderedQty,
+                            customerId: (_b = (_a = item.poPendingItem) === null || _a === void 0 ? void 0 : _a.orderRequest) === null || _b === void 0 ? void 0 : _b.customerId,
+                            orderId: (_d = (_c = item.poPendingItem) === null || _c === void 0 ? void 0 : _c.orderRequest) === null || _d === void 0 ? void 0 : _d.orderId,
+                            productId: item.productId,
+                            itemNameSnapshot: (_f = (_e = item.poPendingItem) === null || _e === void 0 ? void 0 : _e.product) === null || _f === void 0 ? void 0 : _f.itemName,
+                            qty: item.reqQty,
                             remarks: item.notes,
-                            status: database_1.ItemStatus.PENDING
+                            currentStatus: 'PENDING'
                         }
                     });
-                    await tx.orderRequest.update({
-                        where: { id: item.orderRequestId },
-                        data: { stage: database_1.OrderStage.SLIP_GENERATED }
-                    });
+                    if ((_g = item.poPendingItem) === null || _g === void 0 ? void 0 : _g.orderRequestId) {
+                        await tx.orderRequest.update({
+                            where: { id: item.poPendingItem.orderRequestId },
+                            data: { stage: client_1.OrderStage.SLIP_GENERATED }
+                        });
+                    }
                 }
             }
         });
-        return { message: 'Slips generated successfully', generated: generatedCount, suppliers: Array.from(grouped.keys()) };
+        return { message: 'Slips generated', generated: generatedCount };
     }
 };
 exports.OrderSlipsService = OrderSlipsService;

@@ -1,15 +1,13 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:15-alpine
     container_name: sahakar_postgres
     environment:
-      POSTGRES_USER: sahakar_admin
-      POSTGRES_PASSWORD: sahakar_password
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: VqVzHScRLdNyCYlq
       POSTGRES_DB: sahakar_ppo_db
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 

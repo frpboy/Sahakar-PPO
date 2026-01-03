@@ -15,12 +15,22 @@ const rep_items_module_1 = require("./modules/rep-items/rep-items.module");
 const order_slips_module_1 = require("./modules/order-slips/order-slips.module");
 const slip_items_module_1 = require("./modules/slip-items/slip-items.module");
 const analysis_module_1 = require("./modules/analysis/analysis.module");
+const auth_module_1 = require("./modules/auth/auth.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
 exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
-        imports: [prisma_module_1.PrismaModule, order_requests_module_1.OrderRequestsModule, pending_items_module_1.PendingItemsModule, rep_items_module_1.RepItemsModule, order_slips_module_1.OrderSlipsModule, slip_items_module_1.SlipItemsModule, analysis_module_1.AnalysisModule],
+        imports: [
+            prisma_module_1.PrismaModule,
+            auth_module_1.AuthModule,
+            order_requests_module_1.OrderRequestsModule,
+            pending_items_module_1.PendingItemsModule,
+            rep_items_module_1.RepItemsModule,
+            order_slips_module_1.OrderSlipsModule,
+            slip_items_module_1.SlipItemsModule,
+            analysis_module_1.AnalysisModule
+        ],
         controllers: [],
         providers: [],
     })

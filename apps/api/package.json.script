@@ -1,0 +1,5 @@
+{
+  "scripts": {
+    "seed:users": "ts-node --project tsconfig.json scripts/seed-users.ts"
+  }
+}

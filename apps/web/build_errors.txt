@@ -1,0 +1,32 @@
+
+> web@0.1.0 build
+> next build
+
+Γû▓ Next.js 16.1.1 (Turbopack)
+
+  Creating an optimized production build ...
+Γ£ô Compiled successfully in 7.4s
+  Running TypeScript ...
+Failed to compile.
+
+./context/UserRoleContext.tsx:66:42
+Type error: Argument of type '{ readonly name: "Rahul"; readonly role: "SUPER_ADMIN"; readonly email: "frpboy12@gmail.com"; } | { readonly name: "Zabnix"; readonly role: "SUPER_ADMIN"; readonly email: "sahakarhoit@gmail.com"; } | ... 7 more ... | { ...; }' is not assignable to parameter of type 'SetStateAction<{ readonly name: "Vipeesh"; readonly role: "PROCUREMENT_HEAD"; readonly email: "vipeesh.purchase.sahakar@gmail.com"; }>'.
+  Type '{ readonly name: "Rahul"; readonly role: "SUPER_ADMIN"; readonly email: "frpboy12@gmail.com"; }' is not assignable to type 'SetStateAction<{ readonly name: "Vipeesh"; readonly role: "PROCUREMENT_HEAD"; readonly email: "vipeesh.purchase.sahakar@gmail.com"; }>'.
+    Type '{ readonly name: "Rahul"; readonly role: "SUPER_ADMIN"; readonly email: "frpboy12@gmail.com"; }' is not assignable to type '(prevState: { readonly name: "Vipeesh"; readonly role: "PROCUREMENT_HEAD"; readonly email: "vipeesh.purchase.sahakar@gmail.com"; }) => { readonly name: "Vipeesh"; readonly role: "PROCUREMENT_HEAD"; readonly email: "vipeesh.purchase.sahakar@gmail.com"; }'.
+      Type '{ readonly name: "Rahul"; readonly role: "SUPER_ADMIN"; readonly email: "frpboy12@gmail.com"; }' provides no match for the signature '(prevState: { readonly name: "Vipeesh"; readonly role: "PROCUREMENT_HEAD"; readonly email: "vipeesh.purchase.sahakar@gmail.com"; }): { readonly name: "Vipeesh"; readonly role: "PROCUREMENT_HEAD"; readonly email: "vipeesh.purchase.sahakar@gmail.com"; }'.
+
+  64 |                 // Find first user with this role to switch to
+  65 |                 const user = TEST_USERS.find(u => u.role === role);
+> 66 |                 if (user) setCurrentUser(user);
+     |                                          ^
+  67 |             },
+  68 |             currentUser,
+  69 |             setCurrentUser,
+Next.js build worker exited with code: 1 and signal: null
+npm error Lifecycle script `build` failed with error:
+npm error code 1
+npm error path D:\K4NN4N\Sahakar-PPO\apps\web
+npm error workspace web@0.1.0
+npm error location D:\K4NN4N\Sahakar-PPO\apps\web
+npm error command failed
+npm error command C:\WINDOWS\system32\cmd.exe /d /s /c next build

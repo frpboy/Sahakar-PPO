@@ -1,6 +1,9 @@
 'use client';
 import { useQuery } from '@tanstack/react-query';
 import { useParams, useRouter } from 'next/navigation';
+import { DataGrid } from '../../../components/DataGrid';
+import { StatusBadge } from '../../../components/StatusBadge';
+import { ArrowLeft } from 'iconoir-react';
 
 export default function OrderSlipDetailPage() {
     const { id } = useParams();
@@ -15,55 +18,50 @@ export default function OrderSlipDetailPage() {
         enabled: !!id
     });
 
+    const columns = [
+        { header: 'Item Name', accessorKey: 'itemName' as any, className: 'font-medium text-gray-900' },
+        { header: 'Order ID', accessorKey: 'orderId' as any, className: 'text-gray-500 text-xs' },
+        { header: 'Customer', accessorKey: 'customerId' as any, className: 'text-gray-500 text-xs' },
+        { header: 'Qty', accessorKey: 'qty' as any, className: 'font-bold' },
+        { header: 'Remarks', accessorKey: 'remarks' as any, className: 'text-gray-500 italic' },
+        {
+            header: 'Status',
+            cell: (item: any) => <StatusBadge status={item.status} />
+        }
+    ];
+
     if (isLoading) return <div className="p-8">Loading slip details...</div>;
     if (!slip) return <div className="p-8">Slip not found</div>;
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-6">
-            <div className="flex items-center gap-4 mb-8">
-                <button onClick={() => router.back()} className="text-gray-500 hover:text-gray-900">&larr; Back</button>
-                <h1 className="text-2xl font-bold">Order Slip: {slip.supplier}</h1>
+        <div className="p-8 space-y-6">
+            <div className="flex items-center gap-4 mb-2">
+                <button
+                    onClick={() => router.back()}
+                    className="flex items-center gap-1 text-gray-500 hover:text-gray-900 transition-colors text-sm font-medium"
+                >
+                    <ArrowLeft className="w-4 h-4" /> Back
+                </button>
             </div>
 
-            <div className="bg-white p-6 rounded shadow border">
-                <div className="grid grid-cols-2 gap-4 mb-6 text-sm">
-                    <div>
-                        <span className="text-gray-500">Date:</span> {new Date(slip.slipDate).toLocaleDateString()}
-                    </div>
-                    <div>
-                        <span className="text-gray-500">ID:</span> {slip.id}
+            <div className="flex justify-between items-start">
+                <div>
+                    <h1 className="text-2xl font-bold text-gray-800 tracking-tight">Order Slip: {slip.supplier}</h1>
+                    <div className="flex gap-4 mt-2 text-sm text-gray-500">
+                        <span>Date: <span className="font-medium text-gray-700">{new Date(slip.slipDate).toLocaleDateString()}</span></span>
+                        <span>ID: <span className="font-mono text-gray-700">{slip.id}</span></span>
                     </div>
                 </div>
-
-                <table className="min-w-full divide-y divide-gray-200 border-t">
-                    <thead className="bg-gray-50">
-                        <tr>
-                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Item Name</th>
-                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Order ID</th>
-                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Customer</th>
-                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Qty</th>
-                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Remarks</th>
-                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Status</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                        {slip.items.map((item: any) => (
-                            <tr key={item.id}>
-                                <td className="px-4 py-3 text-sm font-medium">{item.itemName}</td>
-                                <td className="px-4 py-3 text-sm text-gray-500">{item.orderId}</td>
-                                <td className="px-4 py-3 text-sm text-gray-500">{item.customerId}</td>
-                                <td className="px-4 py-3 text-sm font-bold">{item.qty}</td>
-                                <td className="px-4 py-3 text-sm text-gray-500">{item.remarks}</td>
-                                <td className="px-4 py-3 text-sm">
-                                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                        {item.status}
-                                    </span>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
+                <button className="bg-indigo-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-indigo-700">
+                    Print / Download
+                </button>
             </div>
+
+            <DataGrid
+                data={slip.items}
+                columns={columns}
+                keyExtractor={(item: any) => item.id}
+            />
         </div>
     );
 }

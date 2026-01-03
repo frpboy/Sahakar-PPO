@@ -15,7 +15,7 @@ const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../../prisma.service");
 const xlsx = require("xlsx");
 const crypto = require("crypto");
-const database_1 = require("@sahakar/database");
+const client_1 = require("@prisma/client");
 let OrderRequestsService = OrderRequestsService_1 = class OrderRequestsService {
     constructor(prisma) {
         this.prisma = prisma;
@@ -57,47 +57,61 @@ let OrderRequestsService = OrderRequestsService_1 = class OrderRequestsService {
         const acceptDate = new Date();
         const customerId = String(cleanRow['customer_id'] || cleanRow['cust_code'] || cleanRow['cust']);
         const orderId = String(cleanRow['order_id'] || cleanRow['order_no']);
-        const productId = String(cleanRow['product_id'] || cleanRow['item_code']);
-        const productName = String(cleanRow['product_name'] || cleanRow['item_name']);
+        const rawProductName = String(cleanRow['product_name'] || cleanRow['item_name']);
         const reqQty = parseInt(cleanRow['req_qty'] || cleanRow['qty'] || cleanRow['quantity'] || '0', 10);
-        if (!customerId || !orderId || !productId || !reqQty) {
-            throw new Error('Missing mandatory fields');
+        if (!customerId || !orderId || !rawProductName || !reqQty) {
+            throw new Error('Missing mandatory fields (cust, order, product, qty)');
         }
-        const hashString = `${orderId}-${productId}-${acceptDate.toISOString().split('T')[0]}`;
+        const hashString = `${orderId}-${rawProductName}-${acceptDate.toISOString().split('T')[0]}`;
         const hash = crypto.createHash('sha256').update(hashString).digest('hex');
         await this.prisma.$transaction(async (tx) => {
+            let product = await tx.product.findFirst({
+                where: { itemName: { equals: rawProductName, mode: 'insensitive' } }
+            });
+            if (!product) {
+                product = await tx.product.create({
+                    data: {
+                        itemName: rawProductName,
+                        productCode: cleanRow['item_code'] || cleanRow['product_id'] || null
+                    }
+                });
+            }
+            let orderedSupplierId = null;
+            const supplierName = cleanRow['supplier'] || cleanRow['primary_supplier'];
+            if (supplierName) {
+                let supplier = await tx.supplier.findUnique({ where: { supplierName } });
+                if (!supplier) {
+                    supplier = await tx.supplier.create({ data: { supplierName } });
+                }
+                orderedSupplierId = supplier.id;
+            }
             const orderRequest = await tx.orderRequest.create({
                 data: {
                     acceptDatetime: acceptDate,
                     customerId,
                     orderId,
-                    productId,
-                    productName,
+                    productId: product.id,
+                    productNameSnapshot: rawProductName,
                     reqQty,
                     hash,
-                    createdBy: userEmail,
-                    stage: database_1.OrderStage.RAW_INGESTED,
-                    packing: cleanRow['packing'],
-                    subcategory: cleanRow['subcategory'],
-                    primarySupplier: cleanRow['supplier'] || cleanRow['primary_supplier'],
-                    rep: cleanRow['rep'],
-                    mobile: String(cleanRow['mobile'] || ''),
-                    mrp: cleanRow['mrp'] ? parseFloat(cleanRow['mrp']) : null,
+                    stage: client_1.OrderStage.PENDING,
+                    created_at: new Date(),
+                    inputFileId: null,
+                    primarySupplier: supplierName,
                 }
             });
-            await tx.pendingItem.create({
+            await tx.poPendingItem.create({
                 data: {
+                    productId: product.id,
                     orderRequestId: orderRequest.id,
+                    totalReqQty: reqQty,
                     orderedQty: reqQty,
                     stockQty: 0,
                     offerQty: 0,
-                    orderedSupplier: cleanRow['supplier'] || cleanRow['primary_supplier'],
-                    notes: '',
+                    decidedSupplierId: orderedSupplierId,
+                    allocatorNotes: '',
+                    creator: { connect: { email: userEmail } }
                 }
-            });
-            await tx.orderRequest.update({
-                where: { id: orderRequest.id },
-                data: { stage: database_1.OrderStage.PENDING }
             });
         });
     }

@@ -12,60 +12,47 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AnalysisService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../../prisma.service");
-const database_1 = require("@sahakar/database");
+const client_1 = require("@prisma/client");
 let AnalysisService = class AnalysisService {
     constructor(prisma) {
         this.prisma = prisma;
     }
     async getDashboardStats() {
-        const stageCounts = await this.prisma.orderRequest.groupBy({
-            by: ['stage'],
-            _count: {
-                stage: true
-            }
-        });
-        const stats = {
-            total: 0,
-            raw: 0,
-            pending: 0,
-            rep_allocation: 0,
-            slip_generated: 0,
-            executed: 0
+        const [total, raw, pending, rep_allocation, slip_generated, executed] = await Promise.all([
+            this.prisma.orderRequest.count(),
+            this.prisma.orderRequest.count({ where: { stage: client_1.OrderStage.RAW_INGESTED } }),
+            this.prisma.orderRequest.count({ where: { stage: client_1.OrderStage.PENDING } }),
+            this.prisma.orderRequest.count({ where: { stage: client_1.OrderStage.REP_ALLOCATION } }),
+            this.prisma.orderRequest.count({ where: { stage: client_1.OrderStage.SLIP_GENERATED } }),
+            this.prisma.orderRequest.count({ where: { stage: client_1.OrderStage.EXECUTED } })
+        ]);
+        return {
+            total,
+            raw,
+            pending,
+            rep_allocation,
+            slip_generated,
+            executed
         };
-        stageCounts.forEach(item => {
-            stats.total += item._count.stage;
-            if (item.stage === database_1.OrderStage.RAW_INGESTED)
-                stats.raw = item._count.stage;
-            if (item.stage === database_1.OrderStage.PENDING)
-                stats.pending = item._count.stage;
-            if (item.stage === database_1.OrderStage.REP_ALLOCATION)
-                stats.rep_allocation = item._count.stage;
-            if (item.stage === database_1.OrderStage.SLIP_GENERATED)
-                stats.slip_generated = item._count.stage;
-            if (item.stage === database_1.OrderStage.EXECUTED)
-                stats.executed = item._count.stage;
-        });
-        return stats;
     }
     async getStatusLedger(limit = 20) {
         return this.prisma.statusEvent.findMany({
             take: limit,
-            orderBy: { eventDatetime: 'desc' }
+            orderBy: { eventTime: 'desc' }
         });
     }
     async getGapAnalysis() {
         return this.prisma.orderSlipItem.findMany({
             where: {
                 OR: [
-                    { status: { not: 'BILLED' } },
-                    { qtyReceived: { lt: this.prisma.orderSlipItem.fields.qty } }
+                    { currentStatus: { not: 'BILLED' } },
                 ]
             },
             include: {
                 orderSlip: true
             },
             take: 50,
-            orderBy: { updatedAt: 'desc' }
+            orderBy: { createdAt: 'desc' }
         });
     }
 };

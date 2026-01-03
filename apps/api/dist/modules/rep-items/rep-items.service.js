@@ -12,61 +12,55 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.RepItemsService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../../prisma.service");
-const database_1 = require("@sahakar/database");
+const client_1 = require("@prisma/client");
 let RepItemsService = class RepItemsService {
     constructor(prisma) {
         this.prisma = prisma;
     }
     async findAll() {
-        return this.prisma.repItem.findMany({
+        return this.prisma.repOrder.findMany({
             where: {
-                pendingItem: {
+                poPendingItem: {
                     orderRequest: {
-                        stage: database_1.OrderStage.REP_ALLOCATION
+                        stage: client_1.OrderStage.REP_ALLOCATION
                     }
                 }
             },
             include: {
-                pendingItem: {
+                poPendingItem: {
                     include: {
-                        orderRequest: true
+                        orderRequest: true,
+                        product: true
                     }
-                }
+                },
+                orderedSupplier: true,
+                rep: true
             },
             orderBy: {
-                pendingItem: {
-                    orderRequest: {
-                        productName: 'asc'
-                    }
-                }
+                createdAt: 'desc'
             }
         });
     }
     async updateAllocation(id, data) {
-        const repItem = await this.prisma.repItem.findUnique({
-            where: { id },
-            include: { pendingItem: true }
-        });
-        if (!repItem)
-            throw new common_1.NotFoundException('Rep item not found');
-        const { orderedQty, stockQty, offerQty, notes, orderStatus } = data;
-        return this.prisma.$transaction([
-            this.prisma.pendingItem.update({
-                where: { id: repItem.pendingItemId },
-                data: {
-                    orderedQty: orderedQty !== undefined ? Number(orderedQty) : undefined,
-                    stockQty: stockQty !== undefined ? Number(stockQty) : undefined,
-                    offerQty: offerQty !== undefined ? Number(offerQty) : undefined,
-                    notes: notes
-                }
-            }),
-            this.prisma.repItem.update({
+        const { repId, notes } = data;
+        return this.prisma.$transaction(async (tx) => {
+            const updated = await tx.repOrder.update({
                 where: { id },
                 data: {
-                    orderStatus: orderStatus
+                    repId: repId,
+                    notes: notes
                 }
-            })
-        ]);
+            });
+            await tx.auditEvent.create({
+                data: {
+                    entityType: 'RepOrder',
+                    entityId: id,
+                    action: 'ASSIGN_REP',
+                    afterState: data,
+                }
+            });
+            return updated;
+        });
     }
 };
 exports.RepItemsService = RepItemsService;

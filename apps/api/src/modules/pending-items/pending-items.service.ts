@@ -1,20 +1,22 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma.service';
-import { OrderStage } from '@sahakar/database';
+import { OrderStage } from '@prisma/client';
 
 @Injectable()
-export class PendingItemsService {
+export class PendingItemsService { // Keeping class name same to avoid Module refactor
     constructor(private prisma: PrismaService) { }
 
     async findAll() {
-        return this.prisma.pendingItem.findMany({
+        return this.prisma.poPendingItem.findMany({
             where: {
                 orderRequest: {
                     stage: OrderStage.PENDING
                 }
             },
             include: {
-                orderRequest: true
+                orderRequest: true,
+                product: true,
+                decidedSupplier: true
             },
             orderBy: {
                 createdAt: 'desc'
@@ -23,52 +25,67 @@ export class PendingItemsService {
     }
 
     async update(id: string, data: any) {
-        // Only allow specific fields to be updated
-        const { orderedQty, stockQty, offerQty, notes, decidedSupplier } = data;
+        const { orderedQty, stockQty, offerQty, notes, decidedSupplierId } = data;
 
-        return this.prisma.pendingItem.update({
+        return this.prisma.poPendingItem.update({
             where: { id },
             data: {
                 orderedQty: orderedQty !== undefined ? Number(orderedQty) : undefined,
                 stockQty: stockQty !== undefined ? Number(stockQty) : undefined,
                 offerQty: offerQty !== undefined ? Number(offerQty) : undefined,
-                notes,
-                decidedSupplier
+                allocatorNotes: notes,
+                decidedSupplierId: decidedSupplierId
             }
         });
     }
 
     async moveToRep(id: string, userEmail: string) {
-        const item = await this.prisma.pendingItem.findUnique({
+        const item = await this.prisma.poPendingItem.findUnique({
             where: { id },
             include: { orderRequest: true }
         });
 
         if (!item) throw new NotFoundException('Pending item not found');
 
-        // Transactional move
         return this.prisma.$transaction(async (tx) => {
-            // 1. Create Rep Item
-            await tx.repItem.create({
+            // 1. Create Rep Order (was RepItem)
+            await tx.repOrder.create({
                 data: {
-                    pendingItemId: item.id,
-                    orderStatus: 'ALLOCATED',
-                    movedBy: userEmail,
-                    rep: item.orderRequest.rep, // Propagate rep if exists
-                    mobile: item.orderRequest.mobile
+                    poPendingId: item.id,
+                    productId: item.productId,
+                    reqQty: item.orderedQty,
+                    orderedSupplierId: item.decidedSupplierId,
+                    notes: item.allocatorNotes,
+                    // If rep logic existed in request, propagate it. For now assume manual assignment later?
+                    // Or if deciding supplier implies rep?
+                    // For strict logic, we just create the order.
                 }
             });
 
-            // 2. Mark Pending Item set as moved (flag)
-            await tx.pendingItem.update({
+            // 2. Mark Moved
+            await tx.poPendingItem.update({
                 where: { id: item.id },
-                data: { moveToRep: true }
+                data: { movedToRep: true }
             });
 
-            // 3. Update Order Request Stage
-            await tx.orderRequest.update({
-                where: { id: item.orderRequestId },
-                data: { stage: OrderStage.REP_ALLOCATION }
+            // 3. Update Request Stage
+            if (item.orderRequestId) {
+                await tx.orderRequest.update({
+                    where: { id: item.orderRequestId },
+                    data: { stage: OrderStage.REP_ALLOCATION }
+                });
+            }
+
+            // 4. Audit
+            await tx.auditEvent.create({
+                data: {
+                    entityType: 'PoPendingItem',
+                    entityId: item.id,
+                    action: 'MOVE_TO_REP',
+                    beforeState: { moveToRep: false } as any,
+                    afterState: { moveToRep: true } as any,
+                    actor: { connect: { email: userEmail } }
+                }
             });
 
             return { success: true };

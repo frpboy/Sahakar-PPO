@@ -1,144 +1,252 @@
 'use client';
 import { useQuery } from '@tanstack/react-query';
-import Link from 'next/link';
+import { useMemo } from 'react';
+import { DataGrid } from '../components/DataGrid';
+import { StatusBadge } from '../components/StatusBadge';
+import {
+    LongArrowRightUp,
+    Archive,
+    CheckCircle,
+    DatabaseWarning,
+    GraphUp,
+    Timer,
+    Activity
+} from 'iconoir-react';
+import { ColumnDef } from '@tanstack/react-table';
 
 export default function DashboardPage() {
-    const { data: stats } = useQuery({
+    const { data: stats, isLoading: statsLoading } = useQuery({
         queryKey: ['dashboard-stats'],
-        queryFn: async () => (await fetch('http://localhost:3001/analysis/stats')).json()
+        queryFn: async () => {
+            const res = await fetch('http://localhost:8080/analysis/stats');
+            if (!res.ok) throw new Error('Failed to fetch stats');
+            return res.json();
+        }
     });
 
-    const { data: ledger } = useQuery({
+    const { data: ledger, isLoading: ledgerLoading } = useQuery({
         queryKey: ['dashboard-ledger'],
-        queryFn: async () => (await fetch('http://localhost:3001/analysis/ledger?limit=10')).json()
+        queryFn: async () => {
+            const res = await fetch('http://localhost:8080/analysis/ledger?limit=10');
+            if (!res.ok) throw new Error('Failed to fetch ledger');
+            return res.json();
+        }
     });
 
-    const { data: gap } = useQuery({
+    const { data: gap, isLoading: gapLoading } = useQuery({
         queryKey: ['dashboard-gap'],
-        queryFn: async () => (await fetch('http://localhost:3001/analysis/gap')).json()
+        queryFn: async () => {
+            const res = await fetch('http://localhost:8080/analysis/gap');
+            if (!res.ok) throw new Error('Failed to fetch gap analysis');
+            return res.json();
+        }
     });
+
+    const ledgerColumns = useMemo<ColumnDef<any>[]>(() => [
+        {
+            header: 'Timestamp',
+            size: 140,
+            cell: ({ row }) => (
+                <span className="tabular-nums text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
+                    {new Date(row.original.eventDatetime).toLocaleString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                </span>
+            )
+        },
+        {
+            header: 'Item Detail',
+            size: 200,
+            cell: ({ row }) => (
+                <div className="flex flex-col">
+                    <span className="text-[10px] font-bold text-gray-900 uppercase truncate max-w-[180px]">{row.original.itemNew}</span>
+                    <span className="text-[9px] text-gray-400 font-bold uppercase tracking-tighter">{row.original.supplier}</span>
+                </div>
+            )
+        },
+        {
+            header: 'Status Evolution',
+            size: 150,
+            cell: ({ row }) => (
+                <div className="flex items-center gap-2">
+                    <StatusBadge status={row.original.status} className="scale-90 origin-left" />
+                </div>
+            )
+        },
+        {
+            header: 'Owner',
+            size: 100,
+            cell: ({ row }) => <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-tighter">{row.original.staff?.split('@')[0]}</span>
+        }
+    ], []);
+
+    const gapColumns = useMemo<ColumnDef<any>[]>(() => [
+        {
+            header: 'Critical Item',
+            size: 200,
+            cell: ({ row }) => (
+                <span className="font-bold text-[10px] text-gray-900 uppercase truncate block">{row.original.itemName}</span>
+            )
+        },
+        {
+            header: 'Variance',
+            size: 120,
+            cell: ({ row }) => {
+                const item = row.original;
+                const isUnder = item.qtyReceived < item.qty;
+                return (
+                    <div className="flex items-center gap-1.5 tabular-nums">
+                        <span className="text-[10px] font-bold text-gray-400">{item.qty}</span>
+                        <LongArrowRightUp className="w-3 h-3 text-gray-300" />
+                        <span className={`text-[11px] font-bold ${isUnder ? 'text-red-500' : 'text-green-600'}`}>
+                            {item.qtyReceived || 0}
+                        </span>
+                    </div>
+                );
+            }
+        },
+        {
+            header: 'State',
+            size: 120,
+            cell: ({ row }) => <StatusBadge status={row.original.status} className="scale-90 origin-left" />
+        }
+    ], []);
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-8">
-            <div className="flex justify-between items-center">
-                <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-                <div className="space-x-4">
-                    <Link href="/order-import" className="text-blue-600 hover:underline">Import</Link> |
-                    <Link href="/pending-orders" className="text-blue-600 hover:underline">Pending</Link> |
-                    <Link href="/rep-allocation" className="text-blue-600 hover:underline">Rep Alloc</Link> |
-                    <Link href="/order-slips" className="text-blue-600 hover:underline">Slips</Link> |
-                    <Link href="/warehouse" className="text-blue-600 hover:underline">Warehouse</Link>
-                </div>
-            </div>
-
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                <StatCard label="Raw Ingested" value={stats?.raw} color="bg-gray-100" />
-                <StatCard label="Pending Review" value={stats?.pending} color="bg-yellow-100" />
-                <StatCard label="In Rep Alloc" value={stats?.rep_allocation} color="bg-blue-100" />
-                <StatCard label="Slip Generated" value={stats?.slip_generated} color="bg-purple-100" />
-                <StatCard label="Executed" value={stats?.executed} color="bg-green-100" />
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Status Ledger */}
-                <div className="bg-white p-6 rounded shadow border">
-                    <h2 className="text-xl font-bold mb-4">Live Status Ledger</h2>
-                    <div className="overflow-y-auto max-h-96">
-                        <table className="min-w-full divide-y divide-gray-100">
-                            <thead className="bg-gray-50">
-                                <tr>
-                                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Time</th>
-                                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Item</th>
-                                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Event</th>
-                                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Staff</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100">
-                                {ledger?.map((event: any) => (
-                                    <tr key={event.id}>
-                                        <td className="px-4 py-2 text-xs text-gray-500">
-                                            {new Date(event.createdAt).toLocaleTimeString()}
-                                        </td>
-                                        <td className="px-4 py-2 text-sm font-medium">
-                                            {event.itemNew}
-                                            <div className="text-xs text-gray-400">{event.supplier}</div>
-                                        </td>
-                                        <td className="px-4 py-2 text-sm">
-                                            <span className={`px-2 py-0.5 rounded-full text-xs ${getStatusColor(event.status)}`}>
-                                                {event.status}
-                                            </span>
-                                            {event.notes && <div className="text-xs text-gray-500 mt-1">"{event.notes}"</div>}
-                                        </td>
-                                        <td className="px-4 py-2 text-xs text-gray-500">
-                                            {event.staff.split('@')[0]}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+        <div className="flex flex-col h-full bg-[var(--background)]">
+            <header className="bg-white border-b border-[var(--border)] px-8 py-5 sticky top-0 z-10">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-xl font-bold text-gray-900 tracking-tight flex items-center gap-2 uppercase">
+                            <Activity className="w-6 h-6 text-indigo-600" />
+                            Operations Command Center
+                        </h1>
+                        <p className="text-[10px] text-gray-400 font-bold mt-1 uppercase tracking-widest leading-none">Real-time Supply Chain Analytics & Reconciliation</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 rounded-full border border-green-100">
+                            <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+                            <span className="text-[9px] font-bold text-green-700 uppercase tracking-widest">System Live</span>
+                        </div>
                     </div>
                 </div>
+            </header>
 
-                {/* Gap Analysis */}
-                <div className="bg-white p-6 rounded shadow border">
-                    <h2 className="text-xl font-bold mb-4">Gap Analysis (Potential Issues)</h2>
-                    <div className="overflow-y-auto max-h-96">
-                        <table className="min-w-full divide-y divide-gray-100">
-                            <thead className="bg-gray-50">
-                                <tr>
-                                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Item</th>
-                                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Supplier</th>
-                                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Req vs Recv</th>
-                                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100">
-                                {gap?.map((item: any) => (
-                                    <tr key={item.id}>
-                                        <td className="px-4 py-2 text-sm font-medium">
-                                            {item.itemName}
-                                        </td>
-                                        <td className="px-4 py-2 text-xs text-gray-500">
-                                            {item.orderSlip?.supplier}
-                                        </td>
-                                        <td className="px-4 py-2 text-sm">
-                                            <span className="font-bold text-gray-900">{item.qty}</span>
-                                            <span className="text-gray-400 mx-1">→</span>
-                                            <span className={`font-bold ${item.qtyReceived < item.qty ? 'text-red-600' : 'text-green-600'}`}>
-                                                {item.qtyReceived || 0}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-2 text-xs">
-                                            <span className={`px-2 py-0.5 rounded-full text-xs ${getStatusColor(item.status)}`}>
-                                                {item.status}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+            <main className="flex-1 p-8 overflow-auto space-y-8">
+                {/* Stats Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+                    <StatCard
+                        label="PO Ingestion"
+                        value={stats?.raw}
+                        icon={<Archive className="w-5 h-5" />}
+                        trend="+12%"
+                        variant="neutral"
+                    />
+                    <StatCard
+                        label="Review Queue"
+                        value={stats?.pending}
+                        icon={<Timer className="w-5 h-5 text-amber-500" />}
+                        trend="Critical"
+                        variant="warning"
+                    />
+                    <StatCard
+                        label="Rep Capacity"
+                        value={stats?.rep_allocation}
+                        icon={<GraphUp className="w-5 h-5 text-indigo-500" />}
+                        trend="Optimal"
+                        variant="info"
+                    />
+                    <StatCard
+                        label="Billing Load"
+                        value={stats?.slip_generated}
+                        icon={<DbWarning className="w-5 h-5 text-cyan-500" />}
+                        trend="Active"
+                        variant="success"
+                    />
+                    <StatCard
+                        label="Duty Complete"
+                        value={stats?.executed}
+                        icon={<CheckCircle className="w-5 h-5 text-green-500" />}
+                        trend="Success"
+                        variant="success"
+                    />
                 </div>
-            </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {/* Live Ledger */}
+                    <section className="bg-white rounded-lg border border-[var(--border)] shadow-sm flex flex-col h-[500px]">
+                        <div className="px-6 py-4 border-b border-[var(--border)] bg-gray-50/50 flex items-center justify-between">
+                            <h2 className="text-[11px] font-bold text-gray-900 uppercase tracking-widest flex items-center gap-2">
+                                <Activity className="w-4 h-4 text-indigo-500" />
+                                Real-time Transaction Ledger
+                            </h2>
+                            <span className="text-[9px] font-bold text-gray-400 uppercase tracking-tighter">Latest 10 Events</span>
+                        </div>
+                        <div className="flex-1">
+                            <DataGrid
+                                data={ledger || []}
+                                columns={ledgerColumns}
+                                isLoading={ledgerLoading}
+                            />
+                        </div>
+                    </section>
+
+                    {/* Gap Analysis */}
+                    <section className="bg-white rounded-lg border border-[var(--border)] shadow-sm flex flex-col h-[500px]">
+                        <div className="px-6 py-4 border-b border-[var(--border)] bg-gray-50/50 flex items-center justify-between">
+                            <h2 className="text-[11px] font-bold text-gray-900 uppercase tracking-widest flex items-center gap-2">
+                                <DatabaseWarning className="w-4 h-4 text-red-500" />
+                                Inventory Variance (Gap Analysis)
+                            </h2>
+                            <span className="text-[9px] font-bold text-red-400 uppercase tracking-tighter">Action Required</span>
+                        </div>
+                        <div className="flex-1">
+                            <DataGrid
+                                data={gap || []}
+                                columns={gapColumns}
+                                isLoading={gapLoading}
+                            />
+                        </div>
+                    </section>
+                </div>
+            </main>
         </div>
     );
 }
 
-function StatCard({ label, value, color }: { label: string, value: number, color: string }) {
+function StatCard({ label, value, icon, trend, variant }: { label: string, value: number, icon: React.ReactNode, trend: string, variant: 'neutral' | 'warning' | 'info' | 'success' }) {
+    const bgColor = {
+        neutral: 'bg-white border-gray-200',
+        warning: 'bg-amber-50/50 border-amber-100',
+        info: 'bg-indigo-50/50 border-indigo-100',
+        success: 'bg-green-50/50 border-green-100',
+    }[variant];
+
+    const trendColor = {
+        neutral: 'text-gray-400',
+        warning: 'text-amber-600',
+        info: 'text-indigo-600',
+        success: 'text-green-600',
+    }[variant];
+
     return (
-        <div className={`${color} p-4 rounded shadow border border-opacity-10`}>
-            <div className="text-gray-500 text-sm font-medium uppercase">{label}</div>
-            <div className="text-3xl font-bold text-gray-800 mt-1">{value || 0}</div>
+        <div className={`${bgColor} p-6 rounded-xl border shadow-sm transition-all hover:shadow-md group relative overflow-hidden`}>
+            {/* Visual accent */}
+            <div className={`absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity`}>
+                {icon}
+            </div>
+
+            <div className="flex items-center gap-3 mb-4">
+                <div className={`p-2 rounded-lg bg-white shadow-sm border border-gray-100`}>
+                    {icon}
+                </div>
+                <div className={`text-[10px] font-bold uppercase tracking-widest text-gray-500`}>{label}</div>
+            </div>
+
+            <div className="flex items-end justify-between">
+                <div className="text-3xl font-bold tabular-nums text-gray-900 tracking-tighter">{value || 0}</div>
+                <div className={`text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border bg-white ${trendColor}`}>
+                    {trend}
+                </div>
+            </div>
         </div>
     )
-}
-
-function getStatusColor(status: string) {
-    switch (status) {
-        case 'BILLED': return 'bg-green-100 text-green-800';
-        case 'PENDING': return 'bg-yellow-100 text-yellow-800';
-        case 'SUPPLIER_ITEM_MISSING': return 'bg-red-100 text-red-800';
-        default: return 'bg-gray-100 text-gray-800';
-    }
 }

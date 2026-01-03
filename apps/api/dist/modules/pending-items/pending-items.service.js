@@ -12,20 +12,22 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.PendingItemsService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../../prisma.service");
-const database_1 = require("@sahakar/database");
+const client_1 = require("@prisma/client");
 let PendingItemsService = class PendingItemsService {
     constructor(prisma) {
         this.prisma = prisma;
     }
     async findAll() {
-        return this.prisma.pendingItem.findMany({
+        return this.prisma.poPendingItem.findMany({
             where: {
                 orderRequest: {
-                    stage: database_1.OrderStage.PENDING
+                    stage: client_1.OrderStage.PENDING
                 }
             },
             include: {
-                orderRequest: true
+                orderRequest: true,
+                product: true,
+                decidedSupplier: true
             },
             orderBy: {
                 createdAt: 'desc'
@@ -33,42 +35,54 @@ let PendingItemsService = class PendingItemsService {
         });
     }
     async update(id, data) {
-        const { orderedQty, stockQty, offerQty, notes, decidedSupplier } = data;
-        return this.prisma.pendingItem.update({
+        const { orderedQty, stockQty, offerQty, notes, decidedSupplierId } = data;
+        return this.prisma.poPendingItem.update({
             where: { id },
             data: {
                 orderedQty: orderedQty !== undefined ? Number(orderedQty) : undefined,
                 stockQty: stockQty !== undefined ? Number(stockQty) : undefined,
                 offerQty: offerQty !== undefined ? Number(offerQty) : undefined,
-                notes,
-                decidedSupplier
+                allocatorNotes: notes,
+                decidedSupplierId: decidedSupplierId
             }
         });
     }
     async moveToRep(id, userEmail) {
-        const item = await this.prisma.pendingItem.findUnique({
+        const item = await this.prisma.poPendingItem.findUnique({
             where: { id },
             include: { orderRequest: true }
         });
         if (!item)
             throw new common_1.NotFoundException('Pending item not found');
         return this.prisma.$transaction(async (tx) => {
-            await tx.repItem.create({
+            await tx.repOrder.create({
                 data: {
-                    pendingItemId: item.id,
-                    orderStatus: 'ALLOCATED',
-                    movedBy: userEmail,
-                    rep: item.orderRequest.rep,
-                    mobile: item.orderRequest.mobile
+                    poPendingId: item.id,
+                    productId: item.productId,
+                    reqQty: item.orderedQty,
+                    orderedSupplierId: item.decidedSupplierId,
+                    notes: item.allocatorNotes,
                 }
             });
-            await tx.pendingItem.update({
+            await tx.poPendingItem.update({
                 where: { id: item.id },
-                data: { moveToRep: true }
+                data: { movedToRep: true }
             });
-            await tx.orderRequest.update({
-                where: { id: item.orderRequestId },
-                data: { stage: database_1.OrderStage.REP_ALLOCATION }
+            if (item.orderRequestId) {
+                await tx.orderRequest.update({
+                    where: { id: item.orderRequestId },
+                    data: { stage: client_1.OrderStage.REP_ALLOCATION }
+                });
+            }
+            await tx.auditEvent.create({
+                data: {
+                    entityType: 'PoPendingItem',
+                    entityId: item.id,
+                    action: 'MOVE_TO_REP',
+                    beforeState: { moveToRep: false },
+                    afterState: { moveToRep: true },
+                    actor: { connect: { email: userEmail } }
+                }
             });
             return { success: true };
         });
