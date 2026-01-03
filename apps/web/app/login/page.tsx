@@ -33,6 +33,42 @@ export default function LoginPage() {
                     <p className="text-gray-500">Infrastructure v1.0 (Production Core)</p>
                 </div>
 
+                {/* Quick Fill Credentials */}
+                <div className="mb-6 p-4 bg-blue-50 rounded-xl border border-blue-100">
+                    <label className="block text-sm font-semibold text-blue-900 mb-2">Quick Fill Credentials</label>
+                    <select
+                        className="w-full px-4 py-2 rounded-lg border border-blue-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none text-sm bg-white"
+                        onChange={(e) => {
+                            const [selectedEmail, selectedPassword] = e.target.value.split('|');
+                            if (selectedEmail && selectedPassword) {
+                                setEmail(selectedEmail);
+                                setPassword(selectedPassword);
+                            }
+                        }}
+                        defaultValue=""
+                    >
+                        <option value="">Select a user to prefill...</option>
+                        <option value="drisya.purchase.sahakar@gmail.com|R8@dQ7!MZxP2#c">Drisya (Purchase Staff)</option>
+                        <option value="jamsheera.purchase.sahakar@gmail.com|K!4sWQ9@b#2LrZ">Jamsheera (Purchase Staff)</option>
+                        <option value="sujitha.purchase.sahakar@gmail.com|ZC#8@wM!5L2R9">Sujitha (Purchase Staff)</option>
+                        <option value="abhi.billinghead.sahakar@gmail.com|@9KZr!5C7W2#b">Abhi (Billing Head)</option>
+                        <option value="sujeev.billing.sahakar@gmail.com|B7!@MZC9#2rW5">Sujeev (Billing Staff)</option>
+                        <option value="shafi.billing.sahakar@gmail.com|#C5Z!9W7@2MrB">Shafi (Billing Staff)</option>
+                        <option value="shiji.billing.sahakar@gmail.com|9@#B7ZC!5WMr2">Shiji (Billing Staff)</option>
+                        <option value="vivek.billing.sahakar@gmail.com|Z!C@9#7W2MBr5">Vivek (Billing Staff)</option>
+                        <option value="jalvan.billing.sahakar@gmail.com|@WZ9#7!B2CMr5">Jalvan (Billing Staff)</option>
+                        <option value="suhail.billing.sahakar@gmail.com|5Z@#C9!7WM2Br">Suhail (Billing Staff)</option>
+                        <option value="fayis.billing.sahakar@gmail.com|7!Z@C#9WMB2r5">Fayis (Billing Staff)</option>
+                        <option value="ashiqmohammedmannarppil@gmail.com|@9C7Z!W#2MB5r">Ashiq (Admin)</option>
+                        <option value="sarath.purchase.sahakar@gmail.com|Z#@7C!9WMB2r5">Sarath (Admin)</option>
+                        <option value="frpboy12@gmail.com|C9Z@#7!WMB2r5">Rahul (Super Admin)</option>
+                        <option value="sahakarhoit@gmail.com|@ZC9#7!WMB2r5">Zabnix (Super Admin)</option>
+                        <option value="zabnixprivatelimited@gmail.com|7Z@C9#!WMB2r5">Zabnix Co (Super Admin)</option>
+                        <option value="vipeesh.purchase.sahakar@gmail.com|!ZC@9#7WMB2r5">Vipeesh (Procurement Head)</option>
+                    </select>
+                    <p className="text-xs text-blue-600 mt-2">Selecting a user will auto-fill email & password.</p>
+                </div>
+
                 <form onSubmit={handleLogin} className="space-y-6">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>

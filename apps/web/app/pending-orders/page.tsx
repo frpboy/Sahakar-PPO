@@ -6,7 +6,7 @@ import { FilterBar } from '../../components/FilterBar';
 import { StatusBadge } from '../../components/StatusBadge';
 import { ConfirmModal } from '../../components/ConfirmModal';
 import { useToast } from '../../components/Toast';
-import { Clock, Edit, Send, InfoCircle } from 'iconoir-react';
+import { Clock, Edit, Send, Info } from 'lucide-react';
 import { ColumnDef } from '@tanstack/react-table';
 
 // Types

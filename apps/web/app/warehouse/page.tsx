@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useMemo } from 'react';
 import { DataGrid } from '../../components/DataGrid';
-import { BoxIso, InfoCircle, PageSearch } from 'iconoir-react';
+import { Box, Info, FileSearch } from 'lucide-react';
 import { ColumnDef } from '@tanstack/react-table';
 
 export default function WarehouseSlipsPage() {

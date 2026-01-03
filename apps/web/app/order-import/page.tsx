@@ -1,6 +1,6 @@
 'use client';
 import { useState, useMemo } from 'react';
-import { Import, CheckCircle, WarningTriangle, InfoCircle } from 'iconoir-react';
+import { Import, CheckCircle, AlertTriangle, Info } from 'lucide-react';
 import { DataGrid } from '../../components/DataGrid';
 import { ColumnDef } from '@tanstack/react-table';
 

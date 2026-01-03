@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { DataGrid } from '../../../components/DataGrid';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { useToast } from '../../../components/Toast';
-import { ArrowLeft } from 'iconoir-react';
+import { ArrowLeft } from 'lucide-react';
 
 const ITEM_STATUSES = [
     'PENDING',

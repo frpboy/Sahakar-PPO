@@ -2,7 +2,7 @@
 
 import { Sidebar } from './Sidebar';
 import { useUserRole } from '../context/UserRoleContext';
-import { Bell, LogOut } from 'iconoir-react';
+import { Bell, LogOut } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { auth } from '../src/lib/firebase';

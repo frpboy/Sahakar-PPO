@@ -1,6 +1,6 @@
 'use client';
 import { createContext, useContext, useState, ReactNode, useCallback } from 'react';
-import { CheckCircle, InfoCircle, WarningTriangle, Xmark } from 'iconoir-react';
+import { CheckCircle, Info, AlertTriangle, X } from 'lucide-react';
 
 type ToastType = 'success' | 'error' | 'info' | 'warning';
 
@@ -50,16 +50,16 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                     >
                         <div className="mt-0.5 shrink-0">
                             {toast.type === 'success' && <CheckCircle className="w-5 h-5 text-green-500" />}
-                            {toast.type === 'error' && <WarningTriangle className="w-5 h-5 text-red-500" />}
-                            {toast.type === 'info' && <InfoCircle className="w-5 h-5 text-blue-500" />}
-                            {toast.type === 'warning' && <WarningTriangle className="w-5 h-5 text-yellow-500" />}
+                            {toast.type === 'error' && <AlertTriangle className="w-5 h-5 text-red-500" />}
+                            {toast.type === 'info' && <Info className="w-5 h-5 text-blue-500" />}
+                            {toast.type === 'warning' && <AlertTriangle className="w-5 h-5 text-yellow-500" />}
                         </div>
                         <p className="flex-1 text-sm font-medium text-gray-800">{toast.message}</p>
                         <button
                             onClick={() => removeToast(toast.id)}
                             className="text-gray-400 hover:text-gray-600 transition-colors"
                         >
-                            <Xmark className="w-4 h-4" />
+                            <X className="w-4 h-4" />
                         </button>
                     </div>
                 ))}

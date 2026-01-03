@@ -11,12 +11,15 @@
         "format": "prettier --write \"**/*.{ts,tsx,md}\""
     },
     "devDependencies": {
-        "turbo": "latest",
+        "concurrently": "latest",
         "prettier": "latest",
-        "concurrently": "latest"
+        "turbo": "latest"
     },
     "workspaces": [
         "apps/*",
         "packages/*"
-    ]
+    ],
+    "dependencies": {
+        "magic-string": "^0.30.21"
+    }
 }

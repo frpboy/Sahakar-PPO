@@ -1,6 +1,6 @@
 'use client';
 
-import { Search } from 'iconoir-react';
+import { Search } from 'lucide-react';
 
 interface FilterOption {
     label: string;

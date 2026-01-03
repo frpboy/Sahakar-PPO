@@ -3,24 +3,24 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-    HomeSimple,
+    Home,
     Import,
     Clock,
-    UserBag,
-    PageSearch,
-    BoxIso,
-    GraphUp,
+    UserCircle,
+    FileSearch,
+    Box,
+    TrendingUp,
     Settings
-} from 'iconoir-react';
+} from 'lucide-react';
 import { useUserRole } from '../context/UserRoleContext';
 
 const MENU_ITEMS = [
-    { label: 'Dashboard', href: '/', icon: HomeSimple },
+    { label: 'Dashboard', href: '/', icon: Home },
     { label: 'PPO Input', href: '/order-import', icon: Import },
     { label: 'Pending', href: '/pending-orders', icon: Clock },
-    { label: 'Rep Alloc', href: '/rep-allocation', icon: UserBag },
-    { label: 'Order Slips', href: '/order-slips', icon: PageSearch },
-    { label: 'Warehouse', href: '/warehouse', icon: BoxIso },
+    { label: 'Rep Alloc', href: '/rep-allocation', icon: UserCircle },
+    { label: 'Order Slips', href: '/order-slips', icon: FileSearch },
+    { label: 'Warehouse', href: '/warehouse', icon: Box },
     // { label: 'Analysis', href: '/analysis', icon: GraphUp }, // Merged into Dashboard basically, but keeping placeholder if needed
     // { label: 'Masters', href: '/masters', icon: Settings }, // Not implemented yet
 ];

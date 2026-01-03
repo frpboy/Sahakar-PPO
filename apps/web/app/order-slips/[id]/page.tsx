@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useParams, useRouter } from 'next/navigation';
 import { DataGrid } from '../../../components/DataGrid';
 import { StatusBadge } from '../../../components/StatusBadge';
-import { ArrowLeft } from 'iconoir-react';
+import { ArrowLeft } from 'lucide-react';
 
 export default function OrderSlipDetailPage() {
     const { id } = useParams();

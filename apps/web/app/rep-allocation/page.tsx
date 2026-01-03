@@ -8,7 +8,7 @@ import { ConfirmModal } from '../../components/ConfirmModal';
 import { StatusBadge } from '../../components/StatusBadge';
 import { useToast } from '../../components/Toast';
 import { useUserRole } from '../../context/UserRoleContext';
-import { UserBag, Edit, Undo, InfoCircle } from 'iconoir-react';
+import { UserCircle, Edit, Undo, Info } from 'lucide-react';
 import { ColumnDef } from '@tanstack/react-table';
 
 // Types

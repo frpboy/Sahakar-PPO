@@ -1,6 +1,6 @@
 'use client';
 import { Fragment, ReactNode } from 'react';
-import { Xmark } from 'iconoir-react';
+import { X } from 'lucide-react';
 
 interface ModalProps {
     isOpen: boolean;
@@ -36,7 +36,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
                         onClick={onClose}
                         className="text-gray-400 hover:text-gray-500 transition-colors"
                     >
-                        <Xmark className="w-5 h-5" />
+                        <X className="w-5 h-5" />
                     </button>
                 </div>
 

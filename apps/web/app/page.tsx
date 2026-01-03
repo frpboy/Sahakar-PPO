@@ -4,14 +4,14 @@ import { useMemo } from 'react';
 import { DataGrid } from '../components/DataGrid';
 import { StatusBadge } from '../components/StatusBadge';
 import {
-    LongArrowRightUp,
+    TrendingUp,
     Archive,
     CheckCircle,
-    DatabaseWarning,
-    GraphUp,
+    DatabaseZap,
+    BarChart3,
     Timer,
     Activity
-} from 'iconoir-react';
+} from 'lucide-react';
 import { ColumnDef } from '@tanstack/react-table';
 
 export default function DashboardPage() {
@@ -95,7 +95,7 @@ export default function DashboardPage() {
                 return (
                     <div className="flex items-center gap-1.5 tabular-nums">
                         <span className="text-[10px] font-bold text-gray-400">{item.qty}</span>
-                        <LongArrowRightUp className="w-3 h-3 text-gray-300" />
+                        <TrendingUp className="w-3 h-3 text-gray-300" />
                         <span className={`text-[11px] font-bold ${isUnder ? 'text-red-500' : 'text-green-600'}`}>
                             {item.qtyReceived || 0}
                         </span>
@@ -150,14 +150,14 @@ export default function DashboardPage() {
                     <StatCard
                         label="Rep Capacity"
                         value={stats?.rep_allocation}
-                        icon={<GraphUp className="w-5 h-5 text-indigo-500" />}
+                        icon={<BarChart3 className="w-5 h-5 text-indigo-500" />}
                         trend="Optimal"
                         variant="info"
                     />
                     <StatCard
                         label="Billing Load"
                         value={stats?.slip_generated}
-                        icon={<DatabaseWarning className="w-5 h-5 text-cyan-500" />}
+                        icon={<DatabaseZap className="w-5 h-5 text-cyan-500" />}
                         trend="Active"
                         variant="success"
                     />
@@ -193,7 +193,7 @@ export default function DashboardPage() {
                     <section className="bg-white rounded-lg border border-[var(--border)] shadow-sm flex flex-col h-[500px]">
                         <div className="px-6 py-4 border-b border-[var(--border)] bg-gray-50/50 flex items-center justify-between">
                             <h2 className="text-[11px] font-bold text-gray-900 uppercase tracking-widest flex items-center gap-2">
-                                <DatabaseWarning className="w-4 h-4 text-red-500" />
+                                <DatabaseZap className="w-4 h-4 text-red-500" />
                                 Inventory Variance (Gap Analysis)
                             </h2>
                             <span className="text-[9px] font-bold text-red-400 uppercase tracking-tighter">Action Required</span>

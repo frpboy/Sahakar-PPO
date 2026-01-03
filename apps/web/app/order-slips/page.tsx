@@ -7,7 +7,7 @@ import { DataGrid } from '../../components/DataGrid';
 import { ConfirmModal } from '../../components/ConfirmModal';
 import { useToast } from '../../components/Toast';
 import { useUserRole } from '../../context/UserRoleContext';
-import { PageSearch, Plus, Printer, InfoCircle } from 'iconoir-react';
+import { FileSearch, Plus, Printer, Info } from 'lucide-react';
 import { ColumnDef } from '@tanstack/react-table';
 
 export default function OrderSlipsPage() {
