@@ -92,84 +92,90 @@ export default function OrderSlipDetailPage() {
     ], []);
 
     if (isLoading) return (
-        <div className="min-h-screen flex items-center justify-center bg-neutral-50">
-            <div className="flex flex-col items-center gap-4">
-                <div className="w-10 h-10 border-2 border-primary-700 border-t-transparent rounded-full animate-spin"></div>
-                <p className="text-neutral-500 font-medium text-sm">Loading Slip Details...</p>
+        <div className="min-h-screen flex items-center justify-center bg-transparent">
+            <div className="flex flex-col items-center gap-6">
+                <div className="w-12 h-12 border-4 border-brand-100 border-t-brand-600 rounded-full animate-spin"></div>
+                <p className="text-neutral-500 font-bold text-xs uppercase tracking-widest animate-pulse">Synchronizing Data...</p>
             </div>
         </div>
     );
 
     if (!slip) return (
         <div className="p-20 text-center">
-            <AlertCircle size={48} className="text-error-600 mx-auto mb-4" />
-            <h1 className="text-lg font-bold text-primary-900 uppercase">Slip Data Not Found</h1>
-            <button onClick={() => router.back()} className="mt-4 text-primary-700 font-bold uppercase tracking-widest text-xs underline">Return to Ledger</button>
+            <div className="w-20 h-20 bg-danger-50 rounded-3xl flex items-center justify-center mx-auto mb-6">
+                <AlertCircle size={40} className="text-danger-600" />
+            </div>
+            <h1 className="text-xl font-extrabold text-neutral-900 tracking-tight">Slip Data Not Found</h1>
+            <button onClick={() => router.back()} className="mt-6 text-brand-600 font-bold uppercase tracking-widest text-xs hover:underline flex items-center gap-2 mx-auto justify-center">
+                <ArrowLeft size={14} /> Return to Ledger
+            </button>
         </div>
     );
 
     return (
-        <div className="flex flex-col h-full bg-neutral-50 font-sans antialiased">
-            <header className="bg-white border-b border-neutral-200 px-8 py-4 sticky top-0 z-10 shadow-sm">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <button
-                            onClick={() => router.back()}
-                            className="p-2 hover:bg-neutral-100 rounded-full transition-colors"
-                        >
-                            <ArrowLeft size={20} className="text-neutral-500" />
-                        </button>
-                        <div>
-                            <h1 className="text-xl font-bold text-primary-900 tracking-tight uppercase flex items-center gap-2">
-                                <Package size={24} className="text-primary-700" />
-                                Slip: {slip.supplier}
+        <div className="flex flex-col h-full bg-transparent font-sans">
+            <header className="mb-10 flex items-center justify-between">
+                <div className="flex items-center gap-6">
+                    <button
+                        onClick={() => router.back()}
+                        className="w-12 h-12 bg-white rounded-2xl shadow-soft flex items-center justify-center border border-neutral-200/60 hover:border-brand-300 transition-colors group"
+                    >
+                        <ArrowLeft size={24} className="text-neutral-500 group-hover:text-brand-600 transition-colors" />
+                    </button>
+                    <div>
+                        <div className="flex items-center gap-3">
+                            <h1 className="text-3xl font-extrabold text-neutral-900 tracking-tight">
+                                {slip.supplier}
                             </h1>
-                            <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest leading-none mt-1">
-                                {new Date(slip.slipDate).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })} • REF: {slip.id.substring(0, 8).toUpperCase()}
-                            </p>
+                            <div className="px-3 py-1 bg-brand-50 text-brand-600 rounded-lg text-[10px] font-bold uppercase tracking-widest border border-brand-100">
+                                Slip ID: {slip.id.substring(0, 8).toUpperCase()}
+                            </div>
                         </div>
+                        <p className="text-sm text-neutral-500 font-medium mt-1">
+                            Issued: {new Date(slip.slipDate).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })} • Procurement Reconciliation
+                        </p>
                     </div>
+                </div>
 
-                    <div className="flex items-center gap-3">
-                        <button className="px-5 py-2.5 bg-neutral-50 border border-neutral-200 text-neutral-600 rounded text-[11px] font-bold uppercase tracking-widest hover:bg-neutral-100 transition-all flex items-center gap-2">
-                            <Printer size={16} /> Print Slip
-                        </button>
-                        <button className="px-5 py-2.5 bg-primary-700 text-white rounded text-[11px] font-bold uppercase tracking-widest hover:bg-primary-900 shadow-sm transition-all flex items-center gap-2">
-                            <CheckCircle2 size={16} /> Mark All Billed
-                        </button>
-                    </div>
+                <div className="flex items-center gap-4">
+                    <button className="px-6 py-3 bg-white border border-neutral-200 text-neutral-700 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-neutral-50 shadow-soft transition-all flex items-center gap-2">
+                        <Printer size={18} /> Print Slip
+                    </button>
+                    <button className="px-6 py-3 bg-brand-600 text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-brand-700 shadow-lg shadow-brand-500/20 transition-all flex items-center gap-2">
+                        <CheckCircle2 size={18} /> Mark All Billed
+                    </button>
                 </div>
             </header>
 
-            <main className="flex-1 p-8 space-y-8 overflow-auto">
-                <div className="max-w-[1400px] mx-auto">
-                    <div className="bg-white erp-card shadow-sm border-neutral-200 overflow-hidden">
-                        <DataGrid
-                            data={slip.items}
-                            columns={columns}
-                        />
-                    </div>
+            <main className="space-y-6">
+                <div className="saas-card bg-white p-2">
+                    <DataGrid
+                        data={slip.items}
+                        columns={columns}
+                    />
                 </div>
             </main>
 
             {/* Status Selection Modal */}
             <ConfirmModal
                 isOpen={statusModal.isOpen}
-                onConfirm={() => { }} // Not used here as we have multiple options
+                onConfirm={() => { }}
                 onCancel={() => setStatusModal({ isOpen: false, itemId: null })}
                 title="Update Item Status"
                 message="Select the current processing status for this line item:"
                 showFooter={false}
             >
-                <div className="grid grid-cols-2 gap-3 p-6 pt-2">
+                <div className="grid grid-cols-2 gap-4 p-8 pt-2">
                     {['BILLED', 'PARTIALLY_BILLED', 'NOT_BILLED', 'PRODUCT_CHANGED', 'DAMAGED', 'MISSING'].map(status => (
                         <button
                             key={status}
                             onClick={() => statusModal.itemId && statusMutation.mutate({ itemId: statusModal.itemId, status })}
-                            className="px-4 py-3 border border-neutral-200 rounded text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-50 hover:border-primary-500 transition-all text-left flex items-center justify-between group"
+                            className="px-5 py-4 border border-neutral-100 bg-neutral-50/50 rounded-2xl text-[10px] font-extrabold uppercase tracking-widest hover:bg-white hover:border-brand-400 hover:shadow-lg hover:shadow-brand-500/5 transition-all text-left flex items-center justify-between group"
                         >
-                            {status.replace('_', ' ')}
-                            <ChevronDown size={14} className="text-neutral-300 group-hover:text-primary-500" />
+                            <span className="text-neutral-600 group-hover:text-brand-700 transition-colors">{status.replace('_', ' ')}</span>
+                            <div className="w-6 h-6 rounded-lg bg-white border border-neutral-200 flex items-center justify-center group-hover:bg-brand-50 group-hover:border-brand-200 transition-all">
+                                <ChevronDown size={14} className="text-neutral-300 group-hover:text-brand-600" />
+                            </div>
                         </button>
                     ))}
                 </div>
@@ -177,4 +183,5 @@ export default function OrderSlipDetailPage() {
         </div>
     );
 }
+
 

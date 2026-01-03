@@ -82,20 +82,20 @@ export default function AnalysisPage() {
     ], []);
 
     return (
-        <div className="flex flex-col h-full bg-neutral-50">
-            <header className="bg-white border-b border-neutral-200 px-8 py-5 sticky top-0 z-10 shadow-sm">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-xl font-bold text-primary-900 tracking-tight flex items-center gap-3 uppercase">
-                            <BarChart3 size={24} className="text-primary-700" />
-                            System Performance Analysis
-                        </h1>
-                        <p className="text-[10px] text-neutral-400 font-bold mt-1 uppercase tracking-widest leading-none">Statistical Deep-Dive & Supply Chain reconciliation</p>
-                    </div>
+        <div className="flex flex-col h-full bg-transparent font-sans">
+            <header className="mb-10 flex items-center justify-between">
+                <div>
+                    <h1 className="text-3xl font-extrabold text-neutral-900 tracking-tight flex items-center gap-4">
+                        <div className="w-12 h-12 bg-white rounded-2xl shadow-soft flex items-center justify-center border border-neutral-200/60">
+                            <BarChart3 size={28} className="text-brand-600" />
+                        </div>
+                        System Performance Analysis
+                    </h1>
+                    <p className="text-sm text-neutral-500 font-medium mt-2">Statistical deep-dive and supply chain reconciliation intelligence.</p>
                 </div>
             </header>
 
-            <main className="flex-1 p-8 space-y-8 overflow-auto">
+            <main className="space-y-10">
                 {/* Executive Summary Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                     <AnalysisCard
@@ -103,42 +103,44 @@ export default function AnalysisPage() {
                         value="1.4h"
                         desc="Ingestion to Dispatch"
                         icon={<Clock size={20} />}
-                        color="primary"
+                        color="brand"
                     />
                     <AnalysisCard
                         title="Reconciliation Rate"
                         value="98.2%"
                         desc="Inventory accuracy"
                         icon={<CheckCircle2 size={20} />}
-                        color="accent"
+                        color="success"
                     />
                     <AnalysisCard
                         title="Critical Stock Outs"
                         value={gap?.filter((i: any) => i.qtyReceived === 0).length || 0}
                         desc="Action required"
                         icon={<AlertTriangle size={20} />}
-                        color="error"
+                        color="danger"
                     />
                     <AnalysisCard
                         title="Daily Throughput"
                         value={stats?.executed || 0}
                         desc="Executed orders today"
                         icon={<TrendingUp size={20} />}
-                        color="primary"
+                        color="brand"
                     />
                 </div>
 
-                <div className="grid grid-cols-1 space-y-8">
+                <div className="grid grid-cols-1">
                     {/* Gap Analysis Table */}
-                    <section className="bg-white erp-card flex flex-col shadow-sm border-neutral-200">
-                        <div className="px-6 py-4 border-b border-neutral-200 bg-neutral-50/30 flex items-center justify-between">
+                    <section className="flex flex-col gap-6">
+                        <div className="flex items-center justify-between px-2">
                             <div className="flex items-center gap-3">
-                                <DatabaseZap size={18} className="text-error-600" />
-                                <h2 className="text-[11px] font-bold text-primary-900 uppercase tracking-widest">Comprehensive Gap Analysis</h2>
+                                <div className="w-10 h-10 bg-danger-50 rounded-xl flex items-center justify-center text-danger-600">
+                                    <DatabaseZap size={20} />
+                                </div>
+                                <h2 className="text-base font-bold text-neutral-900 tracking-tight">Comprehensive Gap Analysis</h2>
                             </div>
-                            <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">Discrepancy audit for all SKU requests</span>
+                            <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Discrepancy audit for all SKU requests</span>
                         </div>
-                        <div className="p-0">
+                        <div className="saas-card bg-white p-2">
                             <DataGrid
                                 data={gap || []}
                                 columns={gapColumns}
@@ -152,27 +154,32 @@ export default function AnalysisPage() {
     );
 }
 
-function AnalysisCard({ title, value, desc, icon, color }: { title: string, value: string | number, desc: string, icon: React.ReactNode, color: 'primary' | 'accent' | 'error' }) {
+function AnalysisCard({ title, value, desc, icon, color }: { title: string, value: string | number, desc: string, icon: React.ReactNode, color: 'brand' | 'success' | 'danger' }) {
     const colorClasses = {
-        primary: 'text-primary-700 bg-neutral-100',
-        accent: 'text-accent-600 bg-accent-50',
-        error: 'text-error-600 bg-error-50',
+        brand: 'text-brand-600 bg-brand-50/50 border-brand-100/50',
+        success: 'text-success-600 bg-success-50/50 border-success-100/50',
+        danger: 'text-danger-600 bg-danger-50/50 border-danger-100/50',
     }[color];
 
     return (
-        <div className="bg-white p-6 rounded border border-neutral-200 shadow-sm transition-all hover:bg-neutral-50">
-            <div className="flex items-start justify-between mb-4">
-                <div className={`p-2.5 rounded ${colorClasses}`}>
+        <div className="saas-card bg-white p-6 smooth-transition hover:shadow-hover hover:-translate-y-1">
+            <div className="flex items-start justify-between mb-6">
+                <div className={`w-10 h-10 rounded-xl border flex items-center justify-center ${colorClasses}`}>
                     {icon}
                 </div>
-                <div className="text-right">
-                    <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">{title}</div>
-                    <div className="text-2xl font-bold tabular-nums text-primary-900 tracking-tight mt-1">{value}</div>
-                </div>
+                <div className="px-2.5 py-1 bg-neutral-50 text-neutral-400 rounded-lg text-[9px] font-bold uppercase tracking-widest">Live Audit</div>
             </div>
-            <div className="text-[9px] font-bold text-neutral-500 uppercase tracking-widest border-t border-neutral-100 pt-3">
+
+            <div className="flex flex-col gap-1">
+                <div className="text-[10px] font-bold uppercase tracking-[0.1em] text-neutral-400">{title}</div>
+                <div className="text-3xl font-extrabold tabular-nums tracking-tight text-neutral-900 mb-4">{value}</div>
+            </div>
+
+            <div className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest border-t border-neutral-100 pt-4 flex items-center gap-2">
+                <div className={`w-1.5 h-1.5 rounded-full ${color === 'danger' ? 'bg-danger-500' : color === 'success' ? 'bg-success-500' : 'bg-brand-500'}`} />
                 {desc}
             </div>
         </div>
     );
 }
+

@@ -78,40 +78,40 @@ export default function MasterLedgerPage() {
     ], []);
 
     return (
-        <div className="flex flex-col h-full bg-neutral-50">
-            <header className="bg-white border-b border-neutral-200 px-8 py-5 sticky top-0 z-10 shadow-sm">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-xl font-bold text-primary-900 tracking-tight flex items-center gap-3 uppercase">
-                            <ListChecks size={24} className="text-primary-700" />
-                            Master Status Ledger
-                        </h1>
-                        <p className="text-[10px] text-neutral-400 font-bold mt-1 uppercase tracking-widest leading-none">End-to-end transaction transparency & audit trail</p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                        <FilterBar
-                            filters={[
-                                {
-                                    key: 'status', label: 'Status', options: [
-                                        { label: 'PENDING', value: 'PENDING' },
-                                        { label: 'REP_ALLOCATION', value: 'REP_ALLOCATION' },
-                                        { label: 'SLIP_GENERATED', value: 'SLIP_GENERATED' },
-                                        { label: 'BILLED', value: 'BILLED' },
-                                        { label: 'DAMAGED', value: 'DAMAGED' },
-                                        { label: 'MISSING', value: 'MISSING' }
-                                    ]
-                                }
-                            ]}
-                            onFilterChange={(key, val) => setFilters(prev => ({ ...prev, [key]: val }))}
-                            onSearch={setSearchTerm}
-                            onReset={() => { setFilters({}); setSearchTerm(''); }}
-                        />
-                    </div>
+        <div className="flex flex-col h-full bg-transparent font-sans">
+            <header className="mb-10 flex items-center justify-between">
+                <div>
+                    <h1 className="text-3xl font-extrabold text-neutral-900 tracking-tight flex items-center gap-4">
+                        <div className="w-12 h-12 bg-white rounded-2xl shadow-soft flex items-center justify-center border border-neutral-200/60">
+                            <ListChecks size={28} className="text-brand-600" />
+                        </div>
+                        Master Status Ledger
+                    </h1>
+                    <p className="text-sm text-neutral-500 font-medium mt-2">End-to-end transaction transparency and procurement audit trail.</p>
+                </div>
+                <div className="flex items-center gap-4">
+                    <FilterBar
+                        filters={[
+                            {
+                                key: 'status', label: 'Status', options: [
+                                    { label: 'PENDING', value: 'PENDING' },
+                                    { label: 'REP_ALLOCATION', value: 'REP_ALLOCATION' },
+                                    { label: 'SLIP_GENERATED', value: 'SLIP_GENERATED' },
+                                    { label: 'BILLED', value: 'BILLED' },
+                                    { label: 'DAMAGED', value: 'DAMAGED' },
+                                    { label: 'MISSING', value: 'MISSING' }
+                                ]
+                            }
+                        ]}
+                        onFilterChange={(key, val) => setFilters(prev => ({ ...prev, [key]: val }))}
+                        onSearch={setSearchTerm}
+                        onReset={() => { setFilters({}); setSearchTerm(''); }}
+                    />
                 </div>
             </header>
 
-            <main className="flex-1 p-8 overflow-auto">
-                <div className="bg-white erp-card shadow-sm border-neutral-200 overflow-hidden">
+            <main className="space-y-6">
+                <div className="saas-card bg-white p-2">
                     <DataGrid
                         data={ledger || []}
                         columns={columns}
@@ -120,13 +120,18 @@ export default function MasterLedgerPage() {
                 </div>
 
                 {!isLoading && ledger?.length === 0 && (
-                    <div className="mt-8 bg-white erp-card border-dashed p-20 text-center shadow-sm">
-                        <Search size={48} className="text-neutral-200 mx-auto mb-4" />
-                        <h3 className="text-sm font-bold text-primary-900 uppercase tracking-wider">No Records Found</h3>
-                        <p className="text-[10px] text-neutral-400 mt-2 font-bold uppercase tracking-widest leading-relaxed">Adjust your search or filters to locate specific entries.</p>
+                    <div className="saas-card bg-white p-20 text-center">
+                        <div className="max-w-xs mx-auto">
+                            <div className="w-16 h-16 bg-neutral-100/50 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                                <Search size={32} className="text-neutral-300" />
+                            </div>
+                            <h3 className="text-base font-bold text-neutral-900">No Records Found</h3>
+                            <p className="text-xs text-neutral-400 mt-2 font-medium">Adjust your search or filters to locate specific entries in the ledger.</p>
+                        </div>
                     </div>
                 )}
             </main>
         </div>
     );
 }
+
