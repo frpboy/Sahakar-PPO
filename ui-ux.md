@@ -760,7 +760,7 @@ This is critical and correct.
 D. Icon System
 ✅ FINAL RULE
 
-Iconoir is the only icon library
+lucide is the only icon library
 
 No mixed icon packs
 
@@ -972,11 +972,11 @@ Duty session started
 
 Button disappears, not disabled.
 
-5. ICONOIR USAGE (FINAL)
+5. lucide USAGE (FINAL)
 
 Examples (to standardize):
 
-Action	Iconoir Icon
+Action	lucide Icon
 Upload	upload
 Validate	check
 Process	play
@@ -1007,7 +1007,7 @@ With these updates:
 
 
 
-I’m assuming Next.js (App Router) + TypeScript, Iconoir icons, TanStack Query, Dexie (IndexedDB), and a small client-side “sync engine” that talks to NestJS.
+I’m assuming Next.js (App Router) + TypeScript, lucide icons, TanStack Query, Dexie (IndexedDB), and a small client-side “sync engine” that talks to NestJS.
 
 1) Final React folder/component structure (production-grade)
 ppo-web/
@@ -1142,7 +1142,7 @@ ppo-web/
 │     │  │  │  └─ EmptyState/
 │     │  │  │     └─ EmptyState.tsx
 │     │  │  └─ icons/
-│     │  │     └─ iconoir.ts                # single export point
+│     │  │     └─ lucide.ts                # single export point
 │     │  │
 │     │  ├─ modules/
 │     │  │  ├─ ppo-input/
@@ -1607,7 +1607,7 @@ export type BadgeVariant = "neutral" | "info" | "success" | "warning" | "danger"
 export type BadgeProps = {
   label: string;
   variant?: BadgeVariant;
-  icon?: React.ReactNode;      // Iconoir icon
+  icon?: React.ReactNode;      // lucide icon
   tooltip?: string;
 };
 

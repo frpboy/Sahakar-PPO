@@ -197,7 +197,7 @@ export default function RepAllocationPage() {
             <header className="bg-white border-b border-[var(--border)] px-8 py-4 sticky top-0 z-10">
                 <div className="flex items-center justify-between">
                     <h1 className="text-lg font-bold text-gray-900 tracking-tight flex items-center gap-2 uppercase">
-                        <UserBag className="w-5 h-5 text-indigo-600" />
+                        <UserCircle className="w-5 h-5 text-indigo-600" />
                         Representation Allocation
                     </h1>
                     <div className="flex items-center gap-4">
@@ -243,7 +243,7 @@ export default function RepAllocationPage() {
                 {Object.keys(groupedItems).length === 0 && !isLoading && (
                     <div className="bg-white rounded-lg border border-[var(--border)] p-20 text-center shadow-sm">
                         <div className="max-w-xs mx-auto">
-                            <InfoCircle className="w-12 h-12 text-gray-200 mx-auto mb-4" />
+                            <Info className="w-12 h-12 text-gray-200 mx-auto mb-4" />
                             <h3 className="text-sm font-bold text-gray-900 uppercase">No Allocations Found</h3>
                             <p className="text-xs text-gray-500 mt-1 font-medium italic">Adjust filters or check pending orders to process new items.</p>
                         </div>

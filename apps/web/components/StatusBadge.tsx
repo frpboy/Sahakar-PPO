@@ -22,18 +22,18 @@ interface StatusBadgeProps {
 }
 
 const statusMap: Record<StatusType, { bg: string, text: string, label: string }> = {
-    'BILLED': { bg: 'var(--status-billed-bg)', text: 'var(--status-billed-text)', label: 'BILLED' },
-    'NOT BILLED': { bg: 'var(--status-not-billed-bg)', text: 'var(--status-not-billed-text)', label: 'NOT BILLED' },
-    'PARTIALLY BILLED': { bg: 'var(--status-partial-bg)', text: 'var(--status-partial-text)', label: 'PARTIAL' },
-    'PRODUCT CHANGED': { bg: 'var(--status-changed-bg)', text: 'var(--status-changed-text)', label: 'CHANGED' },
-    'DAMAGED': { bg: 'var(--status-damaged-bg)', text: 'var(--status-damaged-text)', label: 'DAMAGED' },
-    'MISSING': { bg: 'var(--status-missing-bg)', text: 'var(--status-missing-text)', label: 'MISSING' },
-    'DONE': { bg: 'var(--status-billed-bg)', text: 'var(--status-billed-text)', label: 'DONE' },
-    'LOCKED': { bg: '#F3F4F6', text: '#374151', label: 'LOCKED' },
-    'PENDING': { bg: '#E5E7EB', text: '#374151', label: 'PENDING' },
-    'REP_ALLOCATION': { bg: '#FEF3C7', text: '#92400E', label: 'REP ALLOC' },
-    'SLIP_GENERATED': { bg: '#DBEAFE', text: '#1E40AF', label: 'SLIP GEN' },
-    'EXECUTED': { bg: '#DCFCE7', text: '#166534', label: 'EXECUTED' },
+    'BILLED': { bg: '#dcfce7', text: 'var(--color-status-billed)', label: 'BILLED' },
+    'NOT BILLED': { bg: '#fee2e2', text: 'var(--color-status-not-billed)', label: 'NOT BILLED' },
+    'PARTIALLY BILLED': { bg: '#fef3c7', text: 'var(--color-status-partial)', label: 'PARTIAL' },
+    'PRODUCT CHANGED': { bg: '#dbeafe', text: 'var(--color-status-changed)', label: 'CHANGED' },
+    'DAMAGED': { bg: '#ffedd5', text: 'var(--color-status-damaged)', label: 'DAMAGED' },
+    'MISSING': { bg: '#f3e8ff', text: 'var(--color-status-missing)', label: 'MISSING' },
+    'DONE': { bg: '#dcfce7', text: 'var(--color-status-done)', label: 'DONE' },
+    'LOCKED': { bg: '#f3f4f6', text: 'var(--color-status-locked)', label: 'LOCKED' },
+    'PENDING': { bg: '#e5e7eb', text: '#374151', label: 'PENDING' },
+    'REP_ALLOCATION': { bg: '#fef3c7', text: '#92400E', label: 'REP ALLOC' },
+    'SLIP_GENERATED': { bg: '#dbeafe', text: '#1E40AF', label: 'SLIP GEN' },
+    'EXECUTED': { bg: '#dcfce7', text: '#166534', label: 'EXECUTED' },
 };
 
 export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, className = '' }) => {

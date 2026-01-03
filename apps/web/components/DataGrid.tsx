@@ -7,6 +7,7 @@ import {
     flexRender,
     ColumnDef,
     Row,
+    ColumnResizeMode,
 } from '@tanstack/react-table';
 import { useVirtualizer } from '@tanstack/react-virtual';
 
@@ -17,6 +18,9 @@ interface DataGridProps<TData> {
     onRowClick?: (row: TData) => void;
     stickyHeader?: boolean;
     frozenColumns?: number;
+    enableColumnResizing?: boolean;
+    isRowLocked?: (row: TData) => boolean;
+    isRowHidden?: (row: TData) => boolean;
 }
 
 export function DataGrid<TData>({
@@ -26,11 +30,18 @@ export function DataGrid<TData>({
     onRowClick,
     stickyHeader = true,
     frozenColumns = 0,
+    enableColumnResizing = true,
+    isRowLocked = () => false,
+    isRowHidden = () => false,
 }: DataGridProps<TData>) {
+    const [columnResizeMode] = React.useState<ColumnResizeMode>('onChange');
+
     const table = useReactTable({
         data,
         columns,
         getCoreRowModel: getCoreRowModel(),
+        columnResizeMode,
+        enableColumnResizing,
     });
 
     const { rows } = table.getRowModel();

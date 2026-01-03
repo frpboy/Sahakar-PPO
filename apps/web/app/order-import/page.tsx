@@ -118,7 +118,7 @@ export default function OrderImportPage() {
                             <div className="bg-white p-6 rounded-lg border border-[var(--border)] shadow-sm">
                                 <div className="flex items-center gap-3">
                                     <div className="p-2 bg-indigo-50 rounded-md">
-                                        <InfoCircle className="w-5 h-5 text-indigo-600" />
+                                        <Info className="w-5 h-5 text-indigo-600" />
                                     </div>
                                     <div>
                                         <p className="text-xs font-bold text-gray-400 uppercase">Total Rows</p>
@@ -140,7 +140,7 @@ export default function OrderImportPage() {
                             <div className="bg-white p-6 rounded-lg border border-[var(--border)] shadow-sm">
                                 <div className="flex items-center gap-3">
                                     <div className="p-2 bg-amber-50 rounded-md">
-                                        <WarningTriangle className="w-5 h-5 text-amber-600" />
+                                        <AlertTriangle className="w-5 h-5 text-amber-600" />
                                     </div>
                                     <div>
                                         <p className="text-xs font-bold text-gray-400 uppercase">Duplicates</p>
@@ -155,7 +155,7 @@ export default function OrderImportPage() {
                             <div className="bg-white rounded-lg border border-red-100 overflow-hidden shadow-sm">
                                 <div className="bg-red-50/50 px-6 py-3 border-b border-red-100">
                                     <h3 className="text-sm font-bold text-red-800 uppercase tracking-wider flex items-center gap-2">
-                                        <WarningTriangle className="w-4 h-4" />
+                                        <AlertTriangle className="w-4 h-4" />
                                         Error Report
                                     </h3>
                                 </div>

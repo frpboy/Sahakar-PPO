@@ -92,7 +92,7 @@ export default function OrderSlipsPage() {
             cell: ({ row }) => (
                 <div className="flex items-center gap-3">
                     <Link href={`/order-slips/${row.original.id}`} className="p-1 px-3 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1.5">
-                        <PageSearch className="w-3.5 h-3.5" /> View Slip
+                        <FileSearch className="w-3.5 h-3.5" /> View Slip
                     </Link>
                 </div>
             )
@@ -135,7 +135,7 @@ export default function OrderSlipsPage() {
 
                 {!isLoading && slips?.length === 0 && (
                     <div className="mt-8 bg-indigo-50/30 border border-dashed border-indigo-200 rounded-lg p-12 text-center">
-                        <InfoCircle className="w-10 h-10 text-indigo-300 mx-auto mb-3" />
+                        <Info className="w-10 h-10 text-indigo-300 mx-auto mb-3" />
                         <h3 className="text-sm font-bold text-indigo-900 uppercase">No Active Slips</h3>
                         <p className="text-xs text-indigo-500 mt-1">Generate slips from the REP Allocation ledger to see them here.</p>
                     </div>

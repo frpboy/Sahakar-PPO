@@ -20,6 +20,8 @@
         "packages/*"
     ],
     "dependencies": {
-        "magic-string": "^0.30.21"
+        "@prisma/client": "^7.2.0",
+        "magic-string": "^0.30.21",
+        "prisma": "^7.2.0"
     }
 }

@@ -7,6 +7,8 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { auth } from '../src/lib/firebase';
 import { signOut } from 'firebase/auth';
+import { DutyEndButton } from './DutyEndButton';
+// import { OfflineBadge } from './OfflineBadge'; // Will activate when offline sync is implemented
 
 export function AppShell({ children }: { children: React.ReactNode }) {
     const { role, currentUser, isLoading } = useUserRole();
@@ -48,9 +50,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Sidebar />
             <div className="pl-64 min-h-screen flex flex-col">
                 <header className="sticky top-0 z-40 bg-white border-b border-gray-200 px-8 py-3 flex justify-between items-center shadow-sm">
-                    <h2 className="text-lg font-semibold text-gray-800 tracking-tight">Sahakar PPO</h2>
+                    <div className="flex items-center gap-4">
+                        <h2 className="text-lg font-semibold text-gray-800 tracking-tight">Sahakar PPO</h2>
+                        {/* Offline Badge - will connect to actual online/offline state later */}
+                        {/* <OfflineBadge isOnline={true} pendingSyncCount={0} /> */}
+                    </div>
 
                     <div className="flex items-center gap-6">
+                        {/* Duty End Button - only for Billing roles */}
+                        {(role === 'BILLING_STAFF' || role === 'BILLING_HEAD') && (
+                            <DutyEndButton
+                                onDutyEnd={async () => {
+                                    // TODO: Implement duty end logic
+                                    console.log('Duty ended');
+                                }}
+                            />
+                        )}
+
                         <div className="flex items-center gap-4 border-r pr-6 border-gray-200">
                             <button className="text-gray-400 hover:text-gray-600 relative">
                                 <Bell className="w-5 h-5" />
