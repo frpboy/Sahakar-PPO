@@ -83,11 +83,26 @@ export class PpoImportController {
         @UploadedFile() file: Express.Multer.File,
         @Request() req: any
     ): Promise<{ success: boolean; message: string; data: ProcessOrdersResult }> {
+        console.log('Upload endpoint hit');
+        console.log('File object:', file ? {
+            fieldname: file.fieldname,
+            originalname: file.originalname,
+            mimetype: file.mimetype,
+            size: file.size,
+            bufferLength: file.buffer?.length
+        } : 'null');
+
         if (!file) {
             throw new Error('No file uploaded');
         }
 
-        const userEmail = req.user?.email || 'system@sahakar.local';
+        if (!file.buffer || file.buffer.length === 0) {
+            throw new Error('File buffer is empty');
+        }
+
+        const userEmail = req.user?.email || req.body?.userEmail || 'system@sahakar.local';
+        console.log('Processing file for user:', userEmail);
+
         const result = await this.ppoImportService.parseAndProcessOrders(file.buffer, userEmail);
 
         return {
