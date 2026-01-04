@@ -175,7 +175,17 @@ export default function SuppliersPage() {
         setIsModalOpen(true);
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleBulkDelete = async (selectedIds: string[]) => {
+        try {
+            await Promise.all(selectedIds.map(id => deleteMutation.mutateAsync(id)));
+            alert(`Successfully deleted ${selectedIds.length} supplier(s)`);
+        } catch (error) {
+            console.error('Bulk delete error:', error);
+            alert('Failed to delete some suppliers');
+        }
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         const data = {
             supplierCode: formData.supplierCode?.toUpperCase() || undefined,
@@ -314,7 +324,14 @@ export default function SuppliersPage() {
             </div>
 
             <div className="app-card overflow-hidden flex-1">
-                <DataGrid data={suppliers || []} columns={columns} isLoading={isLoading} />
+                <DataGrid
+                    data={suppliers || []}
+                    columns={columns}
+                    isLoading={isLoading}
+                    enableRowSelection={true}
+                    onBulkDelete={handleBulkDelete}
+                    getRowId={(row) => row.id}
+                />
             </div>
 
             {isModalOpen && (

@@ -276,7 +276,17 @@ export default function ProductsPage() {
         setIsModalOpen(true);
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleBulkDelete = async (selectedIds: string[]) => {
+        try {
+            await Promise.all(selectedIds.map(id => deleteMutation.mutateAsync(id)));
+            alert(`Successfully deleted ${selectedIds.length} product(s)`);
+        } catch (error) {
+            console.error('Bulk delete error:', error);
+            alert('Failed to delete some products');
+        }
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         const data = {
             legacyId: formData.legacyId?.toUpperCase() || undefined,
@@ -464,7 +474,14 @@ export default function ProductsPage() {
 
             {/* Grid */}
             <div className="app-card overflow-hidden flex-1 flex flex-col">
-                <DataGrid data={products || []} columns={columns} isLoading={isLoading} />
+                <DataGrid
+                    data={products || []}
+                    columns={columns}
+                    isLoading={isLoading}
+                    enableRowSelection={true}
+                    onBulkDelete={handleBulkDelete}
+                    getRowId={(row) => row.id}
+                />
             </div>
 
             {/* Modal */}
