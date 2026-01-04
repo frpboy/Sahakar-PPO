@@ -39,7 +39,9 @@ export default function OrderImportPage() {
                 pendingItemsCreated: 0,
                 pendingItemsUpdated: 0,
                 duplicatesSkipped: 0,
-                filesProcessed: 0
+                filesProcessed: 0,
+                errors: [] as any[],
+                preview: [] as any[]
             };
 
             for (const f of files) {
@@ -64,19 +66,24 @@ export default function OrderImportPage() {
                     } catch {
                         errorMessage = errorText || errorMessage;
                     }
-                    throw new Error(errorMessage);
+                    aggregated.errors.push({ row: '-', error: `File ${f.name}: ${errorMessage}` });
+                    continue;
                 }
 
                 const data = await res.json();
                 const metrics = data?.data || data; // unwrap { success, message, data }
                 console.log('Upload response:', data);
 
-                aggregated.totalIngested += metrics?.totalIngested || 0;
-                aggregated.totalAggregated += metrics?.totalAggregated || 0;
-                aggregated.pendingItemsCreated += metrics?.pendingItemsCreated || 0;
-                aggregated.pendingItemsUpdated += metrics?.pendingItemsUpdated || 0;
-                aggregated.duplicatesSkipped += metrics?.duplicatesSkipped || 0;
+                // Map API properties (processed) to UI properties (totalIngested/pendingItemsCreated)
+                aggregated.totalIngested += metrics?.processed || metrics?.totalIngested || 0;
+                aggregated.totalAggregated += metrics?.validRows || metrics?.totalAggregated || 0;
+                aggregated.pendingItemsCreated += metrics?.processed || metrics?.pendingItemsCreated || 0;
+                aggregated.duplicatesSkipped += metrics?.duplicates || metrics?.duplicatesSkipped || 0;
                 aggregated.filesProcessed += 1;
+
+                if (metrics?.errors && Array.isArray(metrics.errors)) {
+                    aggregated.errors.push(...metrics.errors);
+                }
             }
 
             setResult(aggregated);
