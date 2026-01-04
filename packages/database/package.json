@@ -21,9 +21,9 @@
         "typescript": "^5.0.0"
     },
     "dependencies": {
+        "@types/pg": "^8.11.0",
         "drizzle-orm": "latest",
-        "pg": "^8.11.3",
-        "@types/pg": "^8.11.0"
+        "pg": "^8.11.3"
     },
     "overrides": {
         "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
