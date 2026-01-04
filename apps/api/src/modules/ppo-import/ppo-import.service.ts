@@ -34,6 +34,7 @@ export interface ProcessOrdersResult {
     processed: number;
     batchId: string;
     errors: string[];
+    preview: any[];
 }
 
 @Injectable()
@@ -153,6 +154,7 @@ export class PpoImportService {
     async processOrders(rows: OrderRow[], userEmail: string): Promise<ProcessOrdersResult> {
         const batchId = crypto.randomUUID();
         const errors: string[] = [];
+        const preview: any[] = [];
         let duplicates = 0;
         let processed = 0;
 
@@ -176,8 +178,7 @@ export class PpoImportService {
                 if (p.itemName) productNameMap.set(p.itemName.toLowerCase(), p.id);
             });
 
-            const dedupedRows: OrderRow[] = [];
-
+            // Resolve productId for all rows
             for (const row of rows) {
                 if (!row.productId) {
                     if (row.legacyProductId && productMap.has(row.legacyProductId)) {
@@ -186,29 +187,49 @@ export class PpoImportService {
                         row.productId = productNameMap.get(row.productName.toLowerCase());
                     }
                 }
-
-                // Push ALL rows, even if productId is missing
-                dedupedRows.push(row);
-
-                if (!row.productId) {
-                    // Log a warning but don't stop processing
-                    // errors.push(`Warning: Order ${row.orderId} has unknown product (Legacy ID: ${row.legacyProductId || 'N/A'}) - Ingested as UNMATCHED`);
-                }
             }
 
-            console.log(`Processing ${dedupedRows.length} rows`);
+            // Group rows by order_id
+            const orderGroups = new Map<string, OrderRow[]>();
+            for (const row of rows) {
+                const orderId = row.orderId || 'UNKNOWN';
+                if (!orderGroups.has(orderId)) {
+                    orderGroups.set(orderId, []);
+                }
+                orderGroups.get(orderId)!.push(row);
+            }
+
+            console.log(`Processing ${orderGroups.size} unique orders with ${rows.length} total items`);
 
             // Transaction
-            if (dedupedRows.length > 0) {
-                await db.transaction(async (tx) => {
-                    for (const r of dedupedRows) {
-                        try {
-                            const hash = this.generateRowHash(r);
+            await db.transaction(async (tx) => {
+                for (const [orderId, orderRows] of orderGroups.entries()) {
+                    try {
+                        // Step 1: Check if order_id already exists
+                        const { eq } = await import('drizzle-orm');
+                        const existingOrders = await tx
+                            .select()
+                            .from(orderRequests)
+                            .where(eq(orderRequests.orderId, orderId));
+
+                        if (existingOrders.length > 0) {
+                            console.log(`Order ${orderId} already exists. Updating...`);
+
+                            // Delete existing order_requests with this orderId
+                            await tx
+                                .delete(orderRequests)
+                                .where(eq(orderRequests.orderId, orderId));
+
+                            duplicates++;
+                        }
+
+                        // Step 2: Insert all items for this order
+                        for (const r of orderRows) {
                             const [inserted] = await tx.insert(orderRequests).values({
                                 acceptDatetime: r.acceptDatetime,
                                 orderId: r.orderId,
                                 customerId: r.customerId,
-                                productId: r.productId || null, // Allow null
+                                productId: r.productId || null,
                                 reqQty: r.reqQty,
                                 customerName: r.customerName,
                                 legacyProductId: r.legacyProductId,
@@ -226,39 +247,70 @@ export class PpoImportService {
                                 cQty: r.cQty,
                                 modification: r.modification,
                                 stage: r.productId ? 'PENDING' : 'UNMATCHED',
-                                hash: hash
-                            }).onConflictDoNothing().returning();
+                                hash: this.generateRowHash(r)
+                            }).returning();
 
                             if (inserted) {
                                 processed++;
 
-                                // Only create pending item if product is identified
-                                if (r.productId) {
-                                    await tx.insert(pendingItems).values({
-                                        productId: r.productId,
-                                        reqQty: r.reqQty,
-                                        state: 'PENDING'
-                                    });
-                                }
-
                                 await tx.insert(auditEvents).values({
                                     entityType: 'ORDER',
                                     entityId: inserted.id,
-                                    action: 'INGEST',
+                                    action: existingOrders.length > 0 ? 'UPDATE' : 'INGEST',
                                     actor: userEmail,
                                     afterState: JSON.stringify(r)
                                 });
-                            } else {
-                                duplicates++;
                             }
 
-                        } catch (itemError) {
-                            console.error('Row Insert Error:', itemError);
-                            errors.push(`Row Error: ${itemError.message}`);
+                            // Collect preview data (limit to first 100)
+                            if (preview.length < 100) {
+                                preview.push({
+                                    row: preview.length + 1,
+                                    orderId: r.orderId,
+                                    customerName: r.customerName,
+                                    productName: r.productName,
+                                    qty: r.reqQty,
+                                    supplierName: r.primarySupplier || '-',
+                                    status: existingOrders.length > 0 ? 'Updated' : 'Inserted'
+                                });
+                            }
                         }
+
+                    } catch (orderError) {
+                        console.error(`Error processing order ${orderId}:`, orderError);
+                        errors.push(`Order ${orderId}: ${orderError.message}`);
                     }
-                });
-            }
+                }
+
+                // Step 3: Aggregate pending_items by product_id across ALL orders
+                console.log('Aggregating pending_items by product_id...');
+
+                // Delete all existing pending items (we'll recalculate from scratch)
+                await tx.delete(pendingItems);
+
+                // Aggregate from order_requests where productId is not null and stage = 'PENDING'
+                const { sql } = await import('drizzle-orm');
+                const aggregatedItems = await tx.execute(sql`
+                    SELECT 
+                        product_id,
+                        SUM(req_qty) as total_qty
+                    FROM order_requests
+                    WHERE product_id IS NOT NULL 
+                    AND stage = 'PENDING'
+                    GROUP BY product_id
+                `);
+
+                // Insert aggregated pending_items
+                for (const item of aggregatedItems.rows) {
+                    await tx.insert(pendingItems).values({
+                        productId: item.product_id as string,
+                        reqQty: parseInt(item.total_qty as string, 10),
+                        state: 'PENDING'
+                    });
+                }
+
+                console.log(`Created ${aggregatedItems.rows.length} aggregated pending items`);
+            });
 
         } catch (dbError) {
             console.error('Database Error in processOrders:', dbError);
@@ -267,11 +319,12 @@ export class PpoImportService {
 
         return {
             totalRows: rows.length,
-            validRows: rows.length, // total valid rows passed to function
+            validRows: rows.length,
             duplicates,
             processed,
             batchId,
-            errors
+            errors,
+            preview
         };
     }
 

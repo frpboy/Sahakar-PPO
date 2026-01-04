@@ -84,6 +84,10 @@ export default function OrderImportPage() {
                 if (metrics?.errors && Array.isArray(metrics.errors)) {
                     aggregated.errors.push(...metrics.errors);
                 }
+
+                if (metrics?.preview && Array.isArray(metrics.preview)) {
+                    aggregated.preview.push(...metrics.preview);
+                }
             }
 
             setResult(aggregated);
@@ -99,15 +103,19 @@ export default function OrderImportPage() {
 
     const columns = useMemo<ColumnDef<any>[]>(() => [
         { header: 'Row', accessorKey: 'row', size: 60 },
-        { header: 'Product', accessorKey: 'productName', size: 250 },
+        { header: 'Order ID', accessorKey: 'orderId', size: 120, cell: (info) => <span className="text-xs font-bold text-brand-600">{info.getValue() as string}</span> },
+        { header: 'Customer', accessorKey: 'customerName', size: 200, cell: (info) => <span className="text-xs text-neutral-700 truncate">{info.getValue() as string}</span> },
+        { header: 'Product', accessorKey: 'productName', size: 220 },
         { header: 'Qty', accessorKey: 'qty', size: 80, cell: (info) => <span className="tabular-nums font-medium">{info.getValue() as number}</span> },
-        { header: 'Supplier', accessorKey: 'supplierName', size: 200 },
+        { header: 'Supplier', accessorKey: 'supplierName', size: 180 },
         {
             header: 'Status', accessorKey: 'status', size: 120, cell: (info) => {
                 const status = info.getValue() as string;
                 const isError = status.toLowerCase().includes('error');
+                const isUpdated = status.toLowerCase().includes('updated');
+                const bgColor = isError ? 'bg-error-100 text-error-600' : isUpdated ? 'bg - warning-100 text-warning-600' : 'bg-accent-100 text-accent-600';
                 return (
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isError ? 'bg-error-100 text-error-600' : 'bg-accent-100 text-accent-600'}`}>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${bgColor}`}>
                         {status.toUpperCase()}
                     </span>
                 );
