@@ -45,7 +45,7 @@ export function DataGrid<TData>({
     const [columnResizeMode] = React.useState<ColumnResizeMode>('onChange');
     const [pagination, setPagination] = React.useState({
         pageIndex: 0,
-        pageSize: 100, // Default to 100
+        pageSize: 50, // Changed from 100 to 50
     });
     const [rowSelection, setRowSelection] = React.useState({});
 
@@ -145,9 +145,26 @@ export function DataGrid<TData>({
 
     return (
         <div className="flex flex-col h-full">
+            {/* Top Toolbar with Bulk Delete */}
+            {enableRowSelection && onBulkDelete && Object.keys(rowSelection).length > 0 && (
+                <div className="bg-white border-x border-t border-neutral-200 rounded-t-md p-3 flex items-center justify-between">
+                    <span className="text-sm text-neutral-600 font-medium">
+                        {Object.keys(rowSelection).length} item(s) selected
+                    </span>
+                    <button
+                        onClick={handleBulkDelete}
+                        className="px-4 py-2 bg-danger-600 text-white font-semibold text-sm rounded hover:bg-danger-700 flex items-center gap-2"
+                    >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        Delete Selected
+                    </button>
+                </div>
+            )}
             <div
                 ref={parentRef}
-                className="spreadsheet-grid overflow-auto flex-1 relative w-full rounded-t-md border-t border-x border-neutral-200 shadow-sm bg-white"
+                className={`spreadsheet-grid overflow-auto flex-1 relative w-full ${enableRowSelection && Object.keys(rowSelection).length > 0 ? 'border-x' : 'rounded-t-md border-t border-x'} border-neutral-200 shadow-sm bg-white`}
             >
                 <div style={{ height: `${virtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
                     <table className="w-full border-collapse text-[13px]">
@@ -224,19 +241,7 @@ export function DataGrid<TData>({
 
             {/* Pagination Toolbar */}
             <div className="border border-neutral-200 bg-white p-2 flex items-center justify-between rounded-b-md shadow-sm text-xs text-neutral-600">
-                <div className="flex items-center gap-4">
-                    {enableRowSelection && onBulkDelete && (
-                        <button
-                            onClick={handleBulkDelete}
-                            disabled={Object.keys(rowSelection).length === 0}
-                            className="px-3 py-1.5 bg-danger-600 text-white font-semibold text-xs rounded hover:bg-danger-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                        >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                            Delete Selected ({Object.keys(rowSelection).length})
-                        </button>
-                    )}
+                <div className="flex items-center gap-2">
                     <span className="font-medium">Rows per page:</span>
                     <select
                         value={table.getState().pagination.pageSize}
