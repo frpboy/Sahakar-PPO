@@ -12,22 +12,21 @@ import { useUserRole } from '../../context/UserRoleContext';
 import { useOfflineSync } from '../../hooks/useOfflineSync';
 
 // Types
+// Types
 type PendingItem = {
     id: string;
-    orderRequest: {
-        productName: string;
-        orderId: string;
-        customerId: string;
-        reqQty: number;
-        primarySupplier?: string;
-        secondarySupplier?: string;
-    };
-    orderedQty: number;
-    stockQty: number;
-    offerQty: number;
-    notes: string;
-    orderedSupplier: string;
-    decidedSupplier: string;
+    product_name: string;
+    packing?: string;
+    category?: string;
+    req_qty: number;
+    ordered_qty: number;
+    stock_qty: number;
+    offer_qty: number;
+    allocator_notes: string;
+    decided_supplier_id?: string;
+    decided_supplier_name?: string;
+    done: boolean;
+    locked: boolean;
 };
 
 export default function PendingOrdersPage() {
@@ -99,16 +98,25 @@ export default function PendingOrdersPage() {
     const handleEditClick = (item: PendingItem) => {
         setEditingId(item.id);
         setEditFormData({
-            orderedQty: item.orderedQty,
-            stockQty: item.stockQty,
-            offerQty: item.offerQty,
-            notes: item.notes,
-            decidedSupplier: item.decidedSupplier || item.orderedSupplier,
+            ordered_qty: item.ordered_qty,
+            stock_qty: item.stock_qty,
+            offer_qty: item.offer_qty,
+            allocator_notes: item.allocator_notes,
+            decided_supplier_id: item.decided_supplier_id,
         });
     };
 
     const handleSave = (id: string) => {
-        updateMutation.mutate({ id, payload: editFormData });
+        // Map back to camelCase payloads if expected by API
+        const payload = {
+            orderedQty: editFormData.ordered_qty,
+            stockQty: editFormData.stock_qty,
+            offerQty: editFormData.offer_qty,
+            allocatorNotes: editFormData.allocator_notes,
+            decidedSupplierId: editFormData.decided_supplier_id,
+            done: editFormData.done
+        };
+        updateMutation.mutate({ id, payload });
     };
 
     const handleInputChange = (field: string, value: any) => {
@@ -119,13 +127,12 @@ export default function PendingOrdersPage() {
         if (!items) return [];
         return items.filter((item: PendingItem) => {
             const searchLower = searchTerm.toLowerCase();
-            const matchesSearch =
-                item.orderRequest.productName.toLowerCase().includes(searchLower) ||
-                item.orderRequest.orderId.toLowerCase().includes(searchLower) ||
-                item.orderRequest.customerId.toLowerCase().includes(searchLower);
+            const productName = item.product_name?.toLowerCase() || '';
+            const matchesSearch = productName.includes(searchLower);
 
             if (!matchesSearch) return false;
-            if (filters.supplier && item.orderedSupplier !== filters.supplier) return false;
+            // Supplier filter? decided_supplier
+            if (filters.supplier && item.decided_supplier_name !== filters.supplier) return false;
 
             return true;
         });
@@ -133,7 +140,7 @@ export default function PendingOrdersPage() {
 
     const uniqueSuppliers = useMemo(() => {
         if (!items) return [];
-        const suppliers = new Set(items.map((i: PendingItem) => i.orderedSupplier).filter(Boolean));
+        const suppliers = new Set(items.map((i: PendingItem) => i.decided_supplier_name).filter(Boolean));
         return Array.from(suppliers).map(s => ({ label: s as string, value: s as string }));
     }, [items]);
 
@@ -145,28 +152,27 @@ export default function PendingOrdersPage() {
                 const item = row.original;
                 return (
                     <div className="flex flex-col">
-                        <span className="font-bold text-primary-900 group-hover:text-primary-700 transition-colors uppercase text-[11px] tracking-tight">{item.orderRequest.productName}</span>
-                        <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-tighter">{item.orderRequest.primarySupplier}</span>
+                        <span className="font-bold text-primary-900 group-hover:text-primary-700 transition-colors uppercase text-[11px] tracking-tight">{item.product_name}</span>
+                        <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-tighter">{item.packing || '-'} {item.category ? `(${item.category})` : ''}</span>
                     </div>
                 );
             }
         },
         {
-            header: 'Customer Info',
+            header: 'Supplier Priority',
             size: 150,
             cell: ({ row }) => {
                 const item = row.original;
                 return (
                     <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-primary-700">{item.orderRequest.customerId}</span>
-                        <span className="text-[10px] text-neutral-400 font-bold">{item.orderRequest.orderId}</span>
+                        <span className="text-[10px] font-bold text-primary-700">{item.decided_supplier_name || 'Pending Allocation'}</span>
                     </div>
                 );
             }
         },
         {
             header: 'Req',
-            accessorKey: 'orderRequest.reqQty',
+            accessorKey: 'req_qty',
             size: 60,
             cell: (info) => <span className="tabular-nums font-bold text-neutral-400">{info.getValue() as number}</span>
         },
@@ -179,10 +185,10 @@ export default function PendingOrdersPage() {
                     <input
                         type="number"
                         className="w-full bg-white border border-primary-500 rounded px-1 py-1 text-xs font-bold tabular-nums focus:ring-2 focus:ring-primary-500/20 outline-none"
-                        value={editFormData.orderedQty}
-                        onChange={(e) => handleInputChange('orderedQty', parseInt(e.target.value))}
+                        value={editFormData.ordered_qty}
+                        onChange={(e) => handleInputChange('ordered_qty', parseInt(e.target.value))}
                     />
-                ) : <span className="tabular-nums font-bold text-primary-900">{item.orderedQty}</span>;
+                ) : <span className="tabular-nums font-bold text-primary-900">{item.ordered_qty}</span>;
             }
         },
         {
@@ -194,10 +200,10 @@ export default function PendingOrdersPage() {
                     <input
                         type="number"
                         className="w-full bg-white border border-primary-500 rounded px-1 py-1 text-xs font-bold tabular-nums focus:ring-2 focus:ring-primary-500/20 outline-none"
-                        value={editFormData.stockQty}
-                        onChange={(e) => handleInputChange('stockQty', parseInt(e.target.value))}
+                        value={editFormData.stock_qty}
+                        onChange={(e) => handleInputChange('stock_qty', parseInt(e.target.value))}
                     />
-                ) : <span className="tabular-nums font-bold text-primary-900">{item.stockQty}</span>;
+                ) : <span className="tabular-nums font-bold text-primary-900">{item.stock_qty}</span>;
             }
         },
         {
@@ -209,10 +215,10 @@ export default function PendingOrdersPage() {
                     <input
                         type="number"
                         className="w-full bg-white border border-primary-500 rounded px-1 py-1 text-xs font-bold tabular-nums focus:ring-2 focus:ring-primary-500/20 outline-none"
-                        value={editFormData.offerQty}
-                        onChange={(e) => handleInputChange('offerQty', parseInt(e.target.value))}
+                        value={editFormData.offer_qty}
+                        onChange={(e) => handleInputChange('offer_qty', parseInt(e.target.value))}
                     />
-                ) : <span className="tabular-nums font-bold text-primary-900">{item.offerQty}</span>;
+                ) : <span className="tabular-nums font-bold text-primary-900">{item.offer_qty}</span>;
             }
         },
         {
@@ -347,8 +353,8 @@ export default function PendingOrdersPage() {
                                 <input
                                     type="number"
                                     className="w-full bg-neutral-50 border border-neutral-200 rounded-none px-4 py-3 text-sm font-bold tabular-nums focus:ring-2 focus:ring-brand-500/20 outline-none transition-all"
-                                    value={editFormData.offerQty}
-                                    onChange={(e) => handleInputChange('offerQty', parseInt(e.target.value))}
+                                    value={editFormData.offer_qty}
+                                    onChange={(e) => handleInputChange('offer_qty', parseInt(e.target.value))}
                                 />
                             </div>
                             <div>
@@ -356,8 +362,8 @@ export default function PendingOrdersPage() {
                                 <textarea
                                     className="w-full bg-neutral-50 border border-neutral-200 rounded-none px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-brand-500/20 outline-none transition-all"
                                     rows={3}
-                                    value={editFormData.notes}
-                                    onChange={(e) => handleInputChange('notes', e.target.value)}
+                                    value={editFormData.allocator_notes}
+                                    onChange={(e) => handleInputChange('allocator_notes', e.target.value)}
                                     placeholder="Add any internal remarks here..."
                                 />
                             </div>
