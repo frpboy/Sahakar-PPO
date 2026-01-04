@@ -79,10 +79,10 @@ export class OrderSlipsService {
                     continue;
                 }
 
-                // Create order slip
+                // Create order slip (slipDate is already a string from parameter)
                 const slipResult = await tx.insert(orderSlips).values({
-                    supplierId: supplierId,
-                    slipDate: new Date(slipDate),
+                    supplierId,
+                    slipDate,
                     generatedBy: userEmail
                 }).returning({ id: orderSlips.id });
 
