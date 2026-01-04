@@ -1,6 +1,6 @@
 'use client';
 import { useQuery } from '@tanstack/react-query';
-import { DataGrid } from '../../../../components/DataGrid';
+import { DataGrid } from '../../../components/DataGrid';
 import { ColumnDef } from '@tanstack/react-table';
 import { AlertTriangle } from 'lucide-react';
 

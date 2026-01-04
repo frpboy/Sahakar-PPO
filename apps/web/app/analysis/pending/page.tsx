@@ -1,10 +1,10 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { DataGrid } from '../../../../components/DataGrid';
+import { DataGrid } from '../../../components/DataGrid';
 import { ColumnDef } from '@tanstack/react-table';
 import { Timer } from 'lucide-react';
-import { StatusBadge } from '../../../../components/StatusBadge';
+import { StatusBadge } from '../../../components/StatusBadge';
 
 export default function PendingAnalysisPage() {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://asia-south1-sahakar-ppo.cloudfunctions.net/api';
