@@ -99,13 +99,13 @@ export default function SuppliersPage() {
             for (const row of data) {
                 try {
                     await createMutation.mutateAsync({
-                        supplierCode: row['Supplier Code'] || row['supplierCode'],
-                        supplierName: row['Supplier Name'] || row['supplierName'] || row['name'],
-                        contactPerson: row['Contact Person'] || row['contactPerson'],
-                        mobile: row['Mobile'] || row['mobile'] || row['phone'],
-                        email: row['Email'] || row['email'],
-                        gstNumber: row['GST Number'] || row['gstNumber'] || row['gst'],
-                        address: row['Address'] || row['address'],
+                        supplierCode: (row['Supplier Code'] || row['supplierCode'] || '').toString(),
+                        supplierName: (row['Alias'] || row['Supplier Name'] || row['supplierName'] || row['name'] || '').toString(),
+                        contactPerson: (row['Contact Person'] || row['contactPerson'] || '').toString(),
+                        mobile: (row['Mobile'] || row['mobile'] || row['phone'] || '').toString(),
+                        email: (row['Email'] || row['email'] || '').toString(),
+                        gstNumber: (row['GSTNo'] || row['GST Number'] || row['gstNumber'] || row['gst'] || '').toString(),
+                        address: ((row['Address'] || '') + (row['City'] ? `, ${row['City']}` : '')).trim(),
                         creditDays: row['Credit Days'] || row['creditDays']
                     });
                     successCount++;

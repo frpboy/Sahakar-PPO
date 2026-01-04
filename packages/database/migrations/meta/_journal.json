@@ -15,6 +15,13 @@
       "when": 1767519940862,
       "tag": "0001_foamy_red_ghost",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1767548640866,
+      "tag": "0002_small_dark_phoenix",
+      "breakpoints": true
     }
   ]
 }

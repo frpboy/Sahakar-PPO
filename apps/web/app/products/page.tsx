@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState, useMemo } from 'react';
 import { DataGrid } from '../../components/DataGrid';
 import { ExcelImportButton } from '../../components/ExcelImportButton';
-import { Package, Plus, Edit, Trash2 } from 'lucide-react';
+import { Package, Plus, Edit, Trash2, Search, Filter } from 'lucide-react';
 import type { ColumnDef } from '@tanstack/react-table';
 
 interface Product {
@@ -11,12 +11,36 @@ interface Product {
     legacyId?: string;
     productCode?: string;
     itemName: string;
+    aliasName?: string;
     packing?: string;
     category?: string;
     subcategory?: string;
+    genericName?: string;
+    patent?: string;
+    hsnCode?: string;
+    productType?: string;
     mrp?: number;
+    ptr?: number;
+    pts?: number;
+    landedCost?: number;
+    gstPercent?: number;
+    discountPercent?: number;
+    stock?: number;
+    primarySupplierId?: string;
+    secondarySupplierId?: string;
+    repId?: string;
     active: boolean;
     createdAt: string;
+}
+
+interface Supplier {
+    id: string;
+    supplierName: string;
+}
+
+interface Rep {
+    id: string;
+    name: string;
 }
 
 export default function ProductsPage() {
@@ -25,21 +49,60 @@ export default function ProductsPage() {
     const [search, setSearch] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-    const [formData, setFormData] = useState({
+    const [activeTab, setActiveTab] = useState<'general' | 'pricing' | 'tax' | 'suppliers'>('general');
+
+    const initialFormState = {
         legacyId: '',
         productCode: '',
         itemName: '',
+        aliasName: '',
         packing: '',
         category: '',
         subcategory: '',
-        mrp: ''
-    });
+        genericName: '',
+        patent: '',
+        hsnCode: '',
+        productType: '',
+        mrp: '',
+        ptr: '',
+        pts: '',
+        landedCost: '',
+        gstPercent: '',
+        discountPercent: '',
+        stock: '',
+        primarySupplierId: '',
+        secondarySupplierId: '',
+        repId: ''
+    };
 
+    const [formData, setFormData] = useState(initialFormState);
+
+    // Fetch Products
     const { data: products, isLoading } = useQuery({
         queryKey: ['products', search],
         queryFn: async () => {
             const res = await fetch(`${apiUrl}/products?search=${search}`);
             if (!res.ok) throw new Error('Failed to fetch products');
+            return res.json();
+        }
+    });
+
+    // Fetch Suppliers for Dropdown & Import
+    const { data: suppliers } = useQuery<Supplier[]>({
+        queryKey: ['suppliers'],
+        queryFn: async () => {
+            const res = await fetch(`${apiUrl}/suppliers`);
+            if (!res.ok) throw new Error('Failed to fetch suppliers');
+            return res.json();
+        }
+    });
+
+    // Fetch REPs for Dropdown & Import
+    const { data: reps } = useQuery<Rep[]>({
+        queryKey: ['reps'],
+        queryFn: async () => {
+            const res = await fetch(`${apiUrl}/rep-master`);
+            if (!res.ok) throw new Error('Failed to fetch reps');
             return res.json();
         }
     });
@@ -95,39 +158,64 @@ export default function ProductsPage() {
             let successCount = 0;
             let errorCount = 0;
 
+            // Create Lookups
+            const supplierMap = new Map<string, string>(); // Name -> ID
+            suppliers?.forEach(s => supplierMap.set(s.supplierName.toUpperCase(), s.id));
+
+            const repMap = new Map<string, string>(); // Name -> ID
+            reps?.forEach(r => repMap.set(r.name.toUpperCase(), r.id));
+
             for (const row of data) {
                 try {
+                    // Resolve FKs
+                    const pSupName = (row['Primary supplier'] || row['primarySupplier'] || '').toString().toUpperCase();
+                    const sSupName = (row['Secondary supplier'] || row['secondarySupplier'] || '').toString().toUpperCase();
+                    const repName = (row['Rep'] || row['rep'] || '').toString().toUpperCase();
+
+                    const pSupId = supplierMap.get(pSupName);
+                    const sSupId = supplierMap.get(sSupName);
+                    const rId = repMap.get(repName);
+
                     await createMutation.mutateAsync({
-                        legacyId: (row['Legacy ID'] || row['legacyId'] || row['product_id'] || '').toString(),
+                        legacyId: (row['id'] || row['Legacy ID'] || row['legacyId'] || '').toString(),
                         productCode: (row['Product Code'] || row['productCode'] || '').toString(),
-                        itemName: (row['Item Name'] || row['itemName'] || row['name'] || row['product_name'] || '').toString(),
-                        packing: (row['Packing'] || row['packing'] || '').toString(),
+                        itemName: (row['Name'] || row['Item Name'] || row['itemName'] || '').toString(),
+                        aliasName: (row['Alias Name'] || row['aliasName'] || '').toString(),
+                        packing: (row['Packing'] || row['pack ing'] || row['packing'] || '').toString(),
                         category: (row['Category'] || row['category'] || '').toString(),
-                        subcategory: (row['Subcategory'] || row['subcategory'] || '').toString(),
-                        mrp: row['MRP'] || row['mrp']
+                        subcategory: (row['Sub Category'] || row['Subcategory'] || row['subcategory'] || '').toString(),
+                        genericName: (row['Generic Name'] || row['genericName'] || '').toString(),
+                        patent: (row['Patent'] || row['patent'] || '').toString(),
+                        hsnCode: (row['Hsn Code'] || row['hsnCode'] || '').toString(),
+                        productType: (row['Type'] || row['productType'] || '').toString(),
+                        mrp: row['MRP'] || row['mrp'],
+                        ptr: row['PTR'] || row['ptr'],
+                        pts: row['PTS'] || row['pts'],
+                        landedCost: row['L co st'] || row['landedCost'],
+                        gstPercent: row['GSI %'] || row['GST %'] || row['gstPercent'],
+                        discountPercent: row['Dis c%'] || row['discountPercent'],
+                        stock: parseInt(row['Sto ck'] || row['stock'] || '0'),
+                        primarySupplierId: pSupId,
+                        secondarySupplierId: sSupId,
+                        repId: rId
                     });
                     successCount++;
                 } catch (err) {
+                    console.error('Import Row Error:', err);
                     errorCount++;
                 }
             }
 
             alert(`Import complete: ${successCount} products added, ${errorCount} errors`);
         } catch (error) {
+            console.error('Import Error:', error);
             alert('Error importing products');
         }
     };
 
     const resetForm = () => {
-        setFormData({
-            legacyId: '',
-            productCode: '',
-            itemName: '',
-            packing: '',
-            category: '',
-            subcategory: '',
-            mrp: ''
-        });
+        setFormData(initialFormState);
+        setActiveTab('general');
     };
 
     const handleEdit = (product: Product) => {
@@ -136,10 +224,24 @@ export default function ProductsPage() {
             legacyId: product.legacyId || '',
             productCode: product.productCode || '',
             itemName: product.itemName,
+            aliasName: product.aliasName || '',
             packing: product.packing || '',
             category: product.category || '',
             subcategory: product.subcategory || '',
-            mrp: product.mrp?.toString() || ''
+            genericName: product.genericName || '',
+            patent: product.patent || '',
+            hsnCode: product.hsnCode || '',
+            productType: product.productType || '',
+            mrp: product.mrp?.toString() || '',
+            ptr: product.ptr?.toString() || '',
+            pts: product.pts?.toString() || '',
+            landedCost: product.landedCost?.toString() || '',
+            gstPercent: product.gstPercent?.toString() || '',
+            discountPercent: product.discountPercent?.toString() || '',
+            stock: product.stock?.toString() || '',
+            primarySupplierId: product.primarySupplierId || '',
+            secondarySupplierId: product.secondarySupplierId || '',
+            repId: product.repId || ''
         });
         setIsModalOpen(true);
     };
@@ -150,10 +252,24 @@ export default function ProductsPage() {
             legacyId: formData.legacyId?.toUpperCase() || undefined,
             productCode: formData.productCode?.toUpperCase() || undefined,
             itemName: formData.itemName.toUpperCase(),
+            aliasName: formData.aliasName?.toUpperCase() || undefined,
             packing: formData.packing?.toUpperCase() || undefined,
             category: formData.category?.toUpperCase() || undefined,
             subcategory: formData.subcategory?.toUpperCase() || undefined,
-            mrp: formData.mrp ? parseFloat(formData.mrp) : undefined
+            genericName: formData.genericName?.toUpperCase() || undefined,
+            patent: formData.patent?.toUpperCase() || undefined,
+            hsnCode: formData.hsnCode || undefined,
+            productType: formData.productType?.toUpperCase() || undefined,
+            mrp: formData.mrp ? parseFloat(formData.mrp) : undefined,
+            ptr: formData.ptr ? parseFloat(formData.ptr) : undefined,
+            pts: formData.pts ? parseFloat(formData.pts) : undefined,
+            landedCost: formData.landedCost ? parseFloat(formData.landedCost) : undefined,
+            gstPercent: formData.gstPercent ? parseFloat(formData.gstPercent) : undefined,
+            discountPercent: formData.discountPercent ? parseFloat(formData.discountPercent) : undefined,
+            stock: formData.stock ? parseInt(formData.stock) : 0,
+            primarySupplierId: formData.primarySupplierId || undefined,
+            secondarySupplierId: formData.secondarySupplierId || undefined,
+            repId: formData.repId || undefined
         };
 
         if (editingProduct) {
@@ -165,7 +281,6 @@ export default function ProductsPage() {
 
     const handleNumericInput = (e: React.ChangeEvent<HTMLInputElement>, field: string) => {
         const value = e.target.value;
-        // Allow only numbers and decimal point
         if (value === '' || /^\d*\.?\d*$/.test(value)) {
             setFormData({ ...formData, [field]: value });
         }
@@ -173,50 +288,65 @@ export default function ProductsPage() {
 
     const columns = useMemo<ColumnDef<Product>[]>(() => [
         {
-            header: 'Product Code',
+            header: 'Code',
             accessorKey: 'productCode',
-            size: 100,
+            size: 80,
             cell: ({ row }) => (
-                <span className="text-xs font-bold text-brand-600">{row.original.productCode || '-'}</span>
+                <div className="flex flex-col">
+                    <span className="text-xs font-bold text-brand-600">{row.original.productCode || '-'}</span>
+                    <span className="text-[10px] text-neutral-400">#{row.original.legacyId || ''}</span>
+                </div>
             )
         },
         {
-            header: 'Item Name',
+            header: 'Product',
             accessorKey: 'itemName',
             size: 250,
             cell: ({ row }) => (
-                <span className="text-xs font-semibold text-neutral-900">{row.original.itemName}</span>
+                <div className="flex flex-col">
+                    <span className="text-xs font-semibold text-neutral-900 truncate" title={row.original.itemName}>
+                        {row.original.itemName}
+                    </span>
+                    {row.original.aliasName && (
+                        <span className="text-[10px] text-neutral-500 truncate" title={row.original.aliasName}>
+                            {row.original.aliasName}
+                        </span>
+                    )}
+                </div>
             )
         },
         {
             header: 'Packing',
             accessorKey: 'packing',
             size: 100,
-            cell: ({ row }) => (
-                <span className="text-xs text-neutral-600">{row.original.packing || '-'}</span>
-            )
+            cell: ({ row }) => <span className="text-xs text-neutral-600">{row.original.packing || '-'}</span>
         },
         {
-            header: 'Category',
-            accessorKey: 'category',
+            header: 'Pricing (₹)',
+            accessorKey: 'mrp',
             size: 120,
             cell: ({ row }) => (
-                <span className="text-xs text-neutral-600">{row.original.category || '-'}</span>
+                <div className="flex flex-col text-right">
+                    <span className="text-xs font-bold text-neutral-900">MRP: {row.original.mrp?.toFixed(2) || '-'}</span>
+                    <span className="text-[10px] text-neutral-500">PTR: {row.original.ptr?.toFixed(2) || '-'}</span>
+                </div>
             )
         },
         {
-            header: 'MRP',
-            accessorKey: 'mrp',
+            header: 'Stock',
+            accessorKey: 'stock',
             size: 80,
             cell: ({ row }) => (
-                <span className="text-xs font-bold text-neutral-900">₹{row.original.mrp?.toFixed(2) || '0.00'}</span>
+                <span className={`text-xs font-bold ${row.original.stock && row.original.stock > 0 ? 'text-success-600' : 'text-danger-600'}`}>
+                    {row.original.stock || 0}
+                </span>
             )
         },
         {
             header: 'Actions',
             size: 100,
             cell: ({ row }) => (
-                <div className="flex gap-2">
+                <div className="flex gap-2 justify-end">
                     <button
                         onClick={() => handleEdit(row.original)}
                         className="p-1 text-brand-600 hover:bg-brand-100 transition-colors"
@@ -236,19 +366,33 @@ export default function ProductsPage() {
                 </div>
             )
         }
-    ], []);
+    ], [deleteMutation]);
+
+    const InputField = ({ label, field, placeholder, type = 'text' }: any) => (
+        <div>
+            <label className="block text-xs font-medium text-neutral-700 mb-1">{label}</label>
+            <input
+                type={type}
+                value={(formData as any)[field]}
+                onChange={(e) => type === 'number' ? handleNumericInput(e, field) : setFormData({ ...formData, [field]: e.target.value })}
+                placeholder={placeholder}
+                className="w-full px-3 py-2 border border-neutral-300 rounded-sm text-sm focus:ring-1 focus:ring-brand-500 focus:border-brand-500"
+            />
+        </div>
+    );
 
     return (
         <div className="flex flex-col h-full bg-transparent">
+            {/* Header */}
             <header className="mb-6 flex items-center justify-between">
                 <div>
                     <h1 className="text-2xl font-bold text-neutral-900 flex items-center gap-3">
-                        <div className="w-10 h-10 bg-white rounded-none shadow-soft flex items-center justify-center border border-neutral-200/60">
+                        <div className="w-10 h-10 bg-white shadow-soft flex items-center justify-center border border-neutral-200/60">
                             <Package size={22} className="text-brand-600" />
                         </div>
                         Products Master
                     </h1>
-                    <p className="text-sm text-neutral-500 mt-1">Manage product catalog and inventory items</p>
+                    <p className="text-sm text-neutral-500 mt-1">Manage catalog, pricing, and supplier mappings</p>
                 </div>
                 <div className="flex gap-3">
                     <ExcelImportButton onImport={handleExcelImport} entityType="products" />
@@ -266,115 +410,157 @@ export default function ProductsPage() {
                 </div>
             </header>
 
-            <div className="mb-4">
-                <input
-                    type="text"
-                    placeholder="Search by name, code, or legacy ID..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="w-full px-4 py-2 border border-neutral-300 rounded-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
-                />
+            {/* Search */}
+            <div className="mb-4 flex gap-2">
+                <div className="relative flex-1">
+                    <Search className="absolute left-3 top-2.5 text-neutral-400" size={18} />
+                    <input
+                        type="text"
+                        placeholder="Search by name, code, legacy ID, alias..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 border border-neutral-300 rounded-sm focus:ring-1 focus:ring-brand-500 focus:border-brand-500"
+                    />
+                </div>
             </div>
 
-            <div className="app-card overflow-hidden flex-1">
+            {/* Grid */}
+            <div className="app-card overflow-hidden flex-1 flex flex-col">
                 <DataGrid data={products || []} columns={columns} isLoading={isLoading} />
             </div>
 
+            {/* Modal */}
             {isModalOpen && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-none shadow-xl max-w-2xl w-full p-6">
-                        <h2 className="text-xl font-bold text-neutral-900 mb-4">
-                            {editingProduct ? 'Edit Product' : 'Add New Product'}
-                        </h2>
-                        <form onSubmit={handleSubmit} className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-neutral-700 mb-1">Legacy ID</label>
-                                    <input
-                                        type="text"
-                                        value={formData.legacyId}
-                                        onChange={(e) => setFormData({ ...formData, legacyId: e.target.value })}
-                                        className="w-full px-3 py-2 border border-neutral-300 rounded-none focus:ring-2 focus:ring-brand-500"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-neutral-700 mb-1">Product Code</label>
-                                    <input
-                                        type="text"
-                                        value={formData.productCode}
-                                        onChange={(e) => setFormData({ ...formData, productCode: e.target.value })}
-                                        className="w-full px-3 py-2 border border-neutral-300 rounded-none focus:ring-2 focus:ring-brand-500"
-                                    />
-                                </div>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-neutral-700 mb-1">Item Name *</label>
-                                <input
-                                    type="text"
-                                    required
-                                    value={formData.itemName}
-                                    onChange={(e) => setFormData({ ...formData, itemName: e.target.value })}
-                                    className="w-full px-3 py-2 border border-neutral-300 rounded-none focus:ring-2 focus:ring-brand-500"
-                                />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-neutral-700 mb-1">Packing</label>
-                                    <input
-                                        type="text"
-                                        value={formData.packing}
-                                        onChange={(e) => setFormData({ ...formData, packing: e.target.value })}
-                                        className="w-full px-3 py-2 border border-neutral-300 rounded-none focus:ring-2 focus:ring-brand-500"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-neutral-700 mb-1">MRP (₹)</label>
-                                    <input
-                                        type="text"
-                                        value={formData.mrp}
-                                        onChange={(e) => handleNumericInput(e, 'mrp')}
-                                        placeholder="0.00"
-                                        className="w-full px-3 py-2 border border-neutral-300 rounded-none focus:ring-2 focus:ring-brand-500"
-                                    />
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-neutral-700 mb-1">Category</label>
-                                    <input
-                                        type="text"
-                                        value={formData.category}
-                                        onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                                        className="w-full px-3 py-2 border border-neutral-300 rounded-none focus:ring-2 focus:ring-brand-500"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-neutral-700 mb-1">Subcategory</label>
-                                    <input
-                                        type="text"
-                                        value={formData.subcategory}
-                                        onChange={(e) => setFormData({ ...formData, subcategory: e.target.value })}
-                                        className="w-full px-3 py-2 border border-neutral-300 rounded-none focus:ring-2 focus:ring-brand-500"
-                                    />
-                                </div>
-                            </div>
-                            <div className="flex gap-3 justify-end mt-6">
+                    <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full flex flex-col max-h-[90vh]">
+                        <div className="p-6 border-b border-neutral-200 flex justify-between items-center">
+                            <h2 className="text-xl font-bold text-neutral-900">
+                                {editingProduct ? 'Edit Product' : 'Add New Product'}
+                            </h2>
+                            <button onClick={() => setIsModalOpen(false)} className="text-neutral-400 hover:text-neutral-600">✕</button>
+                        </div>
+
+                        {/* Tabs */}
+                        <div className="flex border-b border-neutral-200 bg-neutral-50">
+                            {[
+                                { id: 'general', label: 'General Info' },
+                                { id: 'pricing', label: 'Pricing & Cost' },
+                                { id: 'tax', label: 'Tax & Regulatory' },
+                                { id: 'suppliers', label: 'Suppliers & REP' }
+                            ].map(tab => (
                                 <button
-                                    type="button"
-                                    onClick={() => {
-                                        setIsModalOpen(false);
-                                        setEditingProduct(null);
-                                        resetForm();
-                                    }}
-                                    className="px-4 py-2 text-neutral-700 border border-neutral-300 rounded-none hover:bg-neutral-50"
+                                    key={tab.id}
+                                    onClick={() => setActiveTab(tab.id as any)}
+                                    className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.id
+                                            ? 'border-brand-600 text-brand-600 bg-white'
+                                            : 'border-transparent text-neutral-600 hover:text-neutral-900 hover:bg-white'
+                                        }`}
                                 >
-                                    Cancel
+                                    {tab.label}
                                 </button>
-                                <button type="submit" className="btn-brand">
-                                    {editingProduct ? 'Update' : 'Create'}
-                                </button>
-                            </div>
-                        </form>
+                            ))}
+                        </div>
+
+                        {/* Form Body */}
+                        <div className="p-8 overflow-y-auto flex-1">
+                            <form onSubmit={handleSubmit} className="space-y-6">
+                                {activeTab === 'general' && (
+                                    <div className="grid grid-cols-2 gap-6">
+                                        <InputField label="Item Name *" field="itemName" placeholder="e.g. PARACETAMOL 500MG" />
+                                        <InputField label="Alias Name" field="aliasName" placeholder="e.g. CROCIN" />
+                                        <InputField label="Product Code" field="productCode" placeholder="Internal Code" />
+                                        <InputField label="Legacy ID" field="legacyId" placeholder="ID from old system" />
+                                        <InputField label="Packing" field="packing" placeholder="e.g. 10x10" />
+                                        <InputField label="Category" field="category" placeholder="e.g. PHARMA" />
+                                        <InputField label="Subcategory" field="subcategory" placeholder="e.g. TABLET" />
+                                        <InputField label="Product Type" field="productType" placeholder="e.g. ETHICAL / GENERIC" />
+                                    </div>
+                                )}
+
+                                {activeTab === 'pricing' && (
+                                    <div className="grid grid-cols-3 gap-6">
+                                        <InputField label="MRP" field="mrp" placeholder="0.00" type="number" />
+                                        <InputField label="PTR" field="ptr" placeholder="0.00" type="number" />
+                                        <InputField label="PTS" field="pts" placeholder="0.00" type="number" />
+                                        <InputField label="Landed Cost" field="landedCost" placeholder="0.00" type="number" />
+                                        <InputField label="Stock Qty" field="stock" placeholder="0" type="number" />
+                                    </div>
+                                )}
+
+                                {activeTab === 'tax' && (
+                                    <div className="grid grid-cols-2 gap-6">
+                                        <InputField label="HSN Code" field="hsnCode" placeholder="Tax Code" />
+                                        <InputField label="GST %" field="gstPercent" placeholder="12 or 18" type="number" />
+                                        <InputField label="Discount %" field="discountPercent" placeholder="0.00" type="number" />
+                                        <InputField label="Patent Status" field="patent" placeholder="e.g. Patented / Off-patent" />
+                                        <div className="col-span-2">
+                                            <InputField label="Generic Name" field="genericName" placeholder="Chemical composition" />
+                                        </div>
+                                    </div>
+                                )}
+
+                                {activeTab === 'suppliers' && (
+                                    <div className="grid grid-cols-1 gap-6">
+                                        <div>
+                                            <label className="block text-xs font-medium text-neutral-700 mb-1">Primary Supplier</label>
+                                            <select
+                                                value={formData.primarySupplierId}
+                                                onChange={(e) => setFormData({ ...formData, primarySupplierId: e.target.value })}
+                                                className="w-full px-3 py-2 border border-neutral-300 rounded-sm text-sm"
+                                            >
+                                                <option value="">Select Supplier</option>
+                                                {suppliers?.map(s => (
+                                                    <option key={s.id} value={s.id}>{s.supplierName}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-neutral-700 mb-1">Secondary Supplier</label>
+                                            <select
+                                                value={formData.secondarySupplierId}
+                                                onChange={(e) => setFormData({ ...formData, secondarySupplierId: e.target.value })}
+                                                className="w-full px-3 py-2 border border-neutral-300 rounded-sm text-sm"
+                                            >
+                                                <option value="">Select Supplier</option>
+                                                {suppliers?.map(s => (
+                                                    <option key={s.id} value={s.id}>{s.supplierName}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-neutral-700 mb-1">REP</label>
+                                            <select
+                                                value={formData.repId}
+                                                onChange={(e) => setFormData({ ...formData, repId: e.target.value })}
+                                                className="w-full px-3 py-2 border border-neutral-300 rounded-sm text-sm"
+                                            >
+                                                <option value="">Select REP</option>
+                                                {reps?.map(r => (
+                                                    <option key={r.id} value={r.id}>{r.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </div>
+                                )}
+                            </form>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-6 border-t border-neutral-200 bg-neutral-50 flex justify-end gap-3 rounded-b-lg">
+                            <button
+                                type="button"
+                                onClick={() => setIsModalOpen(false)}
+                                className="px-5 py-2.5 text-neutral-700 font-medium hover:bg-neutral-200 rounded-sm transition-colors text-sm"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleSubmit}
+                                className="btn-brand px-6 text-sm"
+                            >
+                                {editingProduct ? 'Update Product' : 'Create Product'}
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

@@ -85,15 +85,42 @@ export const suppliers = pgTable('suppliers', {
     updatedAt: timestamp('updated_at').defaultNow().notNull()
 });
 
+export const repMaster = pgTable('rep_master', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    name: varchar('name', { length: 255 }).notNull(),
+    mobile: varchar('mobile', { length: 20 }),
+    email: varchar('email', { length: 255 }),
+    designation: varchar('designation', { length: 100 }),
+    active: boolean('active').default(true).notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull()
+});
+
 export const products = pgTable('products', {
     id: uuid('id').primaryKey().defaultRandom(),
     legacyId: varchar('legacy_id', { length: 50 }).unique(),
     productCode: varchar('product_code', { length: 50 }),
     itemName: varchar('item_name', { length: 500 }).notNull(),
+    aliasName: varchar('alias_name', { length: 255 }),
     packing: varchar('packing', { length: 100 }),
     category: varchar('category', { length: 100 }),
     subcategory: varchar('subcategory', { length: 100 }),
+    genericName: varchar('generic_name', { length: 255 }),
+    patent: varchar('patent', { length: 100 }),
+    hsnCode: varchar('hsn_code', { length: 50 }),
+    productType: varchar('product_type', { length: 50 }),
     mrp: numeric('mrp', { precision: 10, scale: 2 }),
+    ptr: numeric('ptr', { precision: 10, scale: 2 }),
+    pts: numeric('pts', { precision: 10, scale: 2 }),
+    landedCost: numeric('landed_cost', { precision: 10, scale: 2 }),
+    gstPercent: numeric('gst_percent', { precision: 5, scale: 2 }),
+    discountPercent: numeric('discount_percent', { precision: 5, scale: 2 }),
+    stock: integer('stock').default(0),
+    primarySupplierId: uuid('primary_supplier_id').references(() => suppliers.id),
+    secondarySupplierId: uuid('secondary_supplier_id').references(() => suppliers.id),
+    leastPriceSupplier: varchar('least_price_supplier', { length: 255 }),
+    mostQtySupplier: varchar('most_qty_supplier', { length: 255 }),
+    repId: uuid('rep_id').references(() => repMaster.id),
     active: boolean('active').default(true).notNull(),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull()
@@ -110,17 +137,6 @@ export const productNameChanges = pgTable('product_name_changes', {
     effectiveTo: date('effective_to'),
     active: boolean('active').default(true).notNull(),
     createdAt: timestamp('created_at').defaultNow().notNull()
-});
-
-export const repMaster = pgTable('rep_master', {
-    id: uuid('id').primaryKey().defaultRandom(),
-    name: varchar('name', { length: 255 }).notNull(),
-    mobile: varchar('mobile', { length: 20 }),
-    email: varchar('email', { length: 255 }),
-    designation: varchar('designation', { length: 100 }),
-    active: boolean('active').default(true).notNull(),
-    createdAt: timestamp('created_at').defaultNow().notNull(),
-    updatedAt: timestamp('updated_at').defaultNow().notNull()
 });
 
 // ========================================

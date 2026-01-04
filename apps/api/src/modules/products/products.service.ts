@@ -32,15 +32,32 @@ export class ProductsService {
         legacyId?: string;
         productCode?: string;
         itemName: string;
+        aliasName?: string;
         packing?: string;
         category?: string;
         subcategory?: string;
+        genericName?: string;
+        patent?: string;
+        hsnCode?: string;
+        productType?: string;
         mrp?: number | string;
+        ptr?: number | string;
+        pts?: number | string;
+        landedCost?: number | string;
+        gstPercent?: number | string;
+        discountPercent?: number | string;
+        stock?: number;
+        primarySupplierId?: string;
+        secondarySupplierId?: string;
+        repId?: string;
     }) {
         const createData: any = { ...data };
-        if (typeof createData.mrp === 'string') {
-            createData.mrp = parseFloat(createData.mrp);
-        }
+        ['mrp', 'ptr', 'pts', 'landedCost', 'gstPercent', 'discountPercent'].forEach(field => {
+            if (typeof createData[field] === 'string' && createData[field] !== '') {
+                createData[field] = parseFloat(createData[field]);
+            }
+        });
+
         const result = await db.insert(products).values(createData).returning();
         return result[0];
     }
@@ -49,16 +66,33 @@ export class ProductsService {
         legacyId?: string;
         productCode?: string;
         itemName?: string;
+        aliasName?: string;
         packing?: string;
         category?: string;
         subcategory?: string;
+        genericName?: string;
+        patent?: string;
+        hsnCode?: string;
+        productType?: string;
         mrp?: number | string;
+        ptr?: number | string;
+        pts?: number | string;
+        landedCost?: number | string;
+        gstPercent?: number | string;
+        discountPercent?: number | string;
+        stock?: number;
+        primarySupplierId?: string;
+        secondarySupplierId?: string;
+        repId?: string;
         active?: boolean;
     }) {
         const updateData: any = { ...data, updatedAt: new Date() };
-        if (typeof updateData.mrp === 'string') {
-            updateData.mrp = parseFloat(updateData.mrp);
-        }
+        ['mrp', 'ptr', 'pts', 'landedCost', 'gstPercent', 'discountPercent'].forEach(field => {
+            if (typeof updateData[field] === 'string' && updateData[field] !== '') {
+                updateData[field] = parseFloat(updateData[field]);
+            }
+        });
+
         const result = await db
             .update(products)
             .set(updateData)

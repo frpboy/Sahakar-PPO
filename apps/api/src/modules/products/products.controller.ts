@@ -22,10 +22,24 @@ export class ProductsController {
             legacyId?: string;
             productCode?: string;
             itemName: string;
+            aliasName?: string;
             packing?: string;
             category?: string;
             subcategory?: string;
+            genericName?: string;
+            patent?: string;
+            hsnCode?: string;
+            productType?: string;
             mrp?: number;
+            ptr?: number;
+            pts?: number;
+            landedCost?: number;
+            gstPercent?: number;
+            discountPercent?: number;
+            stock?: number;
+            primarySupplierId?: string;
+            secondarySupplierId?: string;
+            repId?: string;
         }
     ) {
         return await this.service.create(data);
@@ -39,10 +53,24 @@ export class ProductsController {
             legacyId?: string;
             productCode?: string;
             itemName?: string;
+            aliasName?: string;
             packing?: string;
             category?: string;
             subcategory?: string;
+            genericName?: string;
+            patent?: string;
+            hsnCode?: string;
+            productType?: string;
             mrp?: number;
+            ptr?: number;
+            pts?: number;
+            landedCost?: number;
+            gstPercent?: number;
+            discountPercent?: number;
+            stock?: number;
+            primarySupplierId?: string;
+            secondarySupplierId?: string;
+            repId?: string;
             active?: boolean;
         }
     ) {
