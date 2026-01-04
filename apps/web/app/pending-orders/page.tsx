@@ -335,8 +335,8 @@ export default function PendingOrdersPage() {
                                 <input
                                     type="number"
                                     className="w-full bg-neutral-50 border border-neutral-200 rounded-none px-4 py-3 text-sm font-bold tabular-nums focus:ring-2 focus:ring-brand-500/20 outline-none transition-all"
-                                    value={editFormData.orderedQty}
-                                    onChange={(e) => handleInputChange('orderedQty', parseInt(e.target.value))}
+                                    value={editFormData.ordered_qty}
+                                    onChange={(e) => handleInputChange('ordered_qty', parseInt(e.target.value))}
                                 />
                             </div>
                             <div>
@@ -344,8 +344,8 @@ export default function PendingOrdersPage() {
                                 <input
                                     type="number"
                                     className="w-full bg-neutral-50 border border-neutral-200 rounded-none px-4 py-3 text-sm font-bold tabular-nums focus:ring-2 focus:ring-brand-500/20 outline-none transition-all"
-                                    value={editFormData.stockQty}
-                                    onChange={(e) => handleInputChange('stockQty', parseInt(e.target.value))}
+                                    value={editFormData.stock_qty}
+                                    onChange={(e) => handleInputChange('stock_qty', parseInt(e.target.value))}
                                 />
                             </div>
                             <div>
