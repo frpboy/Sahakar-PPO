@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { db } from '@sahakar/database';
 import { orderRequests, pendingItems, auditEvents, products, suppliers } from '@sahakar/database';
+import { eq, sql } from 'drizzle-orm';
 import * as crypto from 'crypto';
 
 interface OrderRow {
@@ -206,7 +207,6 @@ export class PpoImportService {
                 for (const [orderId, orderRows] of orderGroups.entries()) {
                     try {
                         // Step 1: Check if order_id already exists
-                        const { eq } = await import('drizzle-orm');
                         const existingOrders = await tx
                             .select()
                             .from(orderRequests)
@@ -291,7 +291,6 @@ export class PpoImportService {
                 // Aggregate from order_requests where productId is not null
                 // IMPORTANT: Only include orders with stage = 'PENDING'
                 // Orders with stage = 'COMPLETED' or 'Pending' (completed in ERP) are excluded
-                const { sql } = await import('drizzle-orm');
                 const aggregatedItems = await tx.execute(sql`
                     SELECT 
                         product_id,
