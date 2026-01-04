@@ -23,6 +23,9 @@ interface DataGridProps<TData> {
     enableColumnResizing?: boolean;
     isRowLocked?: (row: TData) => boolean;
     isRowHidden?: (row: TData) => boolean;
+    enableRowSelection?: boolean;
+    onBulkDelete?: (selectedIds: string[]) => void;
+    getRowId?: (row: TData) => string;
 }
 
 export function DataGrid<TData>({
@@ -35,23 +38,70 @@ export function DataGrid<TData>({
     enableColumnResizing = true,
     isRowLocked = () => false,
     isRowHidden = () => false,
+    enableRowSelection = false,
+    onBulkDelete,
+    getRowId = (row: any) => row.id,
 }: DataGridProps<TData>) {
     const [columnResizeMode] = React.useState<ColumnResizeMode>('onChange');
     const [pagination, setPagination] = React.useState({
         pageIndex: 0,
         pageSize: 100, // Default to 100
     });
+    const [rowSelection, setRowSelection] = React.useState({});
+
+    // Add checkbox column if row selection is enabled
+    const tableColumns = useMemo(() => {
+        if (!enableRowSelection) return columns;
+
+        const checkboxColumn: ColumnDef<TData, any> = {
+            id: 'select',
+            size: 50,
+            header: ({ table }) => {
+                const ref = React.useRef<HTMLInputElement>(null);
+                React.useEffect(() => {
+                    if (ref.current) {
+                        ref.current.indeterminate = table.getIsSomePageRowsSelected();
+                    }
+                }, [table.getIsSomePageRowsSelected()]);
+
+                return (
+                    <input
+                        ref={ref}
+                        type="checkbox"
+                        checked={table.getIsAllPageRowsSelected()}
+                        onChange={table.getToggleAllPageRowsSelectedHandler()}
+                        className="w-4 h-4 cursor-pointer"
+                    />
+                );
+            },
+            cell: ({ row }) => (
+                <input
+                    type="checkbox"
+                    checked={row.getIsSelected()}
+                    disabled={!row.getCanSelect()}
+                    onChange={row.getToggleSelectedHandler()}
+                    className="w-4 h-4 cursor-pointer"
+                />
+            ),
+        };
+
+        return [checkboxColumn, ...columns];
+    }, [columns, enableRowSelection]);
 
     const table = useReactTable({
         data,
-        columns,
+        columns: tableColumns,
         getCoreRowModel: getCoreRowModel(),
         getPaginationRowModel: getPaginationRowModel(),
         onPaginationChange: setPagination,
+        onRowSelectionChange: setRowSelection,
+        enableRowSelection: enableRowSelection,
+        getRowId: getRowId as any,
         columnResizeMode,
         enableColumnResizing,
         state: {
             pagination,
+            rowSelection,
         },
     });
 
@@ -67,6 +117,21 @@ export function DataGrid<TData>({
     });
 
     const virtualRows = virtualizer.getVirtualItems();
+
+    const handleBulkDelete = () => {
+        const selectedRows = table.getFilteredSelectedRowModel().rows;
+        const selectedIds = selectedRows.map(row => getRowId(row.original));
+
+        if (selectedIds.length === 0) {
+            alert('Please select at least one item to delete');
+            return;
+        }
+
+        if (confirm(`Are you sure you want to delete ${selectedIds.length} item(s)?`)) {
+            onBulkDelete?.(selectedIds);
+            setRowSelection({});
+        }
+    };
 
     if (isLoading) {
         return (
