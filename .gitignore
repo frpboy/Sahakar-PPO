@@ -10,3 +10,6 @@
 **/.turbo
 **/*.tsbuildinfo
 package-lock.json
+
+# Code archives (too large for GitHub)
+all_project_code.txt
