@@ -1,5 +1,15 @@
 {
     "$schema": "https://turbo.build/schema.json",
+    "globalEnv": [
+        "DATABASE_URL",
+        "NEXTAUTH_URL",
+        "NEXTAUTH_SECRET",
+        "GOOGLE_APPLICATION_CREDENTIALS",
+        "GCP_PROJECT_ID",
+        "GCP_REGION",
+        "REDIS_HOST",
+        "REDIS_PORT"
+    ],
     "tasks": {
         "build": {
             "dependsOn": [
