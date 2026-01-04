@@ -2,6 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState, useMemo } from 'react';
 import { DataGrid } from '../../components/DataGrid';
+import { ExcelImportButton } from '../../components/ExcelImportButton';
 import { Users as UsersIcon, Plus, Edit, Trash2 } from 'lucide-react';
 import type { ColumnDef } from '@tanstack/react-table';
 
@@ -82,6 +83,31 @@ export default function RepMasterPage() {
         }
     });
 
+    const handleExcelImport = async (data: any[]) => {
+        try {
+            let successCount = 0;
+            let errorCount = 0;
+
+            for (const row of data) {
+                try {
+                    await createMutation.mutateAsync({
+                        name: row['Name'] || row['name'] || row['REP Name'],
+                        mobile: row['Mobile'] || row['mobile'] || row['phone'],
+                        email: row['Email'] || row['email'],
+                        designation: row['Designation'] || row['designation']
+                    });
+                    successCount++;
+                } catch (err) {
+                    errorCount++;
+                }
+            }
+
+            alert(`Import complete: ${successCount} REPs added, ${errorCount} errors`);
+        } catch (error) {
+            alert('Error importing REPs');
+        }
+    };
+
     const resetForm = () => {
         setFormData({ name: '', mobile: '', email: '', designation: '' });
     };
@@ -146,7 +172,7 @@ export default function RepMasterPage() {
                 <div className="flex gap-2">
                     <button
                         onClick={() => handleEdit(row.original)}
-                        className="p-1 text-brand-600 hover:bg-brand-100 rounded"
+                        className="p-1 text-brand-600 hover:bg-brand-100 transition-colors"
                     >
                         <Edit size={16} />
                     </button>
@@ -156,7 +182,7 @@ export default function RepMasterPage() {
                                 deleteMutation.mutate(row.original.id);
                             }
                         }}
-                        className="p-1 text-error-600 hover:bg-error-100 rounded"
+                        className="p-1 text-danger-600 hover:bg-danger-100 transition-colors"
                     >
                         <Trash2 size={16} />
                     </button>
@@ -177,17 +203,20 @@ export default function RepMasterPage() {
                     </h1>
                     <p className="text-sm text-neutral-500 mt-1">Manage sales representatives and field staff</p>
                 </div>
-                <button
-                    onClick={() => {
-                        resetForm();
-                        setEditingRep(null);
-                        setIsModalOpen(true);
-                    }}
-                    className="btn-brand flex items-center gap-2"
-                >
-                    <Plus size={18} />
-                    Add REP
-                </button>
+                <div className="flex gap-3">
+                    <ExcelImportButton onImport={handleExcelImport} entityType="rep-master" />
+                    <button
+                        onClick={() => {
+                            resetForm();
+                            setEditingRep(null);
+                            setIsModalOpen(true);
+                        }}
+                        className="btn-brand flex items-center gap-2"
+                    >
+                        <Plus size={18} />
+                        Add REP
+                    </button>
+                </div>
             </header>
 
             <div className="mb-4">

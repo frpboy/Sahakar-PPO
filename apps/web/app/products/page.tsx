@@ -206,7 +206,7 @@ export default function ProductsPage() {
                 <div className="flex gap-2">
                     <button
                         onClick={() => handleEdit(row.original)}
-                        className="p-1 text-brand-600 hover:bg-brand-100 rounded transition-colors"
+                        className="p-1 text-brand-600 hover:bg-brand-100 transition-colors"
                     >
                         <Edit size={16} />
                     </button>
@@ -216,7 +216,7 @@ export default function ProductsPage() {
                                 deleteMutation.mutate(row.original.id);
                             }
                         }}
-                        className="p-1 text-error-600 hover:bg-error-100 rounded transition-colors"
+                        className="p-1 text-danger-600 hover:bg-danger-100 transition-colors"
                     >
                         <Trash2 size={16} />
                     </button>
