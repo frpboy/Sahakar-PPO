@@ -11,6 +11,8 @@ export interface FilterState {
     rep?: string[];
     mobile?: string;
     supplier?: string;
+    category?: string;
+    area?: string;
     primarySupplier?: string;
     secondarySupplier?: string;
     decidedSupplier?: string;
@@ -104,8 +106,8 @@ export function FilterPanel({ isOpen, onClose, filters, onApply, onClear }: Filt
                                             key={rep}
                                             onClick={() => toggleMultiSelect('rep', rep)}
                                             className={`px-3 py-1 rounded-sm text-[10px] font-bold border transition-all ${localFilters.rep?.includes(rep)
-                                                    ? 'bg-brand-600 border-brand-600 text-white shadow-md shadow-brand-500/20'
-                                                    : 'bg-white border-neutral-200 text-neutral-500 hover:border-brand-300'
+                                                ? 'bg-brand-600 border-brand-600 text-white shadow-md shadow-brand-500/20'
+                                                : 'bg-white border-neutral-200 text-neutral-500 hover:border-brand-300'
                                                 }`}
                                         >
                                             {rep}
@@ -114,6 +116,7 @@ export function FilterPanel({ isOpen, onClose, filters, onApply, onClear }: Filt
                                 </div>
                             </div>
                             <FilterInput label="Mobile" placeholder="Last 4 or full..." value={localFilters.mobile} onChange={v => handleChange('mobile', v)} />
+                            <FilterInput label="Area / City" placeholder="Search area..." value={localFilters.area} onChange={v => handleChange('area', v)} />
                         </div>
                     </section>
 
@@ -124,6 +127,7 @@ export function FilterPanel({ isOpen, onClose, filters, onApply, onClear }: Filt
                             <FilterInput label="Any Supplier" placeholder="Search suppliers..." value={localFilters.supplier} onChange={v => handleChange('supplier', v)} />
                             <FilterInput label="Primary Supplier" placeholder="Search primary..." value={localFilters.primarySupplier} onChange={v => handleChange('primarySupplier', v)} />
                             <FilterInput label="Decided Supplier" placeholder="Search decided..." value={localFilters.decidedSupplier} onChange={v => handleChange('decidedSupplier', v)} />
+                            <FilterInput label="Category" placeholder="Search category..." value={localFilters.category} onChange={v => handleChange('category', v)} />
                         </div>
                     </section>
 
@@ -139,8 +143,8 @@ export function FilterPanel({ isOpen, onClose, filters, onApply, onClear }: Filt
                                             key={stage}
                                             onClick={() => toggleMultiSelect('stage', stage)}
                                             className={`px-3 py-2 rounded-sm text-[10px] font-bold border transition-all ${localFilters.stage?.includes(stage)
-                                                    ? 'bg-brand-50 border-brand-500 text-brand-700 shadow-sm'
-                                                    : 'bg-white border-neutral-100 text-neutral-400 hover:border-neutral-200'
+                                                ? 'bg-brand-50 border-brand-500 text-brand-700 shadow-sm'
+                                                : 'bg-white border-neutral-100 text-neutral-400 hover:border-neutral-200'
                                                 }`}
                                         >
                                             {stage}

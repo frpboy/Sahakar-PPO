@@ -368,32 +368,30 @@ export default function ProductsPage() {
         if (!products) return [];
         let result = [...products];
 
-        const f = filters as any;
-
         // Apply Search/Filters
-        if (f.productName) {
+        if (filters.productName) {
             result = result.filter(item =>
-                item.name?.toLowerCase().includes(f.productName!.toLowerCase()) ||
-                item.aliasName?.toLowerCase().includes(f.productName!.toLowerCase()) ||
-                item.productCode?.toLowerCase().includes(f.productName!.toLowerCase())
+                item.name?.toLowerCase().includes(filters.productName!.toLowerCase()) ||
+                item.aliasName?.toLowerCase().includes(filters.productName!.toLowerCase()) ||
+                item.productCode?.toLowerCase().includes(filters.productName!.toLowerCase())
             );
         }
-        if (f.supplier) {
+        if (filters.supplier) {
             result = result.filter(item =>
-                item.primarySupplier?.toLowerCase().includes(f.supplier!.toLowerCase()) ||
-                item.secondarySupplier?.toLowerCase().includes(f.supplier!.toLowerCase())
+                item.primarySupplier?.toLowerCase().includes(filters.supplier!.toLowerCase()) ||
+                item.secondarySupplier?.toLowerCase().includes(filters.supplier!.toLowerCase())
             );
         }
-        if (f.category) {
+        if (filters.category) {
             result = result.filter(item =>
-                item.category?.toLowerCase().includes(f.category!.toLowerCase())
+                item.category?.toLowerCase().includes(filters.category!.toLowerCase())
             );
         }
-        if (f.stage && f.stage.length > 0) {
+        if (filters.stage && filters.stage.length > 0) {
             result = result.filter(item => {
                 const stock = item.stock || 0;
-                if (f.stage!.includes('SHORT') && stock <= 0) return true;
-                if (f.stage!.includes('DONE') && stock > 0) return true;
+                if (filters.stage!.includes('SHORT') && stock <= 0) return true;
+                if (filters.stage!.includes('DONE') && stock > 0) return true;
                 return false;
             });
         }
