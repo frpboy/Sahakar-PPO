@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { db } from '@sahakar/database';
-import { orderRequests, pendingItems, auditEvents } from '@sahakar/database';
+import { orderRequests, pendingItems, auditEvents, products } from '@sahakar/database';
 import { sql, eq } from 'drizzle-orm';
 import * as crypto from 'crypto';
 
@@ -78,9 +78,6 @@ export class PpoImportService {
             const productMap = new Map<string, string>(); // legacyId -> uuid
 
             if (legacyIds.length > 0) {
-                // We need to import 'products' table reference or use raw sql
-                // Assuming 'products' is exported from @sahakar/database locally or available
-                const { products } = await import('@sahakar/database');
                 const foundProducts = await tx
                     .select({ id: products.id, legacyId: products.legacyId })
                     .from(products)
