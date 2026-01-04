@@ -6,7 +6,7 @@ export default function SlipHistoryPlaceholder() {
     const router = useRouter();
     return (
         <div className="flex flex-col items-center justify-center h-full min-h-[400px]">
-            <div className="saas-card p-12 bg-white text-center max-w-md flex flex-col items-center">
+            <div className="app-card p-12 bg-white text-center max-w-md flex flex-col items-center">
                 <div className="w-16 h-16 bg-brand-50 rounded-2xl flex items-center justify-center mx-auto mb-6">
                     <Archive size={32} className="text-brand-600" />
                 </div>

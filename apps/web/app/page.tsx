@@ -203,7 +203,7 @@ export default function DashboardPage() {
                         </div>
                         <button className="text-[10px] font-bold text-brand-600 uppercase tracking-widest hover:underline">View Ledger</button>
                     </div>
-                    <div className="saas-card overflow-hidden">
+                    <div className="app-card overflow-hidden">
                         <DataGrid
                             data={ledger || []}
                             columns={ledgerColumns}
@@ -233,7 +233,7 @@ export default function DashboardPage() {
                             Action Required
                         </span>
                     </div>
-                    <div className="saas-card overflow-hidden">
+                    <div className="app-card overflow-hidden">
                         <DataGrid
                             data={gap || []}
                             columns={gapColumns}
@@ -277,7 +277,7 @@ function StatCard({
     }[variant];
 
     return (
-        <div className="saas-card p-6 flex flex-col gap-4 group">
+        <div className="app-card p-6 flex flex-col gap-4 group">
             <div className="flex items-start justify-between">
                 <div className="w-10 h-10 rounded-xl bg-neutral-100 border border-neutral-200 flex items-center justify-center smooth-transition group-hover:border-brand-200 group-hover:bg-brand-50/50">
                     <div className={statusConfig.icon}>

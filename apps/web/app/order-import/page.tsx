@@ -87,7 +87,7 @@ export default function OrderImportPage() {
             </header>
 
             <main className="space-y-10">
-                <section className="saas-card p-12 bg-white flex flex-col items-center">
+                <section className="app-card p-12 bg-white flex flex-col items-center">
                     <div className="max-w-2xl w-full text-center">
                         <div className="w-16 h-16 bg-neutral-100 border border-neutral-200 rounded-2xl flex items-center justify-center mx-auto mb-6">
                             <FileText size={32} className="text-brand-600" />
@@ -165,7 +165,7 @@ export default function OrderImportPage() {
                             </div>
                         </div>
 
-                        <div className="saas-card overflow-hidden bg-white">
+                        <div className="app-card overflow-hidden bg-white">
                             <DataGrid
                                 data={result.preview || []}
                                 columns={columns}
@@ -174,7 +174,7 @@ export default function OrderImportPage() {
 
                         {/* Error Log */}
                         {result.errors && result.errors.length > 0 && (
-                            <div className="saas-card overflow-hidden border-danger-200/50">
+                            <div className="app-card overflow-hidden border-danger-200/50">
                                 <div className="bg-danger-50 px-6 py-4 border-b border-danger-200/50">
                                     <h3 className="text-sm font-bold text-danger-700 flex items-center gap-2 uppercase tracking-wide">
                                         <AlertTriangle size={18} />
@@ -215,7 +215,7 @@ function SummaryCard({ label, value, icon, color }: { label: string, value: any,
     }[color];
 
     return (
-        <div className="saas-card p-6 flex flex-col gap-4 group">
+        <div className="app-card p-6 flex flex-col gap-4 group">
             <div className="flex items-start justify-between">
                 <div className="w-10 h-10 rounded-xl bg-neutral-100 border border-neutral-200 flex items-center justify-center smooth-transition group-hover:border-brand-200 group-hover:bg-brand-50/50">
                     <div className={statusConfig.icon}>
@@ -223,7 +223,7 @@ function SummaryCard({ label, value, icon, color }: { label: string, value: any,
                     </div>
                 </div>
                 <div className="text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-neutral-50 text-neutral-400 border border-neutral-200/60">
-                    SaaS Meta
+                    System Meta
                 </div>
             </div>
 

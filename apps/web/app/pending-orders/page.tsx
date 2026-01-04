@@ -294,7 +294,7 @@ export default function PendingOrdersPage() {
                         <span className="text-[10px] text-neutral-400 uppercase tracking-widest font-medium">Pending Allocations</span>
                     </div>
                 </div>
-                <div className="saas-card bg-white overflow-hidden">
+                <div className="app-card bg-white overflow-hidden">
                     <DataGrid
                         data={filteredItems}
                         columns={columns}
@@ -314,7 +314,7 @@ export default function PendingOrdersPage() {
                 variant="primary"
             />
 
-            {/* Edit Drawer Overlay Placeholder (Actually a modal/overlay in SaaS) */}
+            {/* Edit Drawer Overlay Placeholder (Actually a modal/overlay in System) */}
             {editingId && (
                 <div className="fixed inset-0 bg-neutral-900/40 backdrop-blur-[2px] z-[60] flex items-center justify-center animate-in fade-in duration-200">
                     <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl p-8 animate-in slide-in-from-bottom-4 duration-300">

@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 @theme {
-    /* SaaS Palette (Vibrant & Modern) */
+    /* System Palette (Vibrant & Modern) */
     --color-brand-950: #0F091F;
     --color-brand-900: #1E1B4B;
     --color-brand-700: #4338CA;
@@ -66,12 +66,12 @@
         @apply bg-brand-600 text-white px-5 py-2.5 rounded-xl font-semibold hover:bg-brand-700 hover:shadow-lg hover:shadow-brand-500/20 transition-all active:scale-[0.97] disabled:opacity-50;
     }
 
-    .saas-card {
-        @apply bg-white border border-neutral-200/80 rounded-2xl shadow-[0_1px_2px_rgba(16_24_40/0.04)] transition-all duration-300;
+    .app-card {
+        @apply bg-white/80 backdrop-blur-xl border border-white/20 shadow-2xl rounded-2xl transition-all duration-300;
     }
 
-    .saas-card:hover {
-        @apply shadow-[0_8px_20px_rgba(15_23_42/0.08)];
+    .app-card:hover {
+        @apply px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase border;
     }
 
     .glass-card {

@@ -148,7 +148,7 @@ export default function OrderSlipDetailPage() {
             </header>
 
             <main className="space-y-6">
-                <div className="saas-card bg-white p-2">
+                <div className="app-card bg-white p-2">
                     <DataGrid
                         data={slip.items}
                         columns={columns}

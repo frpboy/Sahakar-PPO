@@ -240,7 +240,7 @@ export default function RepAllocationPage() {
                                 </div>
                             </div>
                         </div>
-                        <div className="saas-card overflow-hidden bg-white">
+                        <div className="app-card overflow-hidden bg-white">
                             <DataGrid
                                 data={groupItems}
                                 columns={columns}
@@ -250,7 +250,7 @@ export default function RepAllocationPage() {
                 ))}
 
                 {Object.keys(groupedItems).length === 0 && !isLoading && (
-                    <div className="saas-card bg-white p-20 text-center">
+                    <div className="app-card bg-white p-20 text-center">
                         <div className="max-w-xs mx-auto">
                             <div className="w-16 h-16 bg-neutral-50 rounded-2xl flex items-center justify-center mx-auto mb-6">
                                 <Info size={32} className="text-neutral-300" />

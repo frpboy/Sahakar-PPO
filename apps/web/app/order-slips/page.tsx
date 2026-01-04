@@ -127,7 +127,7 @@ export default function OrderSlipsPage() {
             </header>
 
             <main className="space-y-6">
-                <div className="saas-card bg-white p-2">
+                <div className="app-card bg-white p-2">
                     <DataGrid
                         data={slips || []}
                         columns={columns}
@@ -137,7 +137,7 @@ export default function OrderSlipsPage() {
                 </div>
 
                 {!isLoading && slips?.length === 0 && (
-                    <div className="saas-card bg-white p-20 text-center">
+                    <div className="app-card bg-white p-20 text-center">
                         <div className="max-w-xs mx-auto">
                             <div className="w-16 h-16 bg-neutral-100/50 rounded-2xl flex items-center justify-center mx-auto mb-6">
                                 <Info size={32} className="text-neutral-300" />
