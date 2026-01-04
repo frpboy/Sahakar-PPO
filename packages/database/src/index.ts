@@ -8,11 +8,12 @@ const pool = new Pool({
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
-// Initialize Drizzle with schema
+// Create Drizzle instance
 export const db = drizzle(pool, { schema });
 
-// Export everything from schema
+// Export all schema objects
 export * from './schema';
+drizzle(pool, { schema });
 
 // Export types
 export type { InferInsertModel, InferSelectModel } from 'drizzle-orm';
