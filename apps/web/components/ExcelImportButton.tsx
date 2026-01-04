@@ -24,6 +24,11 @@ export function ExcelImportButton({ onImport, entityType, className = '' }: Exce
                 const worksheet = workbook.Sheets[sheetName];
                 const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
+                if (jsonData.length === 0) {
+                    alert('Excel file is empty. Please upload a file with data.');
+                    return;
+                }
+
                 onImport(jsonData);
 
                 // Reset file input
@@ -32,8 +37,11 @@ export function ExcelImportButton({ onImport, entityType, className = '' }: Exce
                 }
             } catch (error) {
                 console.error('Error parsing Excel file:', error);
-                alert('Error reading Excel file. Please check the file format.');
+                alert(`Error reading Excel file: ${error instanceof Error ? error.message : 'Please check the file format.'}`);
             }
+        };
+        reader.onerror = () => {
+            alert('Failed to read file. Please try again.');
         };
         reader.readAsArrayBuffer(file);
     };
@@ -50,7 +58,7 @@ export function ExcelImportButton({ onImport, entityType, className = '' }: Exce
             />
             <label
                 htmlFor={`excel-import-${entityType}`}
-                className="btn-secondary flex items-center gap-2 cursor-pointer"
+                className="btn-secondary flex items-center gap-2 cursor-pointer inline-flex"
             >
                 <Upload size={18} />
                 Import Excel
