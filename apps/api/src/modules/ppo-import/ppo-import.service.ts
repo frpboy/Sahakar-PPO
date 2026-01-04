@@ -234,27 +234,27 @@ export class PpoImportService {
 
         // Map to OrderRow
         const rows: OrderRow[] = rawRows.map((row: any) => ({
-            acceptDatetime: new Date(), // Will be overridden or parsed
-            customerId: row['Customer id']?.toString() || row['Customer ID']?.toString(),
-            customerName: row['Customer Name']?.toString(), // New
-            orderId: row['order_id']?.toString() || row['Order ID']?.toString(),
-            legacyProductId: row['Product Id']?.toString() || row['Item_ID']?.toString(), // New map
+            acceptDatetime: new Date(), // Will be set below
+            customerId: row['Customer id']?.toString(),
+            customerName: row['Customer Name']?.toString(),
+            orderId: row['order_id']?.toString(),
+            legacyProductId: row['Product id']?.toString(),
             productId: undefined, // Will be looked up
-            productName: row['product_name']?.toString() || row['Product Name']?.toString(),
+            productName: row['product_name']?.toString(),
             packing: row['Packing']?.toString(),
-            category: row['Category']?.toString(),
-            subcategory: row['Subcategory']?.toString() || row['Sub Category']?.toString(),
-            primarySupplier: row['Primary Sup']?.toString() || row['Supplier 1']?.toString(),
-            secondarySupplier: row['Secondary Sup']?.toString() || row['Supplier 2']?.toString(),
-            rep: row['Rep']?.toString() || row['REP Name']?.toString(),
+            category: undefined, // Not in Excel
+            subcategory: row['Subcategory']?.toString(),
+            primarySupplier: row['Primary Sup']?.toString(),
+            secondarySupplier: row['Secondary Sup']?.toString(),
+            rep: row['Rep']?.toString(),
             mobile: row['Mobile']?.toString(),
-            mrp: parseFloat(row['mrp'] || row['MRP'] || '0'),
-            reqQty: parseInt(row['Req Qty'] || row['Qty'] || '0', 10),
-            acceptedTime: row['Accepted Time']?.toString(), // New
-            oQty: parseInt(row['O.Qty'] || '0', 10), // New
-            cQty: parseInt(row['C.Qty'] || '0', 10), // New
-            modification: row['Modification']?.toString(), // New
-            stage: row['Stage']?.toString() // New
+            mrp: parseFloat(row['mrp'] || '0'),
+            reqQty: parseInt(row['Req Qty'] || '0', 10),
+            acceptedTime: row['Accepted Time']?.toString(),
+            oQty: parseInt(row['O.Qty'] || '0', 10),
+            cQty: parseInt(row['C.Qty'] || '0', 10),
+            modification: row['Modification']?.toString(),
+            stage: row['Stage']?.toString()
         }));
 
         // Validation: Must have at least a product ID (legacy or uuid) and qty
@@ -264,20 +264,24 @@ export class PpoImportService {
             throw new Error('No valid rows found in Excel file');
         }
 
-        // Use acceptDatetime from first row if available in Excel, else fallback to now
-        // Legacy sheet has 'Accept date' e.g., '3-1-2026'
-        // We need to parse this manually if it comes as string
+        // Use acceptDatetime from Excel 'Accept date' column
         const firstRowDate = rawRows[0]?.['Accept date'];
         let importDate = new Date();
 
         if (firstRowDate) {
-            // Handle simple parsing if needed, or assume XLSX parsed it if date cell
-            // If string "3-1-2026", new Date() might fail depending on locale
-            // Let's rely on simple parsing or fallback
-            const parts = firstRowDate.toString().split('-');
-            if (parts.length === 3) {
-                // assume d-m-y or m-d-y? "3-1-2026" likely d-m-y
-                importDate = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+            // Handle date parsing - could be Date object or string like "3-1-2026"
+            if (firstRowDate instanceof Date) {
+                importDate = firstRowDate;
+            } else {
+                // Parse string format "d-m-yyyy" or similar
+                const parts = firstRowDate.toString().split('-');
+                if (parts.length === 3) {
+                    // Assume d-m-yyyy format
+                    const day = parseInt(parts[0], 10);
+                    const month = parseInt(parts[1], 10) - 1; // JS months are 0-indexed
+                    const year = parseInt(parts[2], 10);
+                    importDate = new Date(year, month, day);
+                }
             }
         }
 
