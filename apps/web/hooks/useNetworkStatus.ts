@@ -13,7 +13,7 @@ export function useNetworkStatus() {
         // Update pending count
         const updatePendingCount = async () => {
             const count = await SyncQueue.getPendingCount();
-            setPendingCount(count);
+            setPendingSync(count);
         };
 
         // Handle online event
