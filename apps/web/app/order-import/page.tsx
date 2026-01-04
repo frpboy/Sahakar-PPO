@@ -7,19 +7,18 @@ import { useUserRole } from '../../context/UserRoleContext';
 
 export default function OrderImportPage() {
     const { currentUser } = useUserRole();
-    const [file, setFile] = useState<File | null>(null);
+    const [files, setFiles] = useState<File[]>([]);
     const [uploading, setUploading] = useState(false);
     const [result, setResult] = useState<any>(null);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files) {
-            setFile(e.target.files[0]);
-        }
+        const list = e.target.files ? Array.from(e.target.files) : [];
+        setFiles(list);
     };
 
     const handleUpload = async () => {
-        console.log('handleUpload triggered', { file, currentUser });
-        if (!file) {
+        console.log('handleUpload triggered', { files, currentUser });
+        if (!files || files.length === 0) {
             alert('Please select a file first');
             return;
         }
@@ -32,36 +31,55 @@ export default function OrderImportPage() {
         setUploading(true);
         setResult(null);
 
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('userEmail', currentUser.email || 'unknown@sahakar.com');
-
         try {
             const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://asia-south1-sahakar-ppo.cloudfunctions.net/api';
-            console.log('Fetching from:', `${apiUrl}/ppo/import/upload`);
-            const res = await fetch(`${apiUrl}/ppo/import/upload`, {
-                method: 'POST',
-                body: formData,
-            });
+            const aggregated = {
+                totalIngested: 0,
+                totalAggregated: 0,
+                pendingItemsCreated: 0,
+                pendingItemsUpdated: 0,
+                duplicatesSkipped: 0,
+                filesProcessed: 0
+            };
 
-            console.log('Response status:', res.status);
+            for (const f of files) {
+                const formData = new FormData();
+                formData.append('file', f);
+                formData.append('userEmail', currentUser.email || 'unknown@sahakar.com');
 
-            if (!res.ok) {
-                // Get detailed error
-                const errorText = await res.text();
-                let errorMessage = `Upload failed (HTTP ${res.status})`;
-                try {
-                    const errorJson = JSON.parse(errorText);
-                    errorMessage = errorJson.message || errorMessage;
-                } catch {
-                    errorMessage = errorText || errorMessage;
+                console.log('Fetching from:', `${apiUrl}/ppo/import/upload`);
+                const res = await fetch(`${apiUrl}/ppo/import/upload`, {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                console.log('Response status:', res.status);
+
+                if (!res.ok) {
+                    const errorText = await res.text();
+                    let errorMessage = `Upload failed (HTTP ${res.status})`;
+                    try {
+                        const errorJson = JSON.parse(errorText);
+                        errorMessage = errorJson.message || errorMessage;
+                    } catch {
+                        errorMessage = errorText || errorMessage;
+                    }
+                    throw new Error(errorMessage);
                 }
-                throw new Error(errorMessage);
+
+                const data = await res.json();
+                const metrics = data?.data || data; // unwrap { success, message, data }
+                console.log('Upload response:', data);
+
+                aggregated.totalIngested += metrics?.totalIngested || 0;
+                aggregated.totalAggregated += metrics?.totalAggregated || 0;
+                aggregated.pendingItemsCreated += metrics?.pendingItemsCreated || 0;
+                aggregated.pendingItemsUpdated += metrics?.pendingItemsUpdated || 0;
+                aggregated.duplicatesSkipped += metrics?.duplicatesSkipped || 0;
+                aggregated.filesProcessed += 1;
             }
 
-            const data = await res.json();
-            console.log('Upload response:', data);
-            setResult(data);
+            setResult(aggregated);
         } catch (error) {
             console.error('Upload error:', error);
             const errorMessage = error instanceof Error ? error.message : 'Upload failed';
@@ -117,6 +135,7 @@ export default function OrderImportPage() {
                             <input
                                 type="file"
                                 accept=".xlsx"
+                                multiple
                                 onChange={handleFileChange}
                                 className="hidden"
                                 id="file-upload"
@@ -129,11 +148,11 @@ export default function OrderImportPage() {
                                 Select PPO SpreadSheet
                             </label>
                         </div>
-                        {file && (
+                        {files.length > 0 && (
                             <div className="mt-6 flex flex-col items-center gap-4 animate-in fade-in zoom-in-95 duration-200">
                                 <div className="px-4 py-2 bg-neutral-50 border border-neutral-200 rounded-none text-sm font-semibold text-neutral-700 flex items-center gap-2">
                                     <FileText size={16} className="text-brand-600" />
-                                    {file.name}
+                                    {files.length === 1 ? files[0].name : `${files.length} files selected`}
                                 </div>
                                 <button
                                     onClick={handleUpload}
@@ -151,27 +170,41 @@ export default function OrderImportPage() {
                     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                             <SummaryCard
-                                label="Total Orders"
-                                value={result.totalOrders}
+                                label="Rows Ingested"
+                                value={result.totalIngested}
                                 icon={<Archive size={20} />}
                                 color="brand"
                             />
                             <SummaryCard
-                                label="Total Items"
-                                value={result.totalItems}
+                                label="Aggregations"
+                                value={result.totalAggregated}
                                 icon={<Package size={20} />}
                                 color="brand"
                             />
                             <SummaryCard
-                                label="Total Quantity"
-                                value={result.totalQty}
+                                label="Pending Created"
+                                value={result.pendingItemsCreated}
                                 icon={<BarChart3 size={20} />}
                                 color="success"
                             />
                             <SummaryCard
-                                label="Suppliers Found"
-                                value={result.suppliers?.length}
+                                label="Pending Updated"
+                                value={result.pendingItemsUpdated}
                                 icon={<ListChecks size={20} />}
+                                color="brand"
+                            />
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                            <SummaryCard
+                                label="Duplicates Skipped"
+                                value={result.duplicatesSkipped}
+                                icon={<Info size={20} />}
+                                color="brand"
+                            />
+                            <SummaryCard
+                                label="Files Processed"
+                                value={result.filesProcessed}
+                                icon={<FileText size={20} />}
                                 color="brand"
                             />
                         </div>
