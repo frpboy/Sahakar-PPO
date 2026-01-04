@@ -62,7 +62,7 @@ export function DataGrid<TData>({
     const virtualizer = useVirtualizer({
         count: rows.length,
         getScrollElement: () => parentRef.current,
-        estimateSize: () => 36,
+        estimateSize: () => 52,
         overscan: 10,
     });
 
@@ -95,7 +95,7 @@ export function DataGrid<TData>({
                                             <th
                                                 key={header.id}
                                                 className={`
-                        px-6 py-4 text-[11px] font-bold text-neutral-500 uppercase tracking-widest
+                        px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-widest text-left
                         ${isFrozen ? 'sticky left-0 z-10 bg-neutral-50' : ''}
                       `}
                                                 style={{
@@ -136,7 +136,7 @@ export function DataGrid<TData>({
                                                 <td
                                                     key={cell.id}
                                                     className={`
-                          px-4 py-2 whitespace-nowrap overflow-hidden text-ellipsis text-neutral-700
+                          px-4 py-2 whitespace-nowrap overflow-hidden text-ellipsis text-neutral-700 align-middle
                           ${isFrozen ? 'sticky left-0 z-10 bg-white group-hover:bg-neutral-50' : ''}
                         `}
                                                 >
