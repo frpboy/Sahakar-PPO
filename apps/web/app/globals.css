@@ -83,10 +83,6 @@
         @apply bg-white border border-neutral-200 shadow-soft;
     }
 
-    .app-card:hover {
-        @apply px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase border;
-    }
-
     .glass-card {
         @apply bg-white/80 backdrop-blur-xl border border-white/40 shadow-xl;
     }

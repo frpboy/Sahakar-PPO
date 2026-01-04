@@ -2,6 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState, useMemo } from 'react';
 import { DataGrid } from '../../components/DataGrid';
+import { ExcelImportButton } from '../../components/ExcelImportButton';
 import { Package, Plus, Edit, Trash2 } from 'lucide-react';
 import type { ColumnDef } from '@tanstack/react-table';
 
@@ -88,6 +89,34 @@ export default function ProductsPage() {
             queryClient.invalidateQueries({ queryKey: ['products'] });
         }
     });
+
+    const handleExcelImport = async (data: any[]) => {
+        try {
+            let successCount = 0;
+            let errorCount = 0;
+
+            for (const row of data) {
+                try {
+                    await createMutation.mutateAsync({
+                        legacyId: row['Legacy ID'] || row['legacyId'],
+                        productCode: row['Product Code'] || row['productCode'],
+                        itemName: row['Item Name'] || row['itemName'] || row['name'],
+                        packing: row['Packing'] || row['packing'],
+                        category: row['Category'] || row['category'],
+                        subcategory: row['Subcategory'] || row['subcategory'],
+                        mrp: row['MRP'] || row['mrp']
+                    });
+                    successCount++;
+                } catch (err) {
+                    errorCount++;
+                }
+            }
+
+            alert(`Import complete: ${successCount} products added, ${errorCount} errors`);
+        } catch (error) {
+            alert('Error importing products');
+        }
+    };
 
     const resetForm = () => {
         setFormData({
@@ -208,17 +237,20 @@ export default function ProductsPage() {
                     </h1>
                     <p className="text-sm text-neutral-500 mt-1">Manage product catalog and inventory items</p>
                 </div>
-                <button
-                    onClick={() => {
-                        resetForm();
-                        setEditingProduct(null);
-                        setIsModalOpen(true);
-                    }}
-                    className="btn-brand flex items-center gap-2"
-                >
-                    <Plus size={18} />
-                    Add Product
-                </button>
+                <div className="flex gap-3">
+                    <ExcelImportButton onImport={handleExcelImport} entityType="products" />
+                    <button
+                        onClick={() => {
+                            resetForm();
+                            setEditingProduct(null);
+                            setIsModalOpen(true);
+                        }}
+                        className="btn-brand flex items-center gap-2"
+                    >
+                        <Plus size={18} />
+                        Add Product
+                    </button>
+                </div>
             </header>
 
             <div className="mb-4">

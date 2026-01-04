@@ -2,6 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState, useMemo } from 'react';
 import { DataGrid } from '../../components/DataGrid';
+import { ExcelImportButton } from '../../components/ExcelImportButton';
 import { Store, Plus, Edit, Trash2 } from 'lucide-react';
 import type { ColumnDef } from '@tanstack/react-table';
 
@@ -89,6 +90,35 @@ export default function SuppliersPage() {
             queryClient.invalidateQueries({ queryKey: ['suppliers'] });
         }
     });
+
+    const handleExcelImport = async (data: any[]) => {
+        try {
+            let successCount = 0;
+            let errorCount = 0;
+
+            for (const row of data) {
+                try {
+                    await createMutation.mutateAsync({
+                        supplierCode: row['Supplier Code'] || row['supplierCode'],
+                        supplierName: row['Supplier Name'] || row['supplierName'] || row['name'],
+                        contactPerson: row['Contact Person'] || row['contactPerson'],
+                        mobile: row['Mobile'] || row['mobile'] || row['phone'],
+                        email: row['Email'] || row['email'],
+                        gstNumber: row['GST Number'] || row['gstNumber'] || row['gst'],
+                        address: row['Address'] || row['address'],
+                        creditDays: row['Credit Days'] || row['creditDays']
+                    });
+                    successCount++;
+                } catch (err) {
+                    errorCount++;
+                }
+            }
+
+            alert(`Import complete: ${successCount} suppliers added, ${errorCount} errors`);
+        } catch (error) {
+            alert('Error importing suppliers');
+        }
+    };
 
     const resetForm = () => {
         setFormData({
@@ -214,17 +244,20 @@ export default function SuppliersPage() {
                     </h1>
                     <p className="text-sm text-neutral-500 mt-1">Manage supplier database and contacts</p>
                 </div>
-                <button
-                    onClick={() => {
-                        resetForm();
-                        setEditingSupplier(null);
-                        setIsModalOpen(true);
-                    }}
-                    className="btn-brand flex items-center gap-2"
-                >
-                    <Plus size={18} />
-                    Add Supplier
-                </button>
+                <div className="flex gap-3">
+                    <ExcelImportButton onImport={handleExcelImport} entityType="suppliers" />
+                    <button
+                        onClick={() => {
+                            resetForm();
+                            setEditingSupplier(null);
+                            setIsModalOpen(true);
+                        }}
+                        className="btn-brand flex items-center gap-2"
+                    >
+                        <Plus size={18} />
+                        Add Supplier
+                    </button>
+                </div>
             </header>
 
             <div className="mb-4">
