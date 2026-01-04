@@ -132,7 +132,7 @@ export default function OrderSlipsPage() {
                         data={slips || []}
                         columns={columns}
                         isLoading={isLoading}
-                        onRowClick={(row) => router.push(`/order-slips/${row.id}`)}
+                        onRowClick={(row: any) => router.push(`/order-slips/${row.id}`)}
                     />
                 </div>
 

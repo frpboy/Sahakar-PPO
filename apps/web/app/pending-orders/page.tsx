@@ -299,7 +299,7 @@ export default function PendingOrdersPage() {
                         data={filteredItems}
                         columns={columns}
                         isLoading={isLoading}
-                        onRowClick={(item) => !editingId && handleEditClick(item)}
+                        onRowClick={(item: PendingItem) => !editingId && handleEditClick(item)}
                     />
                 </div>
             </main>
