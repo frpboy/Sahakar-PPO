@@ -1,7 +1,7 @@
 {
     "name": "api",
     "version": "0.0.1",
-    "main": "dist/main.js",
+    "main": "dist/apps/api/src/main.js",
     "engines": {
         "node": "^20 || ^22 || ^24"
     },
@@ -24,15 +24,12 @@
         "test:e2e": "jest --config ./test/jest-e2e.json",
         "seed:users": "node scripts/seed-users.js"
     },
-    "overrides": {
-        "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
-    },
     "dependencies": {
         "@nestjs/common": "^11.1.11",
+        "@nestjs/config": "^4.0.2",
         "@nestjs/core": "^11.1.11",
         "@nestjs/passport": "^11.0.5",
         "@nestjs/platform-express": "^11.1.11",
-        "@prisma/client": "^7.2.0",
         "@sahakar/database": "file:sahakar-database-0.0.1.tgz",
         "@types/cors": "^2.8.19",
         "@types/passport-jwt": "^4.0.1",
@@ -43,7 +40,7 @@
         "passport-jwt": "^4.0.1",
         "reflect-metadata": "^0.2.2",
         "rxjs": "^7.8.2",
-        "xlsx": "^0.18.5"
+        "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
     },
     "devDependencies": {
         "@nestjs/cli": "^11.0.14",
