@@ -127,6 +127,8 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         }
     }, []);
 
+    const [activePopover, setActivePopover] = useState<{ title: string; top: number } | null>(null);
+
     // Auto-expand based on route
     useEffect(() => {
         const newOpenSections = { ...openSections };
@@ -162,12 +164,18 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         localStorage.setItem('sidebar_state', JSON.stringify(newState));
     };
 
+    const handleMouseEnter = (title: string, e: React.MouseEvent) => {
+        if (!isCollapsed) return;
+        const rect = e.currentTarget.getBoundingClientRect();
+        setActivePopover({ title, top: rect.top });
+    };
+
     return (
         <aside
             className={`
-                ${isCollapsed ? 'w-20' : 'w-72'} 
-                h-screen bg-white border-r border-neutral-200/60 
-                fixed left-0 top-0 flex flex-col z-50 
+                ${isCollapsed ? 'w-20' : 'w-72'}
+                h-screen bg-white border-r border-neutral-200/60
+                fixed left-0 top-0 flex flex-col z-50
                 transition-all duration-300 ease-in-out shadow-sm
             `}
         >
@@ -201,9 +209,15 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                     const isSectionActive = section.items.some(item =>
                         item.href === '/' ? pathname === '/' : pathname.startsWith(item.href)
                     );
+                    const showPopover = isCollapsed && activePopover?.title === section.title;
 
                     return (
-                        <div key={section.title} className="space-y-1">
+                        <div
+                            key={section.title}
+                            className="space-y-1 relative"
+                            onMouseEnter={(e) => handleMouseEnter(section.title, e)}
+                            onMouseLeave={() => setActivePopover(null)}
+                        >
                             {/* Section Header */}
                             <button
                                 onClick={() => toggleSection(section.title)}
@@ -254,6 +268,34 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                                             </Link>
                                         );
                                     })}
+                                </div>
+                            )}
+
+                            {/* Flyout Menu (Only if Collapsed and Hovered) */}
+                            {showPopover && (
+                                <div
+                                    className="fixed left-20 ml-4 w-56 bg-white border border-neutral-200/80 rounded-xl shadow-2xl p-2 z-[100] animate-in fade-in slide-in-from-left-2 duration-200"
+                                    style={{ top: activePopover.top }}
+                                >
+                                    <div className="px-3 py-2 border-b border-neutral-100 mb-2">
+                                        <span className="text-xs font-bold text-neutral-400 uppercase tracking-widest">{section.title}</span>
+                                    </div>
+                                    <div className="space-y-0.5">
+                                        {section.items.map((item) => (
+                                            <Link
+                                                key={item.href}
+                                                href={item.href}
+                                                className={`
+                                                    block px-3 py-2 rounded-lg text-sm font-medium transition-colors
+                                                    ${(item.href === '/' ? pathname === '/' : pathname.startsWith(item.href))
+                                                        ? 'bg-brand-50 text-brand-700'
+                                                        : 'text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900'}
+                                                `}
+                                            >
+                                                {item.label}
+                                            </Link>
+                                        ))}
+                                    </div>
                                 </div>
                             )}
                         </div>
