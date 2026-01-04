@@ -241,12 +241,16 @@ export default function OrderImportPage() {
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-neutral-100/60">
-                                            {result.errors.map((err: any, i: number) => (
-                                                <tr key={i} className="hover:bg-danger-50 transition-colors">
-                                                    <td className="px-6 py-3 tabular-nums font-bold text-danger-600">{err.row}</td>
-                                                    <td className="px-6 py-3 text-neutral-600 text-xs font-medium">{err.error}</td>
-                                                </tr>
-                                            ))}
+                                            {result.errors.map((err: any, i: number) => {
+                                                const rowNum = typeof err === 'object' && err?.row ? err.row : '-';
+                                                const message = typeof err === 'object' && err?.error ? err.error : String(err);
+                                                return (
+                                                    <tr key={i} className="hover:bg-danger-50 transition-colors">
+                                                        <td className="px-6 py-3 tabular-nums font-bold text-danger-600">{rowNum}</td>
+                                                        <td className="px-6 py-3 text-neutral-600 text-xs font-medium">{message}</td>
+                                                    </tr>
+                                                );
+                                            })}
                                         </tbody>
                                     </table>
                                 </div>

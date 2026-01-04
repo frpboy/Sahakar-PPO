@@ -1,15 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { db } from '@sahakar/database';
-import { orderRequests, pendingItems, auditEvents, products } from '@sahakar/database';
-import { sql, eq } from 'drizzle-orm';
+import { orderRequests, pendingItems, auditEvents, products, suppliers } from '@sahakar/database';
 import * as crypto from 'crypto';
 
 interface OrderRow {
     acceptDatetime: Date;
     customerId?: string;
     orderId?: string;
-    productId?: string; // UUID from system, optional if finding by legacy
-    legacyProductId?: string; // ID from Excel
+    productId?: string;
+    legacyProductId?: string;
     productName?: string;
     packing?: string;
     category?: string;
@@ -29,193 +28,16 @@ interface OrderRow {
 }
 
 export interface ProcessOrdersResult {
-    totalIngested: number;
-    totalAggregated: number;
-    pendingItemsCreated: number;
-    pendingItemsUpdated: number;
-    duplicatesSkipped: number;
+    totalRows: number;
+    validRows: number;
+    duplicates: number;
+    processed: number;
+    batchId: string;
+    errors: string[];
 }
 
 @Injectable()
 export class PpoImportService {
-    /**
-     * PPO Import → Process Orders Workflow
-     * 
-     * Canonical Spec Implementation:
-     * - Product-level aggregation
-     * - Append-only pending_po creation
-     * - Advisory locks for concurrency
-     * - Audit trail generation
-     * - Hash-based deduplication
-     */
-    async processOrders(
-        rows: OrderRow[],
-        userEmail: string
-    ): Promise<ProcessOrdersResult> {
-        const result: ProcessOrdersResult = {
-            totalIngested: rows.length,
-            totalAggregated: 0,
-            pendingItemsCreated: 0,
-            pendingItemsUpdated: 0,
-            duplicatesSkipped: 0
-        };
-
-        // Start transaction with advisory lock
-        await db.transaction(async (tx) => {
-            // 1. Acquire advisory lock for this date
-            const acceptDate = rows[0]?.acceptDatetime;
-            if (!acceptDate) {
-                throw new Error('No accept date provided');
-            }
-
-            const lockKey = `PROCESS_ORDERS_${acceptDate.toISOString().split('T')[0]}`;
-            const lockHash = this.hashLockKey(lockKey);
-
-            await tx.execute(sql`SELECT pg_advisory_xact_lock(${lockHash})`);
-
-            // 1a. Build Product Lookup Map (Legacy ID -> UUID)
-            const legacyIds = rows.map(r => r.legacyProductId).filter(id => !!id);
-            const productMap = new Map<string, string>(); // legacyId -> uuid
-
-            if (legacyIds.length > 0) {
-                const foundProducts = await tx
-                    .select({ id: products.id, legacyId: products.legacyId })
-                    .from(products)
-                    .where(sql`${products.legacyId} IN ${legacyIds}`);
-
-                foundProducts.forEach(p => {
-                    if (p.legacyId) productMap.set(p.legacyId, p.id);
-                });
-            }
-
-            // 2. Insert into order_requests (immutable, append-only)
-            for (const row of rows) {
-                // Resolve UUID from Legacy ID if possible
-                const resolvedProductId = row.productId || (row.legacyProductId ? productMap.get(row.legacyProductId) : null);
-
-                // Generate hash for deduplication
-                const rowHash = this.generateRowHash({ ...row, productId: resolvedProductId || row.legacyProductId });
-
-                try {
-                    await tx.insert(orderRequests).values({
-                        acceptDatetime: row.acceptDatetime,
-                        customerId: row.customerId,
-                        orderId: row.orderId,
-                        productId: resolvedProductId, // Can be null
-                        legacyProductId: row.legacyProductId,
-                        productName: row.productName,
-                        packing: row.packing,
-                        category: row.category,
-                        subcategory: row.subcategory,
-                        primarySupplier: row.primarySupplier,
-                        secondarySupplier: row.secondarySupplier,
-                        rep: row.rep,
-                        mobile: row.mobile,
-                        mrp: row.mrp ? row.mrp.toString() : null,
-                        reqQty: row.reqQty,
-                        customerName: row.customerName,
-                        acceptedTime: row.acceptedTime,
-                        oQty: row.oQty,
-                        cQty: row.cQty,
-                        modification: row.modification,
-                        stage: row.stage,
-                        hash: rowHash
-                    });
-                } catch (error) {
-                    // Hash conflict = duplicate, skip
-                    if (error.code === '23505') {
-                        result.duplicatesSkipped++;
-                        continue;
-                    }
-                    console.error('Error processing row:', row, error);
-                    // Don't throw for individual row errors, maybe? Or throw strictly?
-                    // Canonical spec says skip duplicates, throw others.
-                    throw error;
-                }
-            }
-
-            // 3. Aggregate by product_id and accept_date
-            const aggregated = await tx
-                .select({
-                    productId: orderRequests.productId,
-                    acceptDate: orderRequests.acceptDatetime,
-                    totalQty: sql<number>`SUM(${orderRequests.reqQty})`.as('total_qty'),
-                    remarks: sql<string>`string_agg(
-            CONCAT('Ord:', ${orderRequests.orderId}, ' Cust:', ${orderRequests.customerId}, ' Qty:', ${orderRequests.reqQty}),
-            ', ' ORDER BY ${orderRequests.createdAt}
-          )`.as('remarks')
-                })
-                .from(orderRequests)
-                .where(
-                    sql`DATE(${orderRequests.acceptDatetime}) = DATE(${acceptDate})`
-                )
-                .groupBy(orderRequests.productId, sql`DATE(${orderRequests.acceptDatetime})`);
-
-            result.totalAggregated = aggregated.length;
-
-            // 4. Upsert into pending_items
-            for (const agg of aggregated) {
-                if (!agg.productId) continue;
-
-                // Check if pending item exists for this product
-                const existing = await tx
-                    .select()
-                    .from(pendingItems)
-                    .where(eq(pendingItems.productId, agg.productId))
-                    .limit(1);
-
-                if (existing.length > 0 && existing[0].state === 'PENDING' && !existing[0].locked) {
-                    // Update existing (append remarks, add quantity)
-                    await tx
-                        .update(pendingItems)
-                        .set({
-                            reqQty: sql`${pendingItems.reqQty} + ${agg.totalQty}`,
-                            allocatorNotes: sql`COALESCE(${pendingItems.allocatorNotes}, '') || '\n' || ${agg.remarks}`,
-                            updatedAt: new Date()
-                        })
-                        .where(eq(pendingItems.id, existing[0].id));
-
-                    result.pendingItemsUpdated++;
-                } else {
-                    // Create new pending item
-                    await tx.insert(pendingItems).values({
-                        productId: agg.productId,
-                        reqQty: agg.totalQty,
-                        orderedQty: 0,
-                        stockQty: 0,
-                        offerQty: 0,
-                        allocatorNotes: agg.remarks,
-                        decidedSupplierId: null,
-                        done: false,
-                        locked: false,
-                        state: 'PENDING'
-                    });
-
-                    result.pendingItemsCreated++;
-                }
-            }
-
-            // 5. Create audit event
-            await tx.insert(auditEvents).values({
-                entityType: 'PPO_IMPORT',
-                entityId: null,
-                action: 'PROCESS_ORDERS',
-                beforeState: null,
-                afterState: JSON.stringify({
-                    acceptDate: acceptDate.toISOString(),
-                    rowsProcessed: rows.length,
-                    pendingItemsCreated: result.pendingItemsCreated,
-                    pendingItemsUpdated: result.pendingItemsUpdated
-                }),
-                actor: userEmail,
-                createdAt: new Date()
-            });
-        });
-
-        return result;
-    }
-
-
 
     /**
      * Parse Excel file and process orders
@@ -224,28 +46,42 @@ export class PpoImportService {
         fileBuffer: Buffer,
         userEmail: string
     ): Promise<ProcessOrdersResult> {
-        const XLSX = require('xlsx');
-        const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
-        const sheetName = workbook.SheetNames[0];
-        const sheet = workbook.Sheets[sheetName];
+        console.log('parseAndProcessOrders started');
 
-        // Convert to JSON with defval to handle empty cells
-        const rawRows = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: false });
+        // Debug DB Connection availability
+        console.log('Checking Environment:', {
+            hasDbUrl: !!process.env.DATABASE_URL,
+            nodeEnv: process.env.NODE_ENV
+        });
 
-        if (rawRows.length === 0) {
-            throw new Error('Excel file is empty or has no data rows');
+        let rawRows: any[] = [];
+        let detectedHeaders: string[] = [];
+
+        try {
+            const XLSX = require('@e965/xlsx');
+            const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
+            const sheetName = workbook.SheetNames[0];
+            const sheet = workbook.Sheets[sheetName];
+
+            // Convert to JSON
+            rawRows = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: false });
+
+            if (rawRows.length === 0) {
+                throw new Error('Excel file is empty or has no data rows');
+            }
+
+            detectedHeaders = Object.keys(rawRows[0]);
+            console.log('Detected Excel headers:', detectedHeaders);
+        } catch (e) {
+            console.error('Excel Parsing Error:', e);
+            throw new Error(`Failed to parse Excel file: ${e.message}`);
         }
 
-        // Step A: Normalize headers for flexible matching
+        // Step A: Normalize headers
         const normalizeKey = (key: string): string => {
             return key.toString().trim().toLowerCase().replace(/[\s\.]/g, '_');
         };
 
-        // Detect actual headers from first row (for debugging)
-        const detectedHeaders = Object.keys(rawRows[0]);
-        console.log('Detected Excel headers:', detectedHeaders);
-
-        // Normalize all row keys
         const normalizedRows = rawRows.map(row => {
             const normalized: any = {};
             Object.keys(row).forEach(key => {
@@ -254,14 +90,14 @@ export class PpoImportService {
             return normalized;
         });
 
-        // Map to OrderRow with flexible key matching
+        // Map to OrderRow
         const rows: OrderRow[] = normalizedRows.map((row: any) => ({
-            acceptDatetime: new Date(), // Will be set below
+            acceptDatetime: new Date(),
             customerId: row['customer_id'] || row['customerid'] || row['cust_id'],
             customerName: row['customer_name'] || row['customername'],
             orderId: row['order_id'] || row['orderid'],
             legacyProductId: row['product_id'] || row['productid'] || row['item_id'] || row['itemid'] || row['prod_id'],
-            productId: undefined, // Will be looked up
+            productId: undefined,
             productName: row['product_name'] || row['productname'] || row['item_name'],
             packing: row['packing'],
             category: row['category'],
@@ -279,26 +115,19 @@ export class PpoImportService {
             stage: row['stage']
         }));
 
-        // Step C: Handle Excel Accept Date with serial number support
+        // Date Parsing
         const firstRowDate = rawRows[0]?.['Accept date'] || rawRows[0]?.['Accept Date'] || rawRows[0]?.['accept_date'];
         let importDate = new Date();
 
         if (firstRowDate) {
-            // Handle Date object
             if (firstRowDate instanceof Date) {
                 importDate = firstRowDate;
-            }
-            // Handle Excel date serial (number like 44927)
-            else if (!isNaN(firstRowDate) && typeof firstRowDate === 'number') {
-                // Excel epoch: January 1, 1900 (with leap year bug)
+            } else if (!isNaN(firstRowDate) && typeof firstRowDate === 'number') {
                 const excelEpoch = new Date(1900, 0, 1);
                 importDate = new Date(excelEpoch.getTime() + (firstRowDate - 2) * 24 * 60 * 60 * 1000);
-            }
-            // Handle string format "d-m-yyyy" or "dd-mm-yyyy"
-            else if (typeof firstRowDate === 'string') {
+            } else if (typeof firstRowDate === 'string') {
                 const parts = firstRowDate.toString().split(/[-\/]/);
                 if (parts.length === 3) {
-                    // Try d-m-yyyy format first
                     const day = parseInt(parts[0], 10);
                     const month = parseInt(parts[1], 10) - 1;
                     const year = parseInt(parts[2], 10);
@@ -307,34 +136,141 @@ export class PpoImportService {
             }
         }
 
-        // Validation: Must have at least a product ID (legacy or uuid) and qty > 0
         const validRows = rows.filter(r => (r.productId || r.legacyProductId) && r.reqQty > 0);
 
         if (validRows.length === 0) {
-            throw new Error(`No valid rows found. ${rows.length} rows total, but all missing product ID or quantity. Detected headers: ${detectedHeaders.join(', ')}`);
+            throw new Error(`No valid rows found. Detected headers: ${detectedHeaders.join(', ')}`);
         }
 
-        console.log(`Valid rows: ${validRows.length} out of ${rows.length} total`);
-
-        // Set accept date for all valid rows
+        console.log(`Valid rows: ${validRows.length}`);
         validRows.forEach(r => r.acceptDatetime = importDate);
 
         return this.processOrders(validRows, userEmail);
     }
 
-    /**
-     * Generate hash for row deduplication
-     */
+    async processOrders(rows: OrderRow[], userEmail: string): Promise<ProcessOrdersResult> {
+        const batchId = crypto.randomUUID();
+        const errors: string[] = [];
+        let duplicates = 0;
+        let processed = 0;
+
+        try {
+            // DB Lookup
+            console.log('Fetching products from DB...');
+            // Need to handle potential DB connection errors gracefully
+            let productList;
+            try {
+                productList = await db.select().from(products);
+                console.log(`Fetched ${productList.length} products`);
+            } catch (e) {
+                console.error('Failed to fetch products:', e);
+                // Fallback or abort? Abort for now
+                throw new Error(`Database connection failed: ${e.message}`);
+            }
+
+            const productMap = new Map();
+            const productNameMap = new Map();
+
+            productList.forEach(p => {
+                if (p.legacyId) productMap.set(p.legacyId, p.id);
+                if (p.itemName) productNameMap.set(p.itemName.toLowerCase(), p.id);
+            });
+
+            const dedupedRows: OrderRow[] = [];
+
+            for (const row of rows) {
+                if (!row.productId) {
+                    if (row.legacyProductId && productMap.has(row.legacyProductId)) {
+                        row.productId = productMap.get(row.legacyProductId);
+                    } else if (row.productName && productNameMap.has(row.productName.toLowerCase())) {
+                        row.productId = productNameMap.get(row.productName.toLowerCase());
+                    }
+                }
+
+                if (row.productId) {
+                    dedupedRows.push(row);
+                } else {
+                    errors.push(`Order ${row.orderId}: Product not found (Legacy ID: ${row.legacyProductId})`);
+                }
+            }
+
+            console.log(`Matched products for ${dedupedRows.length} rows`);
+
+            // Transaction
+            if (dedupedRows.length > 0) {
+                await db.transaction(async (tx) => {
+                    for (const r of dedupedRows) {
+                        try {
+                            const hash = this.generateRowHash(r);
+                            const [inserted] = await tx.insert(orderRequests).values({
+                                acceptDatetime: r.acceptDatetime,
+                                orderId: r.orderId,
+                                customerId: r.customerId,
+                                productId: r.productId,
+                                reqQty: r.reqQty,
+                                customerName: r.customerName,
+                                legacyProductId: r.legacyProductId,
+                                productName: r.productName,
+                                packing: r.packing,
+                                category: r.category,
+                                subcategory: r.subcategory,
+                                primarySupplier: r.primarySupplier,
+                                secondarySupplier: r.secondarySupplier,
+                                rep: r.rep,
+                                mobile: r.mobile,
+                                mrp: r.mrp?.toString(),
+                                acceptedTime: r.acceptedTime,
+                                oQty: r.oQty,
+                                cQty: r.cQty,
+                                modification: r.modification,
+                                stage: 'PENDING',
+                                hash: hash
+                            }).onConflictDoNothing().returning();
+
+                            if (inserted) {
+                                processed++;
+                                await tx.insert(pendingItems).values({
+                                    productId: r.productId,
+                                    reqQty: r.reqQty,
+                                    state: 'PENDING'
+                                });
+
+                                await tx.insert(auditEvents).values({
+                                    entityType: 'ORDER',
+                                    entityId: inserted.id,
+                                    action: 'INGEST',
+                                    actor: userEmail,
+                                    afterState: JSON.stringify(r)
+                                });
+                            } else {
+                                duplicates++;
+                            }
+
+                        } catch (itemError) {
+                            console.error('Row Insert Error:', itemError);
+                            errors.push(`Row Error: ${itemError.message}`);
+                        }
+                    }
+                });
+            }
+
+        } catch (dbError) {
+            console.error('Database Error in processOrders:', dbError);
+            throw new Error(`Database operation failed: ${dbError.message}`);
+        }
+
+        return {
+            totalRows: rows.length,
+            validRows: rows.length, // total valid rows passed to function
+            duplicates,
+            processed,
+            batchId,
+            errors
+        };
+    }
+
     private generateRowHash(row: OrderRow): string {
         const hashInput = `${row.acceptDatetime.toISOString()}|${row.orderId}|${row.productId}|${row.reqQty}`;
         return crypto.createHash('sha256').update(hashInput).digest('hex');
-    }
-
-    /**
-     * Generate numeric hash for PostgreSQL advisory lock
-     */
-    private hashLockKey(key: string): number {
-        const hash = crypto.createHash('sha256').update(key).digest();
-        return hash.readInt32BE(0);
     }
 }

@@ -23,7 +23,7 @@ const bootstrap = async (expressInstance) => {
 
 export const api = functions
     .region('asia-south1')
-    .runWith({ timeoutSeconds: 300, memory: '512MB' })
+    .runWith({ timeoutSeconds: 300, memory: '1GB' })
     .https.onRequest(async (req, res) => {
         if (!appInitialized) {
             await bootstrap(server);
