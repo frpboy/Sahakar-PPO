@@ -100,7 +100,7 @@ export default function SuppliersPage() {
             // Create Lookup for Existing Suppliers
             // Normalizing keys to UpperCase for case-insensitive matching
             const existingMap = new Map<string, Supplier>();
-            suppliers?.forEach(s => {
+            suppliers?.forEach((s: Supplier) => {
                 if (s.supplierCode) existingMap.set(s.supplierCode.toUpperCase(), s);
                 existingMap.set(s.supplierName.toUpperCase(), s);
             });

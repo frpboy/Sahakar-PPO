@@ -169,7 +169,7 @@ export default function ProductsPage() {
             // Product Lookup for Upsert
             // Keys: ProductCode (Primary), ItemName (Secondary)
             const existingMap = new Map<string, Product>();
-            products?.forEach(p => {
+            products?.forEach((p: Product) => {
                 if (p.productCode) existingMap.set(p.productCode.toUpperCase(), p);
                 existingMap.set(p.itemName.toUpperCase(), p);
                 if (p.legacyId) existingMap.set(p.legacyId.toString().toUpperCase(), p);
