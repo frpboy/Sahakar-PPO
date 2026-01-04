@@ -13,6 +13,6 @@ export class AuthController {
         // req.user contains the decoded Firebase token
         const email = req.user.email;
         const user = await db.select().from(users).where(eq(users.email, email)).limit(1);
-        return user[0] || null;
+        return user[0] || { role: null };
     }
 }
