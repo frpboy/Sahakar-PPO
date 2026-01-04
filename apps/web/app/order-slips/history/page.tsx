@@ -1,18 +1,26 @@
 'use client';
-import { Info, Archive } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { History, FileStack } from 'lucide-react';
 
-export default function SlipHistoryPlaceholder() {
-    const router = useRouter();
+export default function SlipHistoryPage() {
     return (
-        <div className="flex flex-col items-center justify-center h-full min-h-[400px]">
-            <div className="app-card p-12 bg-white text-center max-w-md flex flex-col items-center">
-                <div className="w-16 h-16 bg-brand-50 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                    <Archive size={32} className="text-brand-600" />
+        <div className="flex flex-col h-full bg-transparent">
+            <header className="mb-6">
+                <h1 className="text-2xl font-bold text-neutral-900 flex items-center gap-3">
+                    <div className="w-10 h-10 bg-white rounded-none shadow-soft flex items-center justify-center border border-neutral-200/60">
+                        <History size={22} className="text-brand-600" />
+                    </div>
+                    Order Slip History
+                </h1>
+                <p className="text-sm text-neutral-500 mt-1">Historical order slips archive</p>
+            </header>
+
+            <div className="app-card overflow-hidden flex-1">
+                <div className="p-12 text-center">
+                    <FileStack className="w-16 h-16 mx-auto text-neutral-300 mb-4" />
+                    <h3 className="text-lg font-bold text-neutral-700 mb-2">Coming Soon</h3>
+                    <p className="text-sm text-neutral-500">Historical slip viewer will be available shortly.</p>
+                    <p className="text-xs text-neutral-400 mt-2">Can reuse existing order-slips queries with date range filters</p>
                 </div>
-                <h1 className="text-xl font-bold text-neutral-900 mb-2">Slip History Analysis</h1>
-                <p className="text-sm text-neutral-500 mb-8">The historical archive for order slips is being optimized for high-speed retrieval. Full access will be restored shortly.</p>
-                <button className="btn-brand w-full" onClick={() => router.back()}>Return to Dashboard</button>
             </div>
         </div>
     );

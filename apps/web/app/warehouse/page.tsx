@@ -57,7 +57,7 @@ export default function WarehouseSlipsPage() {
             cell: ({ row }) => (
                 <Link
                     href={`/warehouse/${row.original.id}`}
-                    className="inline-flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-md text-[10px] font-bold uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-sm"
+                    className="inline-flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-none text-[10px] font-bold uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-sm"
                 >
                     <Box className="w-3.5 h-3.5" /> Start Receiving
                 </Link>
@@ -80,7 +80,7 @@ export default function WarehouseSlipsPage() {
             </header>
 
             <main className="flex-1 p-8 overflow-auto">
-                <div className="bg-white rounded-lg border border-[var(--border)] shadow-sm overflow-hidden">
+                <div className="bg-white rounded-none border border-[var(--border)] shadow-sm overflow-hidden">
                     <DataGrid
                         data={slips || []}
                         columns={columns}
@@ -89,7 +89,7 @@ export default function WarehouseSlipsPage() {
                 </div>
 
                 {!isLoading && slips?.length === 0 && (
-                    <div className="mt-8 bg-gray-50 border border-dashed border-gray-200 rounded-lg p-16 text-center">
+                    <div className="mt-8 bg-gray-50 border border-dashed border-gray-200 rounded-none p-16 text-center">
                         <Info className="w-10 h-10 text-gray-200 mx-auto mb-3" />
                         <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest">No Incoming Consignments</h3>
                         <p className="text-xs text-gray-400 mt-1 italic font-medium">Generate order slips to initialize warehouse inbound data.</p>

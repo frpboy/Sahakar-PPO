@@ -86,7 +86,7 @@ export default function AnalysisPage() {
             <header className="mb-10 flex items-center justify-between">
                 <div>
                     <h1 className="text-3xl font-extrabold text-neutral-900 tracking-tight flex items-center gap-4">
-                        <div className="w-12 h-12 bg-white rounded-2xl shadow-[0_1px_3px_rgba(16_24_40/0.1)] flex items-center justify-center border border-neutral-200/80">
+                        <div className="w-12 h-12 bg-white rounded-none shadow-[0_1px_3px_rgba(16_24_40/0.1)] flex items-center justify-center border border-neutral-200/80">
                             <BarChart3 size={28} className="text-brand-600" />
                         </div>
                         System Performance Analysis
@@ -174,7 +174,7 @@ function AnalysisCard({
     return (
         <div className="app-card p-6 flex flex-col gap-4 group">
             <div className="flex items-start justify-between">
-                <div className="w-10 h-10 rounded-xl bg-neutral-100 border border-neutral-200 flex items-center justify-center smooth-transition group-hover:border-brand-200 group-hover:bg-brand-50/50">
+                <div className="w-10 h-10 rounded-none bg-neutral-100 border border-neutral-200 flex items-center justify-center smooth-transition group-hover:border-brand-200 group-hover:bg-brand-50/50">
                     <div className={statusConfig.icon}>
                         {icon}
                     </div>

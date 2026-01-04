@@ -82,7 +82,7 @@ export default function MasterLedgerPage() {
             <header className="mb-10 flex items-center justify-between">
                 <div>
                     <h1 className="text-3xl font-extrabold text-neutral-900 tracking-tight flex items-center gap-4">
-                        <div className="w-12 h-12 bg-white rounded-2xl shadow-soft flex items-center justify-center border border-neutral-200/60">
+                        <div className="w-12 h-12 bg-white rounded-none shadow-soft flex items-center justify-center border border-neutral-200/60">
                             <ListChecks size={28} className="text-brand-600" />
                         </div>
                         Master Status Ledger
@@ -122,7 +122,7 @@ export default function MasterLedgerPage() {
                 {!isLoading && ledger?.length === 0 && (
                     <div className="app-card bg-white p-20 text-center">
                         <div className="max-w-xs mx-auto">
-                            <div className="w-16 h-16 bg-neutral-100/50 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                            <div className="w-16 h-16 bg-neutral-100/50 rounded-none flex items-center justify-center mx-auto mb-6">
                                 <Search size={32} className="text-neutral-300" />
                             </div>
                             <h3 className="text-base font-bold text-neutral-900">No Records Found</h3>

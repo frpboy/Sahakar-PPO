@@ -34,17 +34,17 @@ export default function LoginPage() {
             <div className="w-full max-w-md relative">
                 <div className="bg-white/80 backdrop-blur-xl border border-white/50 rounded-[32px] shadow-2xl p-10 relative z-10 transition-all">
                     <div className="text-center mb-10">
-                        <div className="w-16 h-16 bg-gradient-to-br from-brand-500 to-brand-600 rounded-2xl shadow-lg shadow-brand-500/20 flex items-center justify-center mx-auto mb-6 active:scale-95 transition-transform cursor-default">
-                            <div className="w-8 h-8 bg-white/20 rounded-lg backdrop-blur-sm border border-white/30" />
+                        <div className="w-16 h-16 bg-gradient-to-br from-brand-500 to-brand-600 rounded-none shadow-lg shadow-brand-500/20 flex items-center justify-center mx-auto mb-6 active:scale-95 transition-transform cursor-default">
+                            <div className="w-8 h-8 bg-white/20 rounded-none backdrop-blur-sm border border-white/30" />
                         </div>
                         <h1 className="text-3xl font-extrabold text-neutral-900 tracking-tight">Sahakar PPO</h1>
                         <p className="text-xs text-neutral-400 font-bold uppercase tracking-widest mt-2">Intelligent Procurement Infrastructure</p>
                     </div>
 
-                    <div className="mb-8 p-6 bg-neutral-50/50 rounded-2xl border border-neutral-200/50">
+                    <div className="mb-8 p-6 bg-neutral-50/50 rounded-none border border-neutral-200/50">
                         <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-3">Dev Identity Selector</label>
                         <select
-                            className="w-full px-4 py-3 rounded-xl border border-neutral-200 text-sm bg-white focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-semibold text-neutral-700 appearance-none shadow-sm cursor-pointer"
+                            className="w-full px-4 py-3 rounded-none border border-neutral-200 text-sm bg-white focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-semibold text-neutral-700 appearance-none shadow-sm cursor-pointer"
                             onChange={(e) => {
                                 const [selectedEmail, selectedPassword] = e.target.value.split('|');
                                 if (selectedEmail && selectedPassword) {
@@ -81,7 +81,7 @@ export default function LoginPage() {
                             <input
                                 type="email"
                                 required
-                                className="w-full px-5 py-4 rounded-2xl bg-neutral-50/50 border border-neutral-200 text-sm focus:ring-4 focus:ring-brand-500/10 focus:border-brand-500 outline-none transition-all font-medium"
+                                className="w-full px-5 py-4 rounded-none bg-neutral-50/50 border border-neutral-200 text-sm focus:ring-4 focus:ring-brand-500/10 focus:border-brand-500 outline-none transition-all font-medium"
                                 placeholder="name@sahakar.com"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
@@ -93,7 +93,7 @@ export default function LoginPage() {
                             <input
                                 type="password"
                                 required
-                                className="w-full px-5 py-4 rounded-2xl bg-neutral-50/50 border border-neutral-200 text-sm focus:ring-4 focus:ring-brand-500/10 focus:border-brand-500 outline-none transition-all font-medium"
+                                className="w-full px-5 py-4 rounded-none bg-neutral-50/50 border border-neutral-200 text-sm focus:ring-4 focus:ring-brand-500/10 focus:border-brand-500 outline-none transition-all font-medium"
                                 placeholder="••••••••"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
@@ -101,7 +101,7 @@ export default function LoginPage() {
                         </div>
 
                         {error && (
-                            <div className="p-4 rounded-xl bg-danger-50 text-danger-600 text-[11px] font-bold border border-danger-100 uppercase tracking-tight animate-in shake-in duration-300">
+                            <div className="p-4 rounded-none bg-danger-50 text-danger-600 text-[11px] font-bold border border-danger-100 uppercase tracking-tight animate-in shake-in duration-300">
                                 {error}
                             </div>
                         )}
@@ -109,7 +109,7 @@ export default function LoginPage() {
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full py-4 bg-brand-600 text-white rounded-2xl font-bold hover:bg-brand-700 shadow-xl shadow-brand-500/20 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none transition-all text-sm uppercase tracking-widest"
+                            className="w-full py-4 bg-brand-600 text-white rounded-none font-bold hover:bg-brand-700 shadow-xl shadow-brand-500/20 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none transition-all text-sm uppercase tracking-widest"
                         >
                             {loading ? 'Verifying Credentials...' : 'Access Command Center'}
                         </button>

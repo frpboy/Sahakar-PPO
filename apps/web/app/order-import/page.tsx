@@ -77,7 +77,7 @@ export default function OrderImportPage() {
             <header className="mb-10 flex items-center justify-between">
                 <div>
                     <h1 className="text-3xl font-extrabold text-neutral-900 tracking-tight flex items-center gap-4">
-                        <div className="w-12 h-12 bg-white rounded-2xl shadow-[0_1px_3px_rgba(16_24_40/0.1)] flex items-center justify-center border border-neutral-200/80">
+                        <div className="w-12 h-12 bg-white rounded-none shadow-[0_1px_3px_rgba(16_24_40/0.1)] flex items-center justify-center border border-neutral-200/80">
                             <Upload size={28} className="text-brand-600" />
                         </div>
                         PPO Input & Ingestion
@@ -89,7 +89,7 @@ export default function OrderImportPage() {
             <main className="space-y-10">
                 <section className="app-card p-12 bg-white flex flex-col items-center">
                     <div className="max-w-2xl w-full text-center">
-                        <div className="w-16 h-16 bg-neutral-100 border border-neutral-200 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                        <div className="w-16 h-16 bg-neutral-100 border border-neutral-200 rounded-none flex items-center justify-center mx-auto mb-6">
                             <FileText size={32} className="text-brand-600" />
                         </div>
                         <h2 className="text-xl font-bold text-neutral-900 mb-2 tracking-tight">Upload Purchase Orders</h2>
@@ -113,7 +113,7 @@ export default function OrderImportPage() {
                         </div>
                         {file && (
                             <div className="mt-6 flex flex-col items-center gap-4 animate-in fade-in zoom-in-95 duration-200">
-                                <div className="px-4 py-2 bg-neutral-50 border border-neutral-200 rounded-lg text-sm font-semibold text-neutral-700 flex items-center gap-2">
+                                <div className="px-4 py-2 bg-neutral-50 border border-neutral-200 rounded-none text-sm font-semibold text-neutral-700 flex items-center gap-2">
                                     <FileText size={16} className="text-brand-600" />
                                     {file.name}
                                 </div>
@@ -217,7 +217,7 @@ function SummaryCard({ label, value, icon, color }: { label: string, value: any,
     return (
         <div className="app-card p-6 flex flex-col gap-4 group">
             <div className="flex items-start justify-between">
-                <div className="w-10 h-10 rounded-xl bg-neutral-100 border border-neutral-200 flex items-center justify-center smooth-transition group-hover:border-brand-200 group-hover:bg-brand-50/50">
+                <div className="w-10 h-10 rounded-none bg-neutral-100 border border-neutral-200 flex items-center justify-center smooth-transition group-hover:border-brand-200 group-hover:bg-brand-50/50">
                     <div className={statusConfig.icon}>
                         {icon}
                     </div>
