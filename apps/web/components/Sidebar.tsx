@@ -128,6 +128,8 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
     }, []);
 
     const [activePopover, setActivePopover] = useState<{ title: string; top: number } | null>(null);
+    const [isPopoverLocked, setIsPopoverLocked] = useState(false);
+    const sidebarRef = React.useRef<HTMLElement>(null);
 
     // Auto-expand based on route
     useEffect(() => {
@@ -154,6 +156,23 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         }
     }, [pathname]);
 
+    // Handle click outside to close locked popover
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (isPopoverLocked && sidebarRef.current && !sidebarRef.current.contains(event.target as Node)) {
+                setIsPopoverLocked(false);
+                setActivePopover(null);
+            }
+        };
+
+        if (isPopoverLocked) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [isPopoverLocked]);
+
     const toggleSection = (title: string) => {
         if (isCollapsed) return; // Don't toggle in collapsed mode
         const newState = {
@@ -164,14 +183,39 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         localStorage.setItem('sidebar_state', JSON.stringify(newState));
     };
 
+    const handleSectionClick = (title: string, e: React.MouseEvent) => {
+        if (!isCollapsed) {
+            toggleSection(title);
+            return;
+        }
+
+        // Handle Collapsed Click (Lock/Unlock)
+        if (isPopoverLocked && activePopover?.title === title) {
+            // Unlock/Close
+            setIsPopoverLocked(false);
+            setActivePopover(null);
+        } else {
+            // Lock New
+            const rect = e.currentTarget.getBoundingClientRect();
+            setActivePopover({ title, top: rect.top });
+            setIsPopoverLocked(true);
+        }
+    };
+
     const handleMouseEnter = (title: string, e: React.MouseEvent) => {
-        if (!isCollapsed) return;
+        if (!isCollapsed || isPopoverLocked) return; // Don't hover-switch if locked
         const rect = e.currentTarget.getBoundingClientRect();
         setActivePopover({ title, top: rect.top });
     };
 
+    const handleMouseLeave = () => {
+        if (!isCollapsed || isPopoverLocked) return; // Don't close if locked
+        setActivePopover(null);
+    };
+
     return (
         <aside
+            ref={sidebarRef}
             className={`
                 ${isCollapsed ? 'w-20' : 'w-72'}
                 h-screen bg-white border-r border-neutral-200/60
@@ -216,11 +260,11 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                             key={section.title}
                             className="space-y-1 relative"
                             onMouseEnter={(e) => handleMouseEnter(section.title, e)}
-                            onMouseLeave={() => setActivePopover(null)}
+                            onMouseLeave={handleMouseLeave}
                         >
                             {/* Section Header */}
                             <button
-                                onClick={() => toggleSection(section.title)}
+                                onClick={(e) => handleSectionClick(section.title, e)}
                                 title={isCollapsed ? section.title : undefined}
                                 className={`
                                     w-full flex items-center px-3 py-2.5 rounded-xl transition-all duration-200 group
@@ -271,20 +315,26 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                                 </div>
                             )}
 
-                            {/* Flyout Menu (Only if Collapsed and Hovered) */}
+                            {/* Flyout Menu (Only if Collapsed and Hovered/Locked) */}
                             {showPopover && (
                                 <div
                                     className="fixed left-20 ml-4 w-56 bg-white border border-neutral-200/80 rounded-xl shadow-2xl p-2 z-[100] animate-in fade-in slide-in-from-left-2 duration-200"
                                     style={{ top: activePopover.top }}
                                 >
-                                    <div className="px-3 py-2 border-b border-neutral-100 mb-2">
+                                    <div className="px-3 py-2 border-b border-neutral-100 mb-2 flex justify-between items-center">
                                         <span className="text-xs font-bold text-neutral-400 uppercase tracking-widest">{section.title}</span>
+                                        {isPopoverLocked && <span className="text-[10px] text-brand-600 font-bold bg-brand-50 px-1.5 py-0.5 rounded">LOCKED</span>}
                                     </div>
                                     <div className="space-y-0.5">
                                         {section.items.map((item) => (
                                             <Link
                                                 key={item.href}
                                                 href={item.href}
+                                                onClick={() => {
+                                                    // Close on link click
+                                                    setIsPopoverLocked(false);
+                                                    setActivePopover(null);
+                                                }}
                                                 className={`
                                                     block px-3 py-2 rounded-lg text-sm font-medium transition-colors
                                                     ${(item.href === '/' ? pathname === '/' : pathname.startsWith(item.href))
