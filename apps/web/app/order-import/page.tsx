@@ -38,17 +38,35 @@ export default function OrderImportPage() {
 
         try {
             const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://asia-south1-sahakar-ppo.cloudfunctions.net/api';
-            console.log('Fetching from:', apiUrl);
+            console.log('Fetching from:', `${apiUrl}/ppo/import/upload`);
             const res = await fetch(`${apiUrl}/ppo/import/upload`, {
                 method: 'POST',
                 body: formData,
             });
 
+            console.log('Response status:', res.status);
+
+            if (!res.ok) {
+                // Get detailed error
+                const errorText = await res.text();
+                let errorMessage = `Upload failed (HTTP ${res.status})`;
+                try {
+                    const errorJson = JSON.parse(errorText);
+                    errorMessage = errorJson.message || errorMessage;
+                } catch {
+                    errorMessage = errorText || errorMessage;
+                }
+                throw new Error(errorMessage);
+            }
+
             const data = await res.json();
+            console.log('Upload response:', data);
             setResult(data);
         } catch (error) {
-            console.error(error);
-            setResult({ error: 'Upload failed' });
+            console.error('Upload error:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Upload failed';
+            alert(`Error: ${errorMessage}`);
+            setResult({ error: errorMessage });
         } finally {
             setUploading(false);
         }

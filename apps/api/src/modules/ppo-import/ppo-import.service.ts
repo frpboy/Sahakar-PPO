@@ -229,62 +229,94 @@ export class PpoImportService {
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
 
-        // Convert to JSON
-        const rawRows = XLSX.utils.sheet_to_json(sheet);
+        // Convert to JSON with defval to handle empty cells
+        const rawRows = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: false });
 
-        // Map to OrderRow
-        const rows: OrderRow[] = rawRows.map((row: any) => ({
-            acceptDatetime: new Date(), // Will be set below
-            customerId: row['Customer id']?.toString(),
-            customerName: row['Customer Name']?.toString(),
-            orderId: row['order_id']?.toString(),
-            legacyProductId: row['Product id']?.toString(),
-            productId: undefined, // Will be looked up
-            productName: row['product_name']?.toString(),
-            packing: row['Packing']?.toString(),
-            category: undefined, // Not in Excel
-            subcategory: row['Subcategory']?.toString(),
-            primarySupplier: row['Primary Sup']?.toString(),
-            secondarySupplier: row['Secondary Sup']?.toString(),
-            rep: row['Rep']?.toString(),
-            mobile: row['Mobile']?.toString(),
-            mrp: parseFloat(row['mrp'] || '0'),
-            reqQty: parseInt(row['Req Qty'] || '0', 10),
-            acceptedTime: row['Accepted Time']?.toString(),
-            oQty: parseInt(row['O.Qty'] || '0', 10),
-            cQty: parseInt(row['C.Qty'] || '0', 10),
-            modification: row['Modification']?.toString(),
-            stage: row['Stage']?.toString()
-        }));
-
-        // Validation: Must have at least a product ID (legacy or uuid) and qty
-        const validRows = rows.filter(r => (r.productId || r.legacyProductId) && r.reqQty > 0);
-
-        if (validRows.length === 0) {
-            throw new Error('No valid rows found in Excel file');
+        if (rawRows.length === 0) {
+            throw new Error('Excel file is empty or has no data rows');
         }
 
-        // Use acceptDatetime from Excel 'Accept date' column
-        const firstRowDate = rawRows[0]?.['Accept date'];
+        // Step A: Normalize headers for flexible matching
+        const normalizeKey = (key: string): string => {
+            return key.toString().trim().toLowerCase().replace(/[\s\.]/g, '_');
+        };
+
+        // Detect actual headers from first row (for debugging)
+        const detectedHeaders = Object.keys(rawRows[0]);
+        console.log('Detected Excel headers:', detectedHeaders);
+
+        // Normalize all row keys
+        const normalizedRows = rawRows.map(row => {
+            const normalized: any = {};
+            Object.keys(row).forEach(key => {
+                normalized[normalizeKey(key)] = row[key];
+            });
+            return normalized;
+        });
+
+        // Map to OrderRow with flexible key matching
+        const rows: OrderRow[] = normalizedRows.map((row: any) => ({
+            acceptDatetime: new Date(), // Will be set below
+            customerId: row['customer_id'] || row['customerid'] || row['cust_id'],
+            customerName: row['customer_name'] || row['customername'],
+            orderId: row['order_id'] || row['orderid'],
+            legacyProductId: row['product_id'] || row['productid'] || row['item_id'] || row['itemid'] || row['prod_id'],
+            productId: undefined, // Will be looked up
+            productName: row['product_name'] || row['productname'] || row['item_name'],
+            packing: row['packing'],
+            category: row['category'],
+            subcategory: row['subcategory'] || row['sub_category'],
+            primarySupplier: row['primary_sup'] || row['primarysup'] || row['supplier_1'] || row['supplier1'],
+            secondarySupplier: row['secondary_sup'] || row['secondarysup'] || row['supplier_2'] || row['supplier2'],
+            rep: row['rep'] || row['rep_name'],
+            mobile: row['mobile'] || row['phone'],
+            mrp: parseFloat(row['mrp'] || '0'),
+            reqQty: parseInt(row['req_qty'] || row['reqty'] || row['qty'] || row['quantity'] || '0', 10),
+            acceptedTime: row['accepted_time'] || row['acceptedtime'],
+            oQty: parseInt(row['o_qty'] || row['oqty'] || '0', 10),
+            cQty: parseInt(row['c_qty'] || row['cqty'] || '0', 10),
+            modification: row['modification'],
+            stage: row['stage']
+        }));
+
+        // Step C: Handle Excel Accept Date with serial number support
+        const firstRowDate = rawRows[0]?.['Accept date'] || rawRows[0]?.['Accept Date'] || rawRows[0]?.['accept_date'];
         let importDate = new Date();
 
         if (firstRowDate) {
-            // Handle date parsing - could be Date object or string like "3-1-2026"
+            // Handle Date object
             if (firstRowDate instanceof Date) {
                 importDate = firstRowDate;
-            } else {
-                // Parse string format "d-m-yyyy" or similar
-                const parts = firstRowDate.toString().split('-');
+            }
+            // Handle Excel date serial (number like 44927)
+            else if (!isNaN(firstRowDate) && typeof firstRowDate === 'number') {
+                // Excel epoch: January 1, 1900 (with leap year bug)
+                const excelEpoch = new Date(1900, 0, 1);
+                importDate = new Date(excelEpoch.getTime() + (firstRowDate - 2) * 24 * 60 * 60 * 1000);
+            }
+            // Handle string format "d-m-yyyy" or "dd-mm-yyyy"
+            else if (typeof firstRowDate === 'string') {
+                const parts = firstRowDate.toString().split(/[-\/]/);
                 if (parts.length === 3) {
-                    // Assume d-m-yyyy format
+                    // Try d-m-yyyy format first
                     const day = parseInt(parts[0], 10);
-                    const month = parseInt(parts[1], 10) - 1; // JS months are 0-indexed
+                    const month = parseInt(parts[1], 10) - 1;
                     const year = parseInt(parts[2], 10);
                     importDate = new Date(year, month, day);
                 }
             }
         }
 
+        // Validation: Must have at least a product ID (legacy or uuid) and qty > 0
+        const validRows = rows.filter(r => (r.productId || r.legacyProductId) && r.reqQty > 0);
+
+        if (validRows.length === 0) {
+            throw new Error(`No valid rows found. ${rows.length} rows total, but all missing product ID or quantity. Detected headers: ${detectedHeaders.join(', ')}`);
+        }
+
+        console.log(`Valid rows: ${validRows.length} out of ${rows.length} total`);
+
+        // Set accept date for all valid rows
         validRows.forEach(r => r.acceptDatetime = importDate);
 
         return this.processOrders(validRows, userEmail);

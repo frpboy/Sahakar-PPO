@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { db } from '@sahakar-database/index';
-import { ppoInput, orderSlips, repOrders, auditLogs } from '@sahakar-database/schema';
+import { db } from '@sahakar/database';
+import { ppoInput, orderSlips, repOrders, auditLogs } from '@sahakar/database';
 import { count, eq, desc, sql } from 'drizzle-orm';
 
 @Injectable()
@@ -10,7 +10,7 @@ export class AnalysisService {
         const [pendingCount] = await db.select({ value: count() }).from(ppoInput).where(eq(ppoInput.status, 'RAW'));
         const [repCount] = await db.select({ value: count() }).from(repOrders);
         const [slipCount] = await db.select({ value: count() }).from(orderSlips);
-        
+
         // Mocking some values for now as real data might not exist for all
         return {
             raw: rawCount.value,
@@ -43,8 +43,8 @@ export class AnalysisService {
             totalOrders: count(),
             avgFillRate: sql<number>`AVG(${ppoInput.qtyReceived} / ${ppoInput.qty}) * 100`
         })
-        .from(ppoInput)
-        .groupBy(ppoInput.supplier);
+            .from(ppoInput)
+            .groupBy(ppoInput.supplier);
     }
 
     async getFraudAlerts() {
