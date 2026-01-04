@@ -119,80 +119,164 @@ export default function RepAllocationPage() {
 
     const columns = useMemo<ColumnDef<RepItem>[]>(() => [
         {
-            header: 'Customer',
-            size: 200,
-            cell: ({ row }) => {
-                const item = row.original;
-                return (
-                    <div className="flex flex-col">
-                        <span className="font-bold text-primary-900 text-[11px] uppercase tracking-tight">{item.pendingItem.orderRequest.customerId}</span>
-                        <span className="text-[10px] text-neutral-400 font-bold tracking-widest">{item.pendingItem.orderRequest.orderId}</span>
-                    </div>
-                );
-            }
+            header: 'PROD ID',
+            size: 80,
+            cell: ({ row }) => <span className="font-mono text-[10px] text-neutral-500">{row.original.pendingItem?.id?.toString().substring(0, 8) || '-'}</span>
         },
         {
-            header: 'Req',
-            size: 60,
-            cell: ({ row }) => <span className="tabular-nums font-bold text-neutral-400">{row.original.pendingItem.orderRequest.reqQty}</span>
+            header: 'MRP',
+            size: 80,
+            meta: { align: 'right' },
+            cell: ({ row }) => <span className="tabular-nums">₹{row.original.pendingItem?.orderRequest?.mrp || '0.00'}</span>
         },
         {
-            header: 'Buy Qty',
+            header: 'PACKING',
+            size: 80,
+            cell: ({ row }) => <span className="text-[10px] font-bold text-neutral-400 uppercase">{row.original.pendingItem?.orderRequest?.packing || '-'}</span>
+        },
+        {
+            header: 'ITEM NAME',
+            size: 220,
+            cell: ({ row }) => <span className="font-bold text-neutral-900 uppercase truncate" title={row.original.pendingItem?.orderRequest?.productName}>{row.original.pendingItem?.orderRequest?.productName}</span>
+        },
+        {
+            header: 'REMARKS',
+            size: 120,
+            cell: ({ row }) => <span className="text-[11px] text-neutral-500 truncate italic">{row.original.pendingItem?.orderRequest?.remarks || '-'}</span>
+        },
+        {
+            header: 'SUBCATEGORY',
             size: 100,
+            cell: ({ row }) => <span className="text-[10px] bg-neutral-100 px-1 rounded font-bold text-neutral-500 uppercase">{row.original.pendingItem?.orderRequest?.subcategory || 'N/A'}</span>
+        },
+        {
+            header: 'REQ QTY',
+            size: 80,
+            meta: { align: 'right' },
+            cell: ({ row }) => <span className="tabular-nums font-bold text-neutral-900">{row.original.pendingItem?.orderRequest?.reqQty}</span>
+        },
+        {
+            header: 'NOTES',
+            size: 150,
             cell: ({ row }) => {
                 const item = row.original;
                 return editingId === item.id ? (
                     <input
-                        type="number"
-                        className="w-full bg-white border border-primary-500 rounded px-1 py-1 text-xs font-bold tabular-nums focus:ring-2 focus:ring-primary-500/20 outline-none"
-                        value={editFormData.orderedQty}
-                        onChange={(e) => handleInputChange('orderedQty', parseInt(e.target.value))}
+                        type="text"
+                        className="w-full bg-white border border-brand-500 p-1 text-xs"
+                        value={editFormData.notes || ''}
+                        onChange={(e) => handleInputChange('notes', e.target.value)}
                     />
-                ) : <span className="tabular-nums font-bold text-primary-700">{item.pendingItem.orderedQty}</span>;
+                ) : <span className="text-[11px] text-neutral-600 truncate">{item.pendingItem?.notes || '-'}</span>;
             }
         },
         {
-            header: 'Stock',
-            size: 100,
-            cell: ({ row }) => {
-                const item = row.original;
-                return editingId === item.id ? (
-                    <input
-                        type="number"
-                        className="w-full bg-white border border-primary-500 rounded px-1 py-1 text-xs font-bold tabular-nums focus:ring-2 focus:ring-primary-500/20 outline-none"
-                        value={editFormData.stockQty}
-                        onChange={(e) => handleInputChange('stockQty', parseInt(e.target.value))}
-                    />
-                ) : <span className="tabular-nums font-bold text-primary-900">{item.pendingItem.stockQty}</span>;
-            }
-        },
-        {
-            header: 'Actions',
+            header: 'ORDER STATUS',
             size: 120,
             cell: ({ row }) => {
                 const item = row.original;
+                return editingId === item.id ? (
+                    <select
+                        className="w-full bg-white border border-brand-500 p-1 text-[10px] font-bold uppercase"
+                        value={editFormData.orderStatus || 'Pending'}
+                        onChange={(e) => handleInputChange('orderStatus', e.target.value)}
+                    >
+                        <option value="Pending">Pending</option>
+                        <option value="Ordered">Ordered</option>
+                        <option value="Cancelled">Cancelled</option>
+                        <option value="Short">Short</option>
+                    </select>
+                ) : <StatusBadge status={item.orderStatus || 'Pending'} />;
+            }
+        },
+        {
+            header: 'ITEM NAME CHANGE',
+            size: 130,
+            cell: ({ row }) => <span className="text-[10px] text-neutral-400 font-medium italic">No Change</span>
+        },
+        {
+            header: 'CHANGE TO PENDING ORDER',
+            size: 180,
+            cell: ({ row }) => (
+                <button
+                    onClick={() => returnToPendingMutation.mutate(row.original.id)}
+                    disabled={returnToPendingMutation.isPending}
+                    className="text-[10px] font-bold text-error-600 hover:text-error-700 bg-error-50 px-2 py-1 rounded-none border border-error-100 uppercase tracking-tight transition-colors"
+                >
+                    {returnToPendingMutation.isPending ? 'Moving...' : 'Move to Pending'}
+                </button>
+            )
+        },
+        {
+            header: 'REP',
+            size: 100,
+            cell: ({ row }) => <span className="text-[11px] font-bold text-neutral-600 uppercase">{row.original.pendingItem?.orderRequest?.rep || '-'}</span>
+        },
+        {
+            header: 'MOBILE',
+            size: 100,
+            cell: ({ row }) => <span className="tabular-nums text-[10px] text-neutral-500">{row.original.pendingItem?.orderRequest?.mobile || '-'}</span>
+        },
+        {
+            header: 'ORDERED SUPPLIER',
+            size: 150,
+            cell: ({ row }) => <span className="text-[11px] font-bold text-neutral-400 uppercase truncate">{row.original.pendingItem?.orderRequest?.primarySup || '-'}</span>
+        },
+        {
+            header: 'DECIDED SUP',
+            size: 150,
+            cell: ({ row }) => {
+                const item = row.original;
+                return editingId === item.id ? (
+                    <input
+                        type="text"
+                        className="w-full bg-white border border-brand-500 p-1 text-[10px] font-bold uppercase"
+                        value={editFormData.decidedSupplier || ''}
+                        onChange={(e) => handleInputChange('decidedSupplier', e.target.value)}
+                    />
+                ) : <span className="text-[11px] font-bold text-brand-600 uppercase truncate">{item.pendingItem?.decidedSupplier || row.original.pendingItem?.orderRequest?.primarySup || '-'}</span>;
+            }
+        },
+        {
+            header: 'PRIMARY SUP',
+            size: 150,
+            cell: ({ row }) => <span className="text-[11px] text-neutral-400 uppercase truncate">{row.original.pendingItem?.orderRequest?.primarySup || '-'}</span>
+        },
+        {
+            header: 'SECONDARY SUP',
+            size: 150,
+            cell: ({ row }) => <span className="text-[11px] text-neutral-400 uppercase truncate">{row.original.pendingItem?.orderRequest?.secondarySup || '-'}</span>
+        },
+        {
+            header: 'ACCEPT DATE',
+            size: 100,
+            cell: ({ row }) => <span className="tabular-nums text-[10px] text-neutral-500">{row.original.pendingItem?.orderRequest?.acceptedDate ? new Date(row.original.pendingItem.orderRequest.acceptedDate).toLocaleDateString() : '-'}</span>
+        },
+        {
+            header: 'ACCEPTED TIME',
+            size: 100,
+            cell: ({ row }) => <span className="tabular-nums text-[10px] text-neutral-500">{row.original.pendingItem?.orderRequest?.acceptedTime || '-'}</span>
+        },
+        {
+            header: 'ACTIONS',
+            size: 80,
+            cell: ({ row }) => {
+                const item = row.original;
                 return (
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
                         {editingId === item.id ? (
                             <>
-                                <button onClick={() => handleSave(item.id)} className="p-1 text-accent-600 hover:bg-accent-100 rounded transition-colors"><CheckCircle2 size={18} /></button>
-                                <button onClick={() => setEditingId(null)} className="p-1 text-error-600 hover:bg-error-100 rounded transition-colors"><XCircle size={18} /></button>
+                                <button onClick={() => handleSave(item.id)} className="p-1 text-accent-600 hover:bg-neutral-100"><CheckCircle2 size={16} /></button>
+                                <button onClick={() => setEditingId(null)} className="p-1 text-error-600 hover:bg-neutral-100"><XCircle size={16} /></button>
                             </>
                         ) : (
-                            <>
-                                {can('edit_rep') && (
-                                    <button onClick={() => handleEditClick(item)} className="text-neutral-400 hover:text-primary-700 transition-colors" title="Edit Allocation"><Edit size={18} /></button>
-                                )}
-                                {can('return_to_pending') && (
-                                    <button onClick={() => setReturnId(item.id)} className="text-neutral-400 hover:text-error-600 transition-colors" title="Return to Pending"><Undo size={18} /></button>
-                                )}
-                            </>
+                            <button onClick={() => handleEditClick(item)} className="p-1 text-neutral-400 hover:text-brand-600 hover:bg-neutral-100 transition-all"><Edit size={16} /></button>
                         )}
                     </div>
                 );
             }
         }
-    ], [editingId, editFormData, can]);
+    ], [editingId, editFormData, handleSave, handleEditClick, returnToPendingMutation]);
 
     return (
         <div className="flex flex-col h-full bg-transparent font-sans">

@@ -45,37 +45,36 @@ const MENU_SECTIONS: MenuSection[] = [
         icon: ShoppingCart,
         items: [
             { label: 'PPO Input', href: '/order-import' },
-            { label: 'Pending Purchase Orders', href: '/pending-orders' },
+            { label: 'Pending POs', href: '/pending-orders' },
             { label: 'REP Orders', href: '/rep-allocation' }
         ]
     },
     {
-        title: 'Billing & Execution',
+        title: 'Billing',
         icon: Receipt,
         items: [
-            { label: "Today's Order Slips", href: '/order-slips' },
-            { label: 'Billing Execution', href: '/billing' },
-            { label: 'Order Slip History', href: '/order-slips/history' }
+            { label: "Today's Slips", href: '/order-slips' },
+            { label: 'Slip History', href: '/order-slips/history' },
+            { label: 'Billing Execution', href: '/billing' }
         ]
     },
     {
         title: 'Status & Compliance',
         icon: ShieldCheck,
         items: [
-            { label: 'Master Status Ledger', href: '/ledger' },
+            { label: 'Order Slip Status', href: '/order-slips/status' },
             { label: 'Status Summary', href: '/status-summary' },
             { label: 'Supplier Reliability', href: '/supplier-reliability' },
-            { label: 'Aging Report', href: '/aging-report' },
-            { label: 'Fraud Alerts', href: '/fraud-alerts' }
+            { label: 'Fraud Alerts', href: '/fraud-alerts' },
+            { label: 'Aging Report', href: '/aging-report' }
         ]
     },
     {
-        title: 'Analytics',
+        title: 'Analysis',
         icon: BarChart3,
         items: [
-            { label: 'Operational Analysis', href: '/analysis' },
-            { label: 'Funnel Analysis', href: '/analysis?tab=funnel' },
-            { label: 'Variance / Gap Analysis', href: '/analysis?tab=variance' }
+            { label: 'Status Ledger', href: '/ledger' },
+            { label: 'Analysis', href: '/analysis' }
         ]
     },
     {
@@ -89,20 +88,14 @@ const MENU_SECTIONS: MenuSection[] = [
         ]
     },
     {
-        title: 'System Admin',
+        title: 'System',
         icon: Settings,
         items: [
             { label: 'Users & Roles', href: '/users' },
-            { label: 'System Settings', href: '/settings' },
-            { label: 'Duty Sessions', href: '/duty-sessions' }
-        ]
-    },
-    {
-        title: 'Audit & Logs',
-        icon: FileText,
-        items: [
+            { label: 'Settings', href: '/settings' },
             { label: 'Audit Logs', href: '/logs' },
-            { label: 'System Events', href: '/logs/events' }
+            { label: 'System Events', href: '/logs/events' },
+            { label: 'Duty Sessions', href: '/duty-sessions' }
         ]
     }
 ];

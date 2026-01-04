@@ -17,9 +17,7 @@ export class PendingPoController {
             orderedQty: number;
             stockQty: number;
             offerQty: number;
-            decidedSupplierId: string;
             allocatorNotes?: string;
-            done: boolean;
         },
         @Request() req: any
     ) {
@@ -28,14 +26,12 @@ export class PendingPoController {
     }
 
     @Post(':id/move-to-rep')
-    async moveToRep(@Param('id') id: string, @Request() req: any) {
+    async moveToRep(
+        @Param('id') id: string,
+        @Body() data: { supplierName: string; rate: number },
+        @Request() req: any
+    ) {
         const userEmail = req.user?.email || 'system@sahakar.local';
-        return await this.service.moveToRep(id, userEmail);
-    }
-
-    @Post('rep/:id/return')
-    async returnFromRep(@Param('id') id: string, @Request() req: any) {
-        const userEmail = req.user?.email || 'system@sahakar.local';
-        return await this.service.returnFromRep(id, userEmail);
+        return await this.service.moveToRep(id, data.supplierName, data.rate, userEmail);
     }
 }

@@ -15,16 +15,25 @@ import { useOfflineSync } from '../../hooks/useOfflineSync';
 // Types
 type PendingItem = {
     id: string;
+    product_id: string;
     product_name: string;
+    mrp?: string;
     packing?: string;
     category?: string;
+    subcategory?: string;
+    remarks?: string;
     req_qty: number;
     ordered_qty: number;
     stock_qty: number;
     offer_qty: number;
     allocator_notes: string;
+    ordered_supplier?: string;
     decided_supplier_id?: string;
     decided_supplier_name?: string;
+    rep?: string;
+    mobile?: string;
+    accepted_date?: string;
+    accepted_time?: string;
     done: boolean;
     locked: boolean;
 };
@@ -160,142 +169,194 @@ export default function PendingOrdersPage() {
 
     const columns = useMemo<ColumnDef<PendingItem>[]>(() => [
         {
-            header: 'Product Details',
-            size: 360,
-            meta: { align: 'left' } as any,
-            cell: ({ row }) => {
-                const item = row.original;
-                return (
-                    <div className="flex flex-col">
-                        <span className="font-medium text-neutral-900 group-hover:text-primary-700 transition-colors uppercase text-[13px] tracking-tight">{item.product_name}</span>
-                        <span className="text-xs text-neutral-400 font-medium uppercase tracking-tighter mt-0.5">{item.packing || '-'} {item.category ? `(${item.category})` : ''}</span>
-                    </div>
-                );
-            }
-        },
-        {
-            header: 'Supplier Priority',
-            size: 160,
-            meta: { align: 'left' } as any,
-            cell: ({ row }) => {
-                const item = row.original;
-                return (
-                    <div className="flex flex-col">
-                        <span className="text-[11px] font-bold text-primary-700">{item.decided_supplier_name || 'Pending Allocation'}</span>
-                    </div>
-                );
-            }
-        },
-        {
-            header: 'REQ',
-            accessorKey: 'req_qty',
+            header: 'PROD ID',
             size: 80,
-            meta: { align: 'right' } as any,
-            cell: (info) => <span className="tabular-nums font-semibold text-neutral-600">{info.getValue() as number}</span>
+            cell: ({ row }) => <span className="font-mono text-[10px] text-neutral-500">{row.original.product_id?.toString().substring(0, 8) || '-'}</span>
         },
         {
-            header: 'ORDERED',
+            header: 'MRP',
+            size: 80,
+            meta: { align: 'right' },
+            cell: ({ row }) => <span className="tabular-nums">₹{row.original.mrp || '0.00'}</span>
+        },
+        {
+            header: 'PACKING',
+            size: 80,
+            cell: ({ row }) => <span className="text-[10px] font-bold text-neutral-400 uppercase">{row.original.packing || '-'}</span>
+        },
+        {
+            header: 'ITEM NAME',
+            size: 220,
+            cell: ({ row }) => <span className="font-bold text-neutral-900 uppercase truncate" title={row.original.product_name}>{row.original.product_name}</span>
+        },
+        {
+            header: 'REMARKS',
+            size: 120,
+            cell: ({ row }) => <span className="text-[11px] text-neutral-500 truncate italic">{row.original.remarks || '-'}</span>
+        },
+        {
+            header: 'SUBCATEGORY',
+            size: 100,
+            cell: ({ row }) => <span className="text-[10px] bg-neutral-100 px-1 rounded font-bold text-neutral-500 uppercase">{row.original.subcategory || 'N/A'}</span>
+        },
+        {
+            header: 'REQ QTY',
+            size: 80,
+            meta: { align: 'right' },
+            cell: ({ row }) => <span className="tabular-nums font-bold text-neutral-400 text-[11px]">{row.original.req_qty}</span>
+        },
+        {
+            header: 'ORDERED QTY',
             size: 90,
-            meta: { align: 'right' } as any,
+            meta: { align: 'right' },
             cell: ({ row }) => {
                 const item = row.original;
                 return editingId === item.id ? (
                     <input
                         type="number"
-                        className="w-full bg-white border border-primary-500 rounded px-1 py-1 text-xs font-bold tabular-nums focus:ring-2 focus:ring-primary-500/20 outline-none text-right"
-                        value={editFormData.ordered_qty}
+                        className="w-full bg-white border border-brand-500 p-1 text-xs text-right tabular-nums"
+                        value={editFormData.ordered_qty || ''}
                         onChange={(e) => handleInputChange('ordered_qty', parseInt(e.target.value))}
                     />
-                ) : <span className="tabular-nums font-semibold text-primary-900">{item.ordered_qty}</span>;
+                ) : <span className="tabular-nums font-bold text-brand-600">{item.ordered_qty}</span>;
             }
         },
         {
-            header: 'STOCK',
-            size: 80,
-            meta: { align: 'right' } as any,
+            header: 'STOCK IN HAND',
+            size: 100,
+            meta: { align: 'right' },
             cell: ({ row }) => {
                 const item = row.original;
                 return editingId === item.id ? (
                     <input
                         type="number"
-                        className="w-full bg-white border border-primary-500 rounded px-1 py-1 text-xs font-bold tabular-nums focus:ring-2 focus:ring-primary-500/20 outline-none text-right"
-                        value={editFormData.stock_qty}
+                        className="w-full bg-white border border-brand-500 p-1 text-xs text-right tabular-nums"
+                        value={editFormData.stock_qty || ''}
                         onChange={(e) => handleInputChange('stock_qty', parseInt(e.target.value))}
                     />
-                ) : <span className="tabular-nums font-semibold text-neutral-600">{item.stock_qty}</span>;
+                ) : <span className="tabular-nums font-bold text-neutral-900">{item.stock_qty}</span>;
             }
         },
         {
             header: 'OFFER',
             size: 80,
-            meta: { align: 'right' } as any,
+            meta: { align: 'right' },
             cell: ({ row }) => {
                 const item = row.original;
                 return editingId === item.id ? (
                     <input
                         type="number"
-                        className="w-full bg-white border border-primary-500 rounded px-1 py-1 text-xs font-bold tabular-nums focus:ring-2 focus:ring-primary-500/20 outline-none text-right"
-                        value={editFormData.offer_qty}
+                        className="w-full bg-white border border-brand-500 p-1 text-xs text-right tabular-nums"
+                        value={editFormData.offer_qty || ''}
                         onChange={(e) => handleInputChange('offer_qty', parseInt(e.target.value))}
                     />
-                ) : <span className="tabular-nums font-semibold text-success-600">{item.offer_qty}</span>;
+                ) : <span className="tabular-nums font-bold text-success-600">{item.offer_qty}</span>;
             }
         },
         {
-            header: 'Actions',
-            size: 90,
-            meta: { align: 'center' } as any,
+            header: 'NOTES',
+            size: 150,
             cell: ({ row }) => {
                 const item = row.original;
-                const isMoving = movingIds.has(item.id);
-
+                return editingId === item.id ? (
+                    <input
+                        type="text"
+                        className="w-full bg-white border border-brand-500 p-1 text-xs"
+                        value={editFormData.allocator_notes || ''}
+                        onChange={(e) => handleInputChange('allocator_notes', e.target.value)}
+                    />
+                ) : <span className="text-[11px] text-neutral-600 truncate">{item.allocator_notes || '-'}</span>;
+            }
+        },
+        {
+            header: 'ITEM NAME CHANGE',
+            size: 130,
+            cell: ({ row }) => <span className="text-[10px] text-neutral-400 font-medium italic">No Change</span>
+        },
+        {
+            header: 'ORDERED SUP',
+            size: 150,
+            cell: ({ row }) => <span className="text-[11px] font-bold text-neutral-400 uppercase truncate">{row.original.ordered_supplier || '-'}</span>
+        },
+        {
+            header: 'DECIDED SUP',
+            size: 150,
+            cell: ({ row }) => {
+                const item = row.original;
+                return editingId === item.id ? (
+                    <input
+                        type="text"
+                        className="w-full bg-white border border-brand-500 p-1 text-[10px] font-bold uppercase"
+                        value={editFormData.decided_supplier_name || ''}
+                        onChange={(e) => handleInputChange('decided_supplier_name', e.target.value)}
+                    />
+                ) : <span className="text-[11px] font-bold text-brand-600 uppercase truncate">{item.decided_supplier_name || row.original.ordered_supplier || '-'}</span>;
+            }
+        },
+        {
+            header: 'PRIMARY SUP',
+            size: 150,
+            cell: ({ row }) => <span className="text-[11px] text-neutral-400 uppercase truncate">{row.original.ordered_supplier || '-'}</span>
+        },
+        {
+            header: 'SECONDARY SUP',
+            size: 150,
+            cell: ({ row }) => <span className="text-[11px] text-neutral-400 uppercase truncate">N/A</span>
+        },
+        {
+            header: 'REP',
+            size: 100,
+            cell: ({ row }) => <span className="text-[11px] font-bold text-neutral-600 uppercase">{row.original.rep || '-'}</span>
+        },
+        {
+            header: 'MOBILE',
+            size: 100,
+            cell: ({ row }) => <span className="tabular-nums text-[10px] text-neutral-500">{row.original.mobile || '-'}</span>
+        },
+        {
+            header: 'CHANGE TO REP',
+            size: 150,
+            cell: ({ row }) => (
+                <button
+                    onClick={() => handleMoveToRep(row.original.id)}
+                    disabled={movingIds.has(row.original.id)}
+                    className="text-[10px] font-bold text-brand-600 hover:text-brand-700 bg-brand-50 px-2 py-1 rounded-none border border-brand-100 uppercase tracking-tight transition-colors flex items-center gap-2"
+                >
+                    {movingIds.has(row.original.id) ? <Loader2 size={12} className="animate-spin" /> : <ArrowRight size={12} />}
+                    Move to REP
+                </button>
+            )
+        },
+        {
+            header: 'ACCEPT DATE',
+            size: 100,
+            cell: ({ row }) => <span className="tabular-nums text-[10px] text-neutral-500">{row.original.accepted_date ? new Date(row.original.accepted_date).toLocaleDateString() : '-'}</span>
+        },
+        {
+            header: 'ACCEPTED TIME',
+            size: 100,
+            cell: ({ row }) => <span className="tabular-nums text-[10px] text-neutral-500">{row.original.accepted_time || '-'}</span>
+        },
+        {
+            header: 'ACTIONS',
+            size: 80,
+            cell: ({ row }) => {
+                const item = row.original;
                 return (
-                    <div className={`flex items-center justify-center gap-2 transition-opacity duration-300 ${isMoving ? 'opacity-50 pointer-events-none' : ''}`}>
+                    <div className="flex items-center gap-2">
                         {editingId === item.id ? (
                             <>
-                                <button
-                                    onClick={() => handleSave(item.id)}
-                                    className="p-1.5 text-accent-600 hover:bg-accent-50 rounded-lg transition-colors"
-                                    title="Save Changes"
-                                >
-                                    <CheckCircle2 size={16} strokeWidth={2} />
-                                </button>
-                                <button
-                                    onClick={() => setEditingId(null)}
-                                    className="p-1.5 text-error-600 hover:bg-error-50 rounded-lg transition-colors"
-                                    title="Cancel"
-                                >
-                                    <XCircle size={16} strokeWidth={2} />
-                                </button>
+                                <button onClick={() => handleSave(item.id)} className="p-1 text-accent-600 hover:bg-neutral-100"><CheckCircle2 size={16} /></button>
+                                <button onClick={() => setEditingId(null)} className="p-1 text-error-600 hover:bg-neutral-100"><XCircle size={16} /></button>
                             </>
                         ) : (
-                            <>
-                                <button
-                                    onClick={() => handleEditClick(item)}
-                                    className="p-1.5 text-neutral-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
-                                    title="Edit Row"
-                                >
-                                    <Edit size={16} strokeWidth={1.8} />
-                                </button>
-                                <button
-                                    onClick={() => handleMoveToRep(item.id)}
-                                    className="p-1.5 text-neutral-400 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-colors relative"
-                                    title="Move to Rep"
-                                    disabled={isMoving}
-                                >
-                                    {isMoving ? (
-                                        <Loader2 size={16} className="animate-spin text-brand-600" />
-                                    ) : (
-                                        <ArrowRight size={16} strokeWidth={1.8} />
-                                    )}
-                                </button>
-                            </>
+                            <button onClick={() => handleEditClick(item)} className="p-1 text-neutral-400 hover:text-brand-600 hover:bg-neutral-100 transition-all"><Edit size={16} /></button>
                         )}
                     </div>
                 );
             }
         }
-    ], [editingId, editFormData, movingIds, handleMoveToRep, handleSave]);
+    ], [editingId, editFormData, movingIds, handleMoveToRep, handleSave, handleEditClick]);
 
     return (
         <div className="flex flex-col h-full bg-transparent font-sans">

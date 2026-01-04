@@ -1,17 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { db } from '@sahakar/database';
-import { orderRequests, pendingItems, auditEvents, products, suppliers } from '@sahakar/database';
-import { eq, sql } from 'drizzle-orm';
+import { ppoInput, pendingPoLedger, auditEvents, products } from '@sahakar/database';
+import { eq, and, sql } from 'drizzle-orm';
 import * as crypto from 'crypto';
 
 interface OrderRow {
     acceptDatetime: Date;
-    customerId?: string;
-    orderId?: string;
-    productId?: string;
+    customerId?: bigint;
+    orderId?: bigint;
+    productId?: bigint;
     legacyProductId?: string;
     productName?: string;
-    packing?: string;
+    packing?: number;
     category?: string;
     subcategory?: string;
     primarySupplier?: string;
@@ -32,6 +32,7 @@ export interface ProcessOrdersResult {
     totalRows: number;
     validRows: number;
     duplicates: number;
+    rejectedNoProduct: number;
     processed: number;
     batchId: string;
     errors: string[];
@@ -57,55 +58,37 @@ export class PpoImportService {
         });
 
         let rawRows: any[] = [];
-        let detectedHeaders: string[] = [];
-
         try {
             const XLSX = require('@e965/xlsx');
             const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
             const sheetName = workbook.SheetNames[0];
             const sheet = workbook.Sheets[sheetName];
-
-            // Convert to JSON
             rawRows = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: false });
-
-            if (rawRows.length === 0) {
-                throw new Error('Excel file is empty or has no data rows');
-            }
-
-            detectedHeaders = Object.keys(rawRows[0]);
-            console.log('Detected Excel headers:', detectedHeaders);
+            if (rawRows.length === 0) throw new Error('Excel file is empty');
         } catch (e) {
             console.error('Excel Parsing Error:', e);
-            throw new Error(`Failed to parse Excel file: ${e.message}`);
+            throw new Error(`Failed to parse Excel file: ${e.message} `);
         }
 
-        // Step A: Normalize headers
-        const normalizeKey = (key: string): string => {
-            return key.toString().trim().toLowerCase().replace(/[\s\.]/g, '_');
-        };
-
+        const normalizeKey = (key: string): string => key.toString().trim().toLowerCase().replace(/[\s\.]/g, '_');
         const normalizedRows = rawRows.map(row => {
-            const normalized: any = {};
-            Object.keys(row).forEach(key => {
-                normalized[normalizeKey(key)] = row[key];
-            });
-            return normalized;
+            const n: any = {};
+            Object.keys(row).forEach(k => n[normalizeKey(k)] = row[k]);
+            return n;
         });
 
-        // Map to OrderRow
         const rows: OrderRow[] = normalizedRows.map((row: any) => ({
             acceptDatetime: new Date(),
-            customerId: row['customer_id'] || row['customerid'] || row['cust_id'],
+            customerId: row['customer_id'] ? BigInt(row['customer_id']) : undefined,
             customerName: row['customer_name'] || row['customername'],
-            orderId: row['order_id'] || row['orderid'],
+            orderId: row['order_id'] ? BigInt(row['order_id']) : undefined,
             legacyProductId: row['product_id'] || row['productid'] || row['item_id'] || row['itemid'] || row['prod_id'],
-            productId: undefined,
             productName: row['product_name'] || row['productname'] || row['item_name'],
-            packing: row['packing'],
+            packing: row['packing'] ? parseInt(row['packing'], 10) : undefined,
             category: row['category'],
             subcategory: row['subcategory'] || row['sub_category'],
-            primarySupplier: row['primary_sup'] || row['primarysup'] || row['supplier_1'] || row['supplier1'],
-            secondarySupplier: row['secondary_sup'] || row['secondarysup'] || row['supplier_2'] || row['supplier2'],
+            primarySupplier: row['primary_sup'] || row['primarysup'] || row['supplier_1'] || row['supplier1'] || row['primary_supplier'],
+            secondarySupplier: row['secondary_sup'] || row['secondarysup'] || row['supplier_2'] || row['supplier2'] || row['secondary_supplier'],
             rep: row['rep'] || row['rep_name'],
             mobile: row['mobile'] || row['phone'],
             mrp: parseFloat(row['mrp'] || '0'),
@@ -117,14 +100,11 @@ export class PpoImportService {
             stage: row['stage']
         }));
 
-        // Date Parsing
         const firstRowDate = rawRows[0]?.['Accept date'] || rawRows[0]?.['Accept Date'] || rawRows[0]?.['accept_date'];
         let importDate = new Date();
-
         if (firstRowDate) {
-            if (firstRowDate instanceof Date) {
-                importDate = firstRowDate;
-            } else if (!isNaN(firstRowDate) && typeof firstRowDate === 'number') {
+            if (firstRowDate instanceof Date) importDate = firstRowDate;
+            else if (!isNaN(firstRowDate) && typeof firstRowDate === 'number') {
                 const excelEpoch = new Date(1900, 0, 1);
                 importDate = new Date(excelEpoch.getTime() + (firstRowDate - 2) * 24 * 60 * 60 * 1000);
             } else if (typeof firstRowDate === 'string') {
@@ -137,19 +117,9 @@ export class PpoImportService {
                 }
             }
         }
+        rows.forEach(r => r.acceptDatetime = importDate);
 
-        // Valid Rows: Require reqQty > 0 only.
-        // We now allow rows without productId (they will be inserted into orderRequests but skipped for pendingItems)
-        const validRows = rows.filter(r => r.reqQty > 0);
-
-        if (validRows.length === 0) {
-            throw new Error(`No valid rows found. Detected headers: ${detectedHeaders.join(', ')}`);
-        }
-
-        console.log(`Valid rows: ${validRows.length}`);
-        validRows.forEach(r => r.acceptDatetime = importDate);
-
-        return this.processOrders(validRows, userEmail);
+        return this.processOrders(rows, userEmail);
     }
 
     async processOrders(rows: OrderRow[], userEmail: string): Promise<ProcessOrdersResult> {
@@ -157,180 +127,149 @@ export class PpoImportService {
         const errors: string[] = [];
         const preview: any[] = [];
         let duplicates = 0;
+        let rejectedNoProduct = 0;
         let processed = 0;
 
-        try {
-            // DB Lookup
-            console.log('Fetching products from DB...');
-            let productList = [];
-            try {
-                productList = await db.select().from(products);
-                console.log(`Fetched ${productList.length} products`);
-            } catch (e) {
-                console.error('Failed to fetch products:', e);
-                throw new Error(`Database connection failed: ${e.message}`);
+        console.log('Fetching products from DB...');
+        const productList = await db.select().from(products);
+        console.log(`Fetched ${productList.length} products`);
+
+        const productMap = new Map<string, bigint>(); // Maps legacyId (string) to productId (bigint)
+        const productNameMap = new Map<string, bigint>(); // Maps productName (string) to productId (bigint)
+        productList.forEach(p => {
+            productMap.set(p.id.toString(), p.id); // Assuming p.id is the primary key and can be used as a legacyId if needed
+            if (p.legacyId) productMap.set(p.legacyId, p.id);
+            if (p.name) productNameMap.set(p.name.toLowerCase(), p.id);
+        });
+
+        // Step 1: Resolve productId and Filter rows
+        const validRows: OrderRow[] = [];
+        for (const row of rows) {
+            if (row.reqQty <= 0) { // Only process rows with positive quantity
+                continue;
             }
 
-            const productMap = new Map();
-            const productNameMap = new Map();
+            let pid = row.productId;
+            if (!pid) {
+                if (row.legacyProductId && productMap.has(row.legacyProductId)) {
+                    pid = productMap.get(row.legacyProductId);
+                } else if (row.productName && productNameMap.has(row.productName.toLowerCase())) {
+                    pid = productNameMap.get(row.productName.toLowerCase());
+                }
+            }
 
-            productList.forEach(p => {
-                if (p.legacyId) productMap.set(p.legacyId, p.id);
-                if (p.itemName) productNameMap.set(p.itemName.toLowerCase(), p.id);
-            });
+            if (!pid) {
+                rejectedNoProduct++;
+                errors.push(`Row for product '${row.productName || row.legacyProductId}' rejected: Product ID could not be resolved.`);
+                continue;
+            }
+            row.productId = pid;
+            validRows.push(row);
+        }
 
-            // Resolve productId for all rows
-            for (const row of rows) {
-                if (!row.productId) {
-                    if (row.legacyProductId && productMap.has(row.legacyProductId)) {
-                        row.productId = productMap.get(row.legacyProductId);
-                    } else if (row.productName && productNameMap.has(row.productName.toLowerCase())) {
-                        row.productId = productNameMap.get(row.productName.toLowerCase());
+        console.log(`Valid rows after product resolution: ${validRows.length}, Rejected(no product): ${rejectedNoProduct} `);
+
+        await db.transaction(async (tx) => {
+            for (const r of validRows) {
+                try {
+                    // Deduplicate by (order_id + product_id)
+                    // Ensure orderId is present for deduplication
+                    if (!r.orderId || !r.productId) {
+                        errors.push(`Row skipped: Missing orderId or productId for deduplication.Order: ${r.orderId}, Product: ${r.productId} `);
+                        continue;
                     }
-                }
-            }
 
-            // Group rows by order_id
-            const orderGroups = new Map<string, OrderRow[]>();
-            for (const row of rows) {
-                const orderId = row.orderId || 'UNKNOWN';
-                if (!orderGroups.has(orderId)) {
-                    orderGroups.set(orderId, []);
-                }
-                orderGroups.get(orderId)!.push(row);
-            }
+                    const existing = await tx.select().from(ppoInput).where(
+                        and(
+                            eq(ppoInput.orderId, r.orderId),
+                            eq(ppoInput.productId, r.productId)
+                        )
+                    ).limit(1);
 
-            console.log(`Processing ${orderGroups.size} unique orders with ${rows.length} total items`);
-
-            // Transaction
-            await db.transaction(async (tx) => {
-                for (const [orderId, orderRows] of orderGroups.entries()) {
-                    try {
-                        // Step 1: Check if order_id already exists
-                        const existingOrders = await tx
-                            .select()
-                            .from(orderRequests)
-                            .where(eq(orderRequests.orderId, orderId));
-
-                        if (existingOrders.length > 0) {
-                            console.log(`Order ${orderId} already exists. Updating...`);
-
-                            // Delete existing order_requests with this orderId
-                            await tx
-                                .delete(orderRequests)
-                                .where(eq(orderRequests.orderId, orderId));
-
-                            duplicates++;
-                        }
-
-                        // Step 2: Insert all items for this order
-                        for (const r of orderRows) {
-                            const [inserted] = await tx.insert(orderRequests).values({
-                                acceptDatetime: r.acceptDatetime,
-                                orderId: r.orderId,
-                                customerId: r.customerId,
-                                productId: r.productId || null,
-                                reqQty: r.reqQty,
-                                customerName: r.customerName,
-                                legacyProductId: r.legacyProductId,
-                                productName: r.productName,
-                                packing: r.packing,
-                                category: r.category,
-                                subcategory: r.subcategory,
-                                primarySupplier: r.primarySupplier,
-                                secondarySupplier: r.secondarySupplier,
-                                rep: r.rep,
-                                mobile: r.mobile,
-                                mrp: r.mrp?.toString(),
-                                acceptedTime: r.acceptedTime,
-                                oQty: r.oQty,
-                                cQty: r.cQty,
-                                modification: r.modification,
-                                stage: r.productId ? 'PENDING' : 'UNMATCHED',
-                                hash: this.generateRowHash(r)
-                            }).returning();
-
-                            if (inserted) {
-                                processed++;
-
-                                await tx.insert(auditEvents).values({
-                                    entityType: 'ORDER',
-                                    entityId: inserted.id,
-                                    action: existingOrders.length > 0 ? 'UPDATE' : 'INGEST',
-                                    actor: userEmail,
-                                    afterState: JSON.stringify(r)
-                                });
-                            }
-
-                            // Collect preview data (limit to first 100)
-                            if (preview.length < 100) {
-                                preview.push({
-                                    row: preview.length + 1,
-                                    orderId: r.orderId,
-                                    customerName: r.customerName,
-                                    productName: r.productName,
-                                    qty: r.reqQty,
-                                    supplierName: r.primarySupplier || '-',
-                                    status: existingOrders.length > 0 ? 'Updated' : 'Inserted'
-                                });
-                            }
-                        }
-
-                    } catch (orderError) {
-                        console.error(`Error processing order ${orderId}:`, orderError);
-                        errors.push(`Order ${orderId}: ${orderError.message}`);
+                    if (existing.length > 0) {
+                        duplicates++;
+                        continue; // Skip insertion if duplicate
                     }
-                }
 
-                // Step 3: Aggregate pending_items by product_id across ALL orders
-                console.log('Aggregating pending_items by product_id...');
+                    const [inserted] = await tx.insert(ppoInput).values({
+                        acceptedDate: r.acceptDatetime.toISOString().split('T')[0],
+                        acceptedTime: r.acceptedTime || null,
+                        customerId: r.customerId,
+                        customerName: r.customerName,
+                        orderId: r.orderId,
+                        productId: r.productId,
+                        productName: r.productName,
+                        packing: r.packing,
+                        subcategory: r.subcategory,
+                        primarySupplier: r.primarySupplier,
+                        secondarySupplier: r.secondarySupplier,
+                        rep: r.rep,
+                        mobile: r.mobile,
+                        mrp: r.mrp?.toString(),
+                        orderQty: r.oQty,
+                        confirmedQty: r.cQty,
+                        requestedQty: r.reqQty,
+                        modification: r.modification,
+                        stage: 'Pending' // Default stage for new inputs
+                    }).returning();
 
-                // Delete all existing pending items (we'll recalculate from scratch)
-                await tx.delete(pendingItems);
+                    processed++;
 
-                // Aggregate from order_requests where productId is not null
-                // IMPORTANT: Only include orders with stage = 'PENDING'
-                // Orders with stage = 'COMPLETED' or 'Pending' (completed in ERP) are excluded
-                const aggregatedItems = await tx.execute(sql`
-                    SELECT 
-                        product_id,
-                        SUM(req_qty) as total_qty
-                    FROM order_requests
-                    WHERE product_id IS NOT NULL 
-                    AND (
-                        stage = 'PENDING' 
-                        OR stage = 'UNMATCHED'
-                    )
-                    AND LOWER(stage) NOT LIKE '%complet%'
-                    AND LOWER(stage) NOT LIKE '%done%'
-                    AND LOWER(stage) NOT LIKE '%executed%'
-                    GROUP BY product_id
-                `);
-
-                // Insert aggregated pending_items with state = 'PENDING'
-                for (const item of aggregatedItems.rows) {
-                    const totalQty = parseInt(item.total_qty as string, 10);
-                    if (totalQty > 0) {
-                        await tx.insert(pendingItems).values({
-                            productId: item.product_id as string,
-                            reqQty: totalQty,
-                            state: 'PENDING'
+                    if (preview.length < 100) {
+                        preview.push({
+                            orderId: r.orderId?.toString(),
+                            productName: r.productName,
+                            qty: r.reqQty,
+                            status: 'Inserted'
                         });
                     }
+
+                    await tx.insert(auditEvents).values({
+                        actor: userEmail,
+                        action: 'INGEST',
+                        entityType: 'PPO_INPUT',
+                        entityId: inserted.id,
+                        payload: r as any // Cast to any as OrderRow might not perfectly match payload type
+                    });
+                } catch (e: any) {
+                    console.error(`Error processing row for order ${r.orderId} product ${r.productId}: `, e);
+                    errors.push(`Row Error(Order: ${r.orderId}, Product: ${r.productName}): ${e.message} `);
                 }
+            }
 
-                console.log(`Created ${aggregatedItems.rows.length} aggregated pending items (excluding completed orders)`);
-            });
+            // Global aggregation for pending_po_ledger
+            console.log('Aggregating pending_po_ledger...');
+            // Delete all existing non-locked pending items (we'll recalculate from scratch)
+            await tx.delete(pendingPoLedger).where(eq(pendingPoLedger.locked, false));
 
-        } catch (dbError) {
-            console.error('Database Error in processOrders:', dbError);
-            throw new Error(`Database operation failed: ${dbError.message}`);
-        }
+            // Aggregate from ppo_input where stage is 'Pending'
+            const aggregated = await tx.execute(sql`
+SELECT
+product_id,
+    SUM(requested_qty) as total_qty
+                FROM ppo_input
+                WHERE stage = 'Pending'
+                GROUP BY product_id
+            `);
+
+            for (const item of aggregated.rows) {
+                const totalQty = parseInt(item.total_qty as string, 10);
+                if (totalQty > 0) {
+                    await tx.insert(pendingPoLedger).values({
+                        productId: BigInt(item.product_id as string),
+                        reqQty: totalQty,
+                        allocationStatus: 'PENDING'
+                    });
+                }
+            }
+            console.log(`Created ${aggregated.rows.length} aggregated pending items in pending_po_ledger.`);
+        });
 
         return {
             totalRows: rows.length,
-            validRows: rows.length,
+            validRows: validRows.length,
             duplicates,
+            rejectedNoProduct,
             processed,
             batchId,
             errors,
@@ -338,8 +277,36 @@ export class PpoImportService {
         };
     }
 
-    private generateRowHash(row: OrderRow): string {
-        const hashInput = `${row.acceptDatetime.toISOString()}|${row.orderId}|${row.productId}|${row.reqQty}`;
-        return crypto.createHash('sha256').update(hashInput).digest('hex');
+    async getAllInputItems() {
+        return await db.select({
+            id: ppoInput.id,
+            acceptedDate: ppoInput.acceptedDate,
+            acceptedTime: ppoInput.acceptedTime,
+            orderId: ppoInput.orderId,
+            productId: ppoInput.productId,
+            productName: ppoInput.productName,
+            packing: ppoInput.packing,
+            subcategory: ppoInput.subcategory,
+            primarySupplier: ppoInput.primarySupplier,
+            secondarySupplier: ppoInput.secondarySupplier,
+            rep: ppoInput.rep,
+            mobile: ppoInput.mobile,
+            mrp: ppoInput.mrp,
+            orderQty: ppoInput.orderQty,
+            confirmedQty: ppoInput.confirmedQty,
+            requestedQty: ppoInput.requestedQty,
+            offer: ppoInput.offer,
+            stock: ppoInput.stock,
+            rate: ppoInput.rate,
+            value: ppoInput.value,
+            status: ppoInput.status,
+            notes: ppoInput.notes,
+            decidedSupplier: ppoInput.decidedSupplier,
+            modification: ppoInput.modification,
+            stage: ppoInput.stage,
+            createdAt: ppoInput.createdAt
+        })
+            .from(ppoInput)
+            .orderBy(sql`${ppoInput.createdAt} DESC`);
     }
 }

@@ -10,27 +10,29 @@ interface Product {
     id: string;
     legacyId?: string;
     productCode?: string;
-    itemName: string;
+    name: string;
     aliasName?: string;
-    packing?: string;
+    primarySupplier?: string;
+    secondarySupplier?: string;
+    leastPriceSupplier?: string;
+    mostQtySupplier?: string;
     category?: string;
-    subcategory?: string;
+    subCategory?: string;
     genericName?: string;
     patent?: string;
     hsnCode?: string;
     productType?: string;
-    mrp?: number;
-    ptr?: number;
-    pts?: number;
-    landedCost?: number;
-    gstPercent?: number;
-    discountPercent?: number;
+    discountPercent?: string;
+    packing?: number;
+    gstPercent?: string;
     stock?: number;
-    primarySupplierId?: string;
-    secondarySupplierId?: string;
-    repId?: string;
+    mrp?: string;
+    ptr?: string;
+    pt?: string;
+    localCost?: string;
+    createdDate?: string;
+    rep?: string;
     active: boolean;
-    createdAt: string;
 }
 
 interface Supplier {
@@ -54,25 +56,25 @@ export default function ProductsPage() {
     const initialFormState = {
         legacyId: '',
         productCode: '',
-        itemName: '',
+        name: '',
         aliasName: '',
         packing: '',
         category: '',
-        subcategory: '',
+        subCategory: '',
         genericName: '',
         patent: '',
         hsnCode: '',
         productType: '',
         mrp: '',
         ptr: '',
-        pts: '',
-        landedCost: '',
+        pt: '',
+        localCost: '',
         gstPercent: '',
         discountPercent: '',
         stock: '',
-        primarySupplierId: '',
-        secondarySupplierId: '',
-        repId: ''
+        primarySupplier: '',
+        secondarySupplier: '',
+        rep: ''
     };
 
     const [formData, setFormData] = useState(initialFormState);
@@ -171,7 +173,7 @@ export default function ProductsPage() {
             const existingMap = new Map<string, Product>();
             products?.forEach((p: Product) => {
                 if (p.productCode) existingMap.set(p.productCode.toUpperCase(), p);
-                existingMap.set(p.itemName.toUpperCase(), p);
+                existingMap.set(p.name.toUpperCase(), p);
                 if (p.legacyId) existingMap.set(p.legacyId.toString().toUpperCase(), p);
             });
 
@@ -187,37 +189,37 @@ export default function ProductsPage() {
                     const rId = repMap.get(repName);
 
                     const productCode = (row['Product Code'] || row['productCode'] || '').toString().trim();
-                    const itemName = (row['Name'] || row['Item Name'] || row['itemName'] || '').toString().trim();
+                    const name = (row['Name'] || row['Item Name'] || row['itemName'] || '').toString().trim();
                     const legacyId = (row['id'] || row['Legacy ID'] || row['legacyId'] || '').toString().trim();
 
-                    if (!itemName) continue;
+                    if (!name) continue;
 
                     // Match existing
-                    const matchKey = productCode ? productCode.toUpperCase() : (legacyId ? legacyId.toUpperCase() : itemName.toUpperCase());
+                    const matchKey = productCode ? productCode.toUpperCase() : (legacyId ? legacyId.toUpperCase() : name.toUpperCase());
                     const existing = existingMap.get(matchKey);
 
                     const payload = {
                         legacyId,
                         productCode,
-                        itemName,
+                        name,
                         aliasName: (row['Alias Name'] || row['aliasName'] || '').toString(),
-                        packing: (row['Packing'] || row['pack ing'] || row['packing'] || '').toString(),
+                        packing: parseInt((row['Packing'] || row['pack ing'] || row['packing'] || '0').toString()),
                         category: (row['Category'] || row['category'] || '').toString(),
-                        subcategory: (row['Sub Category'] || row['Subcategory'] || row['subcategory'] || '').toString(),
+                        subCategory: (row['Sub Category'] || row['Subcategory'] || row['subcategory'] || '').toString(),
                         genericName: (row['Generic Name'] || row['genericName'] || '').toString(),
                         patent: (row['Patent'] || row['patent'] || '').toString(),
                         hsnCode: (row['Hsn Code'] || row['hsnCode'] || '').toString(),
                         productType: (row['Type'] || row['productType'] || '').toString(),
                         mrp: row['MRP'] || row['mrp'],
                         ptr: row['PTR'] || row['ptr'],
-                        pts: row['PTS'] || row['pts'],
-                        landedCost: row['L co st'] || row['landedCost'],
+                        pt: row['PTS'] || row['pts'],
+                        localCost: row['L co st'] || row['landedCost'],
                         gstPercent: row['GSI %'] || row['GST %'] || row['gstPercent'],
                         discountPercent: row['Dis c%'] || row['discountPercent'],
                         stock: parseInt(row['Sto ck'] || row['stock'] || '0'),
-                        primarySupplierId: pSupId,
-                        secondarySupplierId: sSupId,
-                        repId: rId
+                        primarySupplier: (row['Primary supplier'] || row['primarySupplier'] || '').toString(),
+                        secondarySupplier: (row['Secondary supplier'] || row['secondarySupplier'] || '').toString(),
+                        rep: repName
                     };
 
                     if (existing) {
@@ -253,25 +255,25 @@ export default function ProductsPage() {
         setFormData({
             legacyId: product.legacyId || '',
             productCode: product.productCode || '',
-            itemName: product.itemName,
+            name: product.name,
             aliasName: product.aliasName || '',
-            packing: product.packing || '',
+            packing: product.packing?.toString() || '',
             category: product.category || '',
-            subcategory: product.subcategory || '',
+            subCategory: product.subCategory || '',
             genericName: product.genericName || '',
             patent: product.patent || '',
             hsnCode: product.hsnCode || '',
             productType: product.productType || '',
             mrp: product.mrp?.toString() || '',
             ptr: product.ptr?.toString() || '',
-            pts: product.pts?.toString() || '',
-            landedCost: product.landedCost?.toString() || '',
+            pt: product.pt?.toString() || '',
+            localCost: product.localCost?.toString() || '',
             gstPercent: product.gstPercent?.toString() || '',
             discountPercent: product.discountPercent?.toString() || '',
             stock: product.stock?.toString() || '',
-            primarySupplierId: product.primarySupplierId || '',
-            secondarySupplierId: product.secondarySupplierId || '',
-            repId: product.repId || ''
+            primarySupplier: product.primarySupplier || '',
+            secondarySupplier: product.secondarySupplier || '',
+            rep: product.rep || ''
         });
         setIsModalOpen(true);
     };
@@ -291,25 +293,25 @@ export default function ProductsPage() {
         const data = {
             legacyId: formData.legacyId?.toUpperCase() || undefined,
             productCode: formData.productCode?.toUpperCase() || undefined,
-            itemName: formData.itemName.toUpperCase(),
+            name: formData.name.toUpperCase(),
             aliasName: formData.aliasName?.toUpperCase() || undefined,
-            packing: formData.packing?.toUpperCase() || undefined,
+            packing: formData.packing ? parseInt(formData.packing) : undefined,
             category: formData.category?.toUpperCase() || undefined,
-            subcategory: formData.subcategory?.toUpperCase() || undefined,
+            subCategory: formData.subCategory?.toUpperCase() || undefined,
             genericName: formData.genericName?.toUpperCase() || undefined,
             patent: formData.patent?.toUpperCase() || undefined,
             hsnCode: formData.hsnCode || undefined,
             productType: formData.productType?.toUpperCase() || undefined,
-            mrp: formData.mrp ? parseFloat(formData.mrp) : undefined,
-            ptr: formData.ptr ? parseFloat(formData.ptr) : undefined,
-            pts: formData.pts ? parseFloat(formData.pts) : undefined,
-            landedCost: formData.landedCost ? parseFloat(formData.landedCost) : undefined,
-            gstPercent: formData.gstPercent ? parseFloat(formData.gstPercent) : undefined,
-            discountPercent: formData.discountPercent ? parseFloat(formData.discountPercent) : undefined,
+            mrp: formData.mrp ? formData.mrp : undefined,
+            ptr: formData.ptr ? formData.ptr : undefined,
+            pt: formData.pt ? formData.pt : undefined,
+            localCost: formData.localCost ? formData.localCost : undefined,
+            gstPercent: formData.gstPercent ? formData.gstPercent : undefined,
+            discountPercent: formData.discountPercent ? formData.discountPercent : undefined,
             stock: formData.stock ? parseInt(formData.stock) : 0,
-            primarySupplierId: formData.primarySupplierId || undefined,
-            secondarySupplierId: formData.secondarySupplierId || undefined,
-            repId: formData.repId || undefined
+            primarySupplier: formData.primarySupplier || undefined,
+            secondarySupplier: formData.secondarySupplier || undefined,
+            rep: formData.rep || undefined
         };
 
         if (editingProduct) {
@@ -334,73 +336,150 @@ export default function ProductsPage() {
 
     const columns = useMemo<ColumnDef<Product>[]>(() => [
         {
-            header: 'Code',
-            accessorKey: 'productCode',
-            size: 100,
-            cell: ({ row }) => (
-                <div className="flex flex-col">
-                    <span className="text-xs font-bold text-brand-600">{row.original.productCode || '-'}</span>
-                    <span className="text-[10px] text-neutral-400">#{row.original.legacyId || ''}</span>
-                </div>
-            )
+            header: 'PROD ID',
+            size: 80,
+            cell: ({ row }) => <span className="font-mono text-[10px] text-neutral-400 font-bold">#{row.original.id?.toString().padStart(4, '0')}</span>
         },
         {
-            header: 'Product',
-            accessorKey: 'itemName',
-            size: 360,
-            cell: ({ row }) => (
-                <div className="flex flex-col">
-                    <span className="text-xs font-semibold text-neutral-900 truncate" title={row.original.itemName}>
-                        {row.original.itemName}
-                    </span>
-                    {row.original.aliasName && (
-                        <span className="text-[10px] text-neutral-500 truncate" title={row.original.aliasName}>
-                            {row.original.aliasName}
-                        </span>
-                    )}
-                </div>
-            )
+            header: 'Name',
+            accessorKey: 'name',
+            size: 220,
+            cell: ({ row }) => <span className="font-bold text-neutral-900 uppercase truncate text-[11px]" title={row.original.name}>{row.original.name}</span>
+        },
+        {
+            header: 'Alias Name',
+            accessorKey: 'aliasName',
+            size: 150,
+            cell: ({ row }) => <span className="text-[10px] text-neutral-400 font-bold italic uppercase">{row.original.aliasName || '-'}</span>
+        },
+        {
+            header: 'Primary Supplier',
+            accessorKey: 'primarySupplier',
+            size: 180,
+            cell: ({ row }) => <span className="text-[11px] text-neutral-500 uppercase font-medium truncate">{row.original.primarySupplier || '-'}</span>
+        },
+        {
+            header: 'Secondary Supplier',
+            accessorKey: 'secondarySupplier',
+            size: 180,
+            cell: ({ row }) => <span className="text-[11px] text-neutral-400 uppercase font-medium truncate">{row.original.secondarySupplier || '-'}</span>
+        },
+        {
+            header: 'Least Price Supplier',
+            accessorKey: 'leastPriceSupplier',
+            size: 180,
+            cell: ({ row }) => <span className="text-[11px] text-brand-600 uppercase font-bold truncate">{row.original.leastPriceSupplier || '-'}</span>
+        },
+        {
+            header: 'Most Qty Supplier',
+            accessorKey: 'mostQtySupplier',
+            size: 180,
+            cell: ({ row }) => <span className="text-[11px] text-success-600 uppercase font-bold truncate">{row.original.mostQtySupplier || '-'}</span>
+        },
+        {
+            header: 'Category',
+            accessorKey: 'category',
+            size: 120,
+            cell: ({ row }) => <span className="text-[11px] text-neutral-600 uppercase font-bold">{row.original.category || '-'}</span>
+        },
+        {
+            header: 'Sub Category',
+            accessorKey: 'subCategory',
+            size: 120,
+            cell: ({ row }) => <span className="text-[10px] text-neutral-400 uppercase">{row.original.subCategory || '-'}</span>
+        },
+        {
+            header: 'Generic Name',
+            accessorKey: 'genericName',
+            size: 200,
+            cell: ({ row }) => <span className="text-[10px] text-neutral-400 italic truncate" title={row.original.genericName}>{row.original.genericName || '-'}</span>
+        },
+        {
+            header: 'Patent',
+            accessorKey: 'patent',
+            size: 100,
+            cell: ({ row }) => <span className="text-[10px] text-brand-600 font-bold uppercase">{row.original.patent || '-'}</span>
+        },
+        {
+            header: 'HSN Code',
+            accessorKey: 'hsnCode',
+            size: 100,
+            cell: ({ row }) => <span className="text-[10px] text-neutral-500">{row.original.hsnCode || '-'}</span>
+        },
+        {
+            header: 'Type',
+            accessorKey: 'productType',
+            size: 100,
+            cell: ({ row }) => <span className="text-[10px] text-neutral-500 uppercase">{row.original.productType || '-'}</span>
+        },
+        {
+            header: 'Disc %',
+            size: 80,
+            meta: { align: 'right' },
+            cell: ({ row }) => <span className="tabular-nums font-bold text-brand-500">{row.original.discountPercent ? `${row.original.discountPercent}%` : '-'}</span>
         },
         {
             header: 'Packing',
-            accessorKey: 'packing',
-            size: 100,
-            cell: ({ row }) => <span className="text-xs text-neutral-600">{row.original.packing || '-'}</span>
+            size: 80,
+            cell: ({ row }) => <span className="text-[10px] bg-neutral-100 px-1 rounded font-bold text-neutral-500 uppercase">{row.original.packing || '-'}</span>
         },
         {
-            header: 'Pricing (₹)',
-            accessorKey: 'mrp',
-            size: 120,
+            header: 'GST %',
+            size: 80,
             meta: { align: 'right' },
-            cell: ({ row }) => (
-                <div className="flex flex-col">
-                    <span className="text-xs font-bold text-neutral-900">MRP: {formatCurrency(row.original.mrp)}</span>
-                    <span className="text-[10px] text-neutral-500">PTR: {formatCurrency(row.original.ptr)}</span>
-                </div>
-            )
+            cell: ({ row }) => <span className="tabular-nums font-bold text-success-600">{row.original.gstPercent ? `${row.original.gstPercent}%` : '-'}</span>
         },
         {
             header: 'Stock',
-            accessorKey: 'stock',
-            size: 100,
+            size: 80,
             meta: { align: 'right' },
-            cell: ({ row }) => (
-                <span className={`text-xs font-bold ${row.original.stock && row.original.stock > 0 ? 'text-success-600' : 'text-danger-600'}`}>
-                    {row.original.stock || 0}
-                </span>
-            )
+            cell: ({ row }) => <span className={`tabular-nums font-black ${row.original.stock && row.original.stock > 0 ? 'text-success-600' : 'text-danger-600'}`}>{row.original.stock || 0}</span>
         },
         {
-            header: 'Actions',
+            header: 'MRP',
             size: 100,
-            meta: { align: 'center' },
+            meta: { align: 'right' },
+            cell: ({ row }) => <span className="tabular-nums font-bold text-neutral-900">₹{formatCurrency(row.original.mrp)}</span>
+        },
+        {
+            header: 'PTR',
+            size: 100,
+            meta: { align: 'right' },
+            cell: ({ row }) => <span className="tabular-nums font-bold text-neutral-600">₹{formatCurrency(row.original.ptr)}</span>
+        },
+        {
+            header: 'PTS',
+            size: 100,
+            meta: { align: 'right' },
+            cell: ({ row }) => <span className="tabular-nums font-bold text-brand-600">₹{formatCurrency(row.original.pt)}</span>
+        },
+        {
+            header: 'Lcost',
+            size: 100,
+            meta: { align: 'right' },
+            cell: ({ row }) => <span className="tabular-nums font-bold text-neutral-400">₹{formatCurrency(row.original.localCost)}</span>
+        },
+        {
+            header: 'Created Date',
+            size: 110,
+            cell: ({ row }) => <span className="tabular-nums text-[10px] text-neutral-400">{row.original.createdDate ? new Date(row.original.createdDate).toLocaleDateString() : '-'}</span>
+        },
+        {
+            header: 'Rep',
+            accessorKey: 'rep',
+            size: 120,
+            cell: ({ row }) => <span className="text-[11px] text-neutral-500 uppercase">{row.original.rep || '-'}</span>
+        },
+        {
+            header: 'ACTIONS',
+            size: 80,
             cell: ({ row }) => (
-                <div className="flex gap-2 justify-center">
+                <div className="flex gap-1 justify-center">
                     <button
                         onClick={() => handleEdit(row.original)}
-                        className="p-1 text-brand-600 hover:bg-brand-100 transition-colors"
+                        className="p-1.5 text-neutral-300 hover:text-brand-600 hover:bg-brand-50 rounded transition-colors"
                     >
-                        <Edit size={16} />
+                        <Edit size={14} />
                     </button>
                     <button
                         onClick={() => {
@@ -408,9 +487,9 @@ export default function ProductsPage() {
                                 deleteMutation.mutate(row.original.id);
                             }
                         }}
-                        className="p-1 text-danger-600 hover:bg-danger-100 transition-colors"
+                        className="p-1.5 text-neutral-300 hover:text-danger-600 hover:bg-danger-50 rounded transition-colors"
                     >
-                        <Trash2 size={16} />
+                        <Trash2 size={14} />
                     </button>
                 </div>
             )
@@ -522,23 +601,23 @@ export default function ProductsPage() {
                             <form onSubmit={handleSubmit} className="space-y-6">
                                 {activeTab === 'general' && (
                                     <div className="grid grid-cols-2 gap-6">
-                                        <InputField label="Item Name *" field="itemName" placeholder="e.g. PARACETAMOL 500MG" />
+                                        <InputField label="Name *" field="name" placeholder="e.g. PARACETAMOL 500MG" />
                                         <InputField label="Alias Name" field="aliasName" placeholder="e.g. CROCIN" />
                                         <InputField label="Product Code" field="productCode" placeholder="Internal Code" />
                                         <InputField label="Legacy ID" field="legacyId" placeholder="ID from old system" />
-                                        <InputField label="Packing" field="packing" placeholder="e.g. 10x10" />
+                                        <InputField label="Packing" field="packing" placeholder="e.g. 10x10" type="number" />
                                         <InputField label="Category" field="category" placeholder="e.g. PHARMA" />
-                                        <InputField label="Subcategory" field="subcategory" placeholder="e.g. TABLET" />
+                                        <InputField label="Sub Category" field="subCategory" placeholder="e.g. TABLET" />
                                         <InputField label="Product Type" field="productType" placeholder="e.g. ETHICAL / GENERIC" />
                                     </div>
                                 )}
 
                                 {activeTab === 'pricing' && (
                                     <div className="grid grid-cols-3 gap-6">
-                                        <InputField label="MRP" field="mrp" placeholder="0.00" type="number" />
-                                        <InputField label="PTR" field="ptr" placeholder="0.00" type="number" />
-                                        <InputField label="PTS" field="pts" placeholder="0.00" type="number" />
-                                        <InputField label="Landed Cost" field="landedCost" placeholder="0.00" type="number" />
+                                        <InputField label="MRP" field="mrp" placeholder="0.00" />
+                                        <InputField label="PTR" field="ptr" placeholder="0.00" />
+                                        <InputField label="PT / PTS" field="pt" placeholder="0.00" />
+                                        <InputField label="Landed Cost" field="localCost" placeholder="0.00" />
                                         <InputField label="Stock Qty" field="stock" placeholder="0" type="number" />
                                     </div>
                                 )}
@@ -546,8 +625,8 @@ export default function ProductsPage() {
                                 {activeTab === 'tax' && (
                                     <div className="grid grid-cols-2 gap-6">
                                         <InputField label="HSN Code" field="hsnCode" placeholder="Tax Code" />
-                                        <InputField label="GST %" field="gstPercent" placeholder="12 or 18" type="number" />
-                                        <InputField label="Discount %" field="discountPercent" placeholder="0.00" type="number" />
+                                        <InputField label="GST %" field="gstPercent" placeholder="12 or 18" />
+                                        <InputField label="Discount %" field="discountPercent" placeholder="0.00" />
                                         <InputField label="Patent Status" field="patent" placeholder="e.g. Patented / Off-patent" />
                                         <div className="col-span-2">
                                             <InputField label="Generic Name" field="genericName" placeholder="Chemical composition" />
@@ -557,45 +636,11 @@ export default function ProductsPage() {
 
                                 {activeTab === 'suppliers' && (
                                     <div className="grid grid-cols-1 gap-6">
-                                        <div>
-                                            <label className="block text-xs font-medium text-neutral-700 mb-1">Primary Supplier</label>
-                                            <select
-                                                value={formData.primarySupplierId}
-                                                onChange={(e) => setFormData({ ...formData, primarySupplierId: e.target.value })}
-                                                className="w-full px-3 py-2 border border-neutral-300 rounded-sm text-sm"
-                                            >
-                                                <option value="">Select Supplier</option>
-                                                {suppliers?.map(s => (
-                                                    <option key={s.id} value={s.id}>{s.supplierName}</option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-medium text-neutral-700 mb-1">Secondary Supplier</label>
-                                            <select
-                                                value={formData.secondarySupplierId}
-                                                onChange={(e) => setFormData({ ...formData, secondarySupplierId: e.target.value })}
-                                                className="w-full px-3 py-2 border border-neutral-300 rounded-sm text-sm"
-                                            >
-                                                <option value="">Select Supplier</option>
-                                                {suppliers?.map(s => (
-                                                    <option key={s.id} value={s.id}>{s.supplierName}</option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-medium text-neutral-700 mb-1">REP</label>
-                                            <select
-                                                value={formData.repId}
-                                                onChange={(e) => setFormData({ ...formData, repId: e.target.value })}
-                                                className="w-full px-3 py-2 border border-neutral-300 rounded-sm text-sm"
-                                            >
-                                                <option value="">Select REP</option>
-                                                {reps?.map(r => (
-                                                    <option key={r.id} value={r.id}>{r.name}</option>
-                                                ))}
-                                            </select>
-                                        </div>
+                                        <InputField label="Primary Supplier" field="primarySupplier" placeholder="Search Supplier..." />
+                                        <InputField label="Secondary Supplier" field="secondarySupplier" placeholder="Search Supplier..." />
+                                        <InputField label="Least Price Supplier" field="leastPriceSupplier" placeholder="Supplier with lowest price" />
+                                        <InputField label="Most Qty Supplier" field="mostQtySupplier" placeholder="Supplier with max stock" />
+                                        <InputField label="REP" field="rep" placeholder="Search Representative..." />
                                     </div>
                                 )}
                             </form>

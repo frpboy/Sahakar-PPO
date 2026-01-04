@@ -1,50 +1,51 @@
 import { Injectable } from '@nestjs/common';
-import { db, pendingItems, repItems, auditEvents } from '@sahakar/database';
+import { db, pendingPoLedger, repOrders, auditEvents, statusEvents, products, suppliers } from '@sahakar/database';
 import { sql, eq, and } from 'drizzle-orm';
 
 @Injectable()
 export class PendingPoService {
     /**
-     * Get all pending items with product details
+     * Get all pending ledger items with product details
      */
     async getAllPendingItems() {
         const items = await db.execute(sql`
             SELECT 
-                pi.id,
-                pi.product_id,
-                pi.req_qty,
-                pi.ordered_qty,
-                pi.stock_qty,
-                pi.offer_qty,
-                pi.decided_supplier_id,
-                pi.allocator_notes,
-                pi.done,
-                pi.locked,
-                pi.state,
-                p.item_name as product_name,
+                pl.id,
+                pl.product_id,
+                pl.req_qty,
+                pl.ordered_qty,
+                pl.stock_qty,
+                pl.offer_qty,
+                pl.allocation_status,
+                pl.locked,
+                pl.supplier_priority,
+                p.name as product_name,
                 p.packing,
                 p.mrp,
                 p.ptr,
+                p.pt,
+                p.local_cost,
                 p.category,
-                p.subcategory,
-                s.supplier_name as decided_supplier_name
-            FROM pending_items pi
-            LEFT JOIN products p ON pi.product_id = p.id
-            LEFT JOIN suppliers s ON pi.decided_supplier_id = s.id
-            WHERE pi.state = 'PENDING'
-            ORDER BY pi.created_at DESC
+                p.sub_category as subcategory,
+                p.generic_name,
+                p.patent,
+                p.hsn_code,
+                (SELECT string_agg(DISTINCT rep, ', ') FROM ppo_input WHERE product_id = pl.product_id AND stage = 'Pending') as rep,
+                (SELECT string_agg(DISTINCT mobile, ', ') FROM ppo_input WHERE product_id = pl.product_id AND stage = 'Pending') as mobile,
+                (SELECT MIN(accepted_date) FROM ppo_input WHERE product_id = pl.product_id AND stage = 'Pending') as accepted_date,
+                (SELECT MIN(accepted_time) FROM ppo_input WHERE product_id = pl.product_id AND stage = 'Pending') as accepted_time,
+                (SELECT string_agg(DISTINCT primary_supplier, ', ') FROM ppo_input WHERE product_id = pl.product_id AND stage = 'Pending') as ordered_supplier
+            FROM pending_po_ledger pl
+            LEFT JOIN products p ON pl.product_id = p.id
+            WHERE pl.locked = false
+            ORDER BY pl.created_at DESC
         `);
 
         return items.rows;
     }
 
     /**
-     * Workflow 2: Pending PO Allocator
-     * 
-     * Rules:
-     * - ordered_qty + stock_qty + offer_qty ≤ req_qty
-     * - Must select supplier
-     * - Lock after slip generation
+     * Update allocation details
      */
     async updateAllocation(
         pendingItemId: string,
@@ -52,54 +53,32 @@ export class PendingPoService {
             orderedQty: number;
             stockQty: number;
             offerQty: number;
-            decidedSupplierId: string;
             allocatorNotes?: string;
-            done: boolean;
         },
         userEmail: string
     ) {
         return await db.transaction(async (tx) => {
-            // Get current item
-            const items = await tx.select().from(pendingItems).where(eq(pendingItems.id, pendingItemId)).limit(1);
-
-            if (!items.length) {
-                throw new Error('Pending item not found');
-            }
-
+            const items = await tx.select().from(pendingPoLedger).where(eq(pendingPoLedger.id, BigInt(pendingItemId))).limit(1);
+            if (!items.length) throw new Error('Item not found');
             const item = items[0];
 
-            // Validation: Cannot edit if locked
-            if (item.locked) {
-                throw new Error('Item is locked - already moved to REP or slipped');
-            }
+            if (item.locked) throw new Error('Item is locked');
 
-            // Validation: Quantity constraint
-            const totalAllocated = data.orderedQty + data.stockQty + data.offerQty;
-            if (totalAllocated > item.reqQty) {
-                throw new Error(`Total allocation (${totalAllocated}) exceeds required quantity (${item.reqQty})`);
-            }
-
-            // Update pending item
-            await tx.update(pendingItems)
+            await tx.update(pendingPoLedger)
                 .set({
                     orderedQty: data.orderedQty,
                     stockQty: data.stockQty,
                     offerQty: data.offerQty,
-                    decidedSupplierId: data.decidedSupplierId,
-                    allocatorNotes: data.allocatorNotes,
-                    done: data.done,
                     updatedAt: new Date()
                 })
-                .where(eq(pendingItems.id, pendingItemId));
+                .where(eq(pendingPoLedger.id, BigInt(pendingItemId)));
 
-            // Audit event
             await tx.insert(auditEvents).values({
-                entityType: 'PENDING_PO',
-                entityId: pendingItemId,
+                actor: userEmail,
                 action: 'ALLOCATE',
-                beforeState: JSON.stringify(item),
-                afterState: JSON.stringify({ ...item, ...data }),
-                actor: userEmail
+                entityType: 'PENDING_PO_LEDGER',
+                entityId: item.id,
+                payload: data as any
             });
 
             return { success: true };
@@ -107,118 +86,62 @@ export class PendingPoService {
     }
 
     /**
-     * Workflow 3: Move to REP
-     * 
-     * Rules:
-     * - Atomic migration
-     * - Lock pending item
-     * - Create REP item
-     * - Advisory lock: MOVE_TO_REP_{id}
+     * Atomic Move to REP
      */
     async moveToRep(
         pendingItemId: string,
+        supplierName: string,
+        rate: number,
         userEmail: string
     ) {
         return await db.transaction(async (tx) => {
-            // Advisory lock
+            // Advisory lock to prevent race conditions on the same item
             const lockHash = this.hashLockKey(`MOVE_TO_REP_${pendingItemId}`);
             await tx.execute(sql`SELECT pg_advisory_xact_lock(${lockHash})`);
 
-            // Get pending item
-            const items = await tx.select().from(pendingItems).where(eq(pendingItems.id, pendingItemId)).limit(1);
-
-            if (!items.length) {
-                throw new Error('Pending item not found');
-            }
-
+            const items = await tx.select().from(pendingPoLedger).where(eq(pendingPoLedger.id, BigInt(pendingItemId))).limit(1);
+            if (!items.length) throw new Error('Item not found');
             const item = items[0];
 
-            if (item.locked) {
-                throw new Error('Item already locked');
-            }
+            if (item.locked) throw new Error('Item already locked');
 
-            if (!item.done) {
-                throw new Error('Item must be marked done before moving to REP');
-            }
-
-            // Lock pending item
-            await tx.update(pendingItems)
+            // 1. Lock pending row
+            await tx.update(pendingPoLedger)
                 .set({
                     locked: true,
-                    state: 'MOVED_TO_REP',
-                    updatedAt: new Date()
+                    allocationStatus: 'MOVED_TO_REP'
                 })
-                .where(eq(pendingItems.id, pendingItemId));
+                .where(eq(pendingPoLedger.id, BigInt(pendingItemId)));
 
-            // Create REP item
-            const repItemId = await tx.insert(repItems).values({
-                pendingItemId: pendingItemId,
+            // 2. Insert REP order
+            const [repOrder] = await tx.insert(repOrders).values({
                 productId: item.productId,
-                reqQty: item.orderedQty, // Only ordered quantity goes to REP
-                notes: item.allocatorNotes || null,
-                orderedSupplierId: item.decidedSupplierId,
-                done: false,
-                state: 'REP_ACTIVE'
-            }).returning({ id: repItems.id });
+                supplier: supplierName,
+                qty: item.orderedQty || 0,
+                rate: rate.toString(),
+                sourcePendingPoId: item.id
+            }).returning();
 
-            // Audit event
+            // 3. Write Audit Event
             await tx.insert(auditEvents).values({
-                entityType: 'PENDING_PO',
-                entityId: pendingItemId,
+                actor: userEmail,
                 action: 'MOVE_TO_REP',
-                beforeState: JSON.stringify(item),
-                afterState: JSON.stringify({ locked: true, state: 'MOVED_TO_REP', repItemId: repItemId[0].id }),
-                actor: userEmail
+                entityType: 'REP_ORDER',
+                entityId: repOrder.id,
+                payload: { sourceId: item.id, supplierName, qty: item.orderedQty } as any
             });
 
-            return { success: true, repItemId: repItemId[0].id };
-        });
-    }
-
-    /**
-     * Return from REP to Pending
-     */
-    async returnFromRep(
-        repItemId: string,
-        userEmail: string
-    ) {
-        return await db.transaction(async (tx) => {
-            // Get REP item
-            const reps = await tx.select().from(repItems).where(eq(repItems.id, repItemId)).limit(1);
-
-            if (!reps.length) {
-                throw new Error('REP item not found');
-            }
-
-            const repItem = reps[0];
-
-            if (!repItem.pendingItemId) {
-                throw new Error('No associated pending item');
-            }
-
-            // Unlock pending item
-            await tx.update(pendingItems)
-                .set({
-                    locked: false,
-                    state: 'PENDING',
-                    updatedAt: new Date()
-                })
-                .where(eq(pendingItems.id, repItem.pendingItemId));
-
-            // Delete REP item
-            await tx.delete(repItems).where(eq(repItems.id, repItemId));
-
-            // Audit event
-            await tx.insert(auditEvents).values({
-                entityType: 'REP_ITEM',
-                entityId: repItemId,
-                action: 'RETURN_TO_PENDING',
-                beforeState: JSON.stringify(repItem),
-                afterState: null,
-                actor: userEmail
+            // 4. Update Status Events
+            await tx.insert(statusEvents).values({
+                entityType: 'REP',
+                entityId: repOrder.id,
+                oldStatus: 'PENDING',
+                newStatus: 'REP_ACTIVE',
+                note: `Moved from Pending PO Ledger ID ${item.id}`,
+                createdBy: userEmail
             });
 
-            return { success: true };
+            return { success: true, repOrderId: repOrder.id.toString() };
         });
     }
 

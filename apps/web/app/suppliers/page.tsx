@@ -8,14 +8,17 @@ import type { ColumnDef } from '@tanstack/react-table';
 
 interface Supplier {
     id: string;
-    supplierCode?: string;
+    alias: string;
     supplierName: string;
-    contactPerson?: string;
+    area?: string;
     mobile?: string;
-    email?: string;
-    gstNumber?: string;
     address?: string;
-    creditDays?: number;
+    city?: string;
+    closingBalance?: string;
+    balanceType?: string;
+    regNo?: string;
+    dlNo?: string;
+    gstNo?: string;
     active: boolean;
 }
 
@@ -26,14 +29,16 @@ export default function SuppliersPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
     const [formData, setFormData] = useState({
-        supplierCode: '',
+        alias: '',
         supplierName: '',
-        contactPerson: '',
         mobile: '',
-        email: '',
-        gstNumber: '',
         address: '',
-        creditDays: ''
+        city: '',
+        closingBalance: '',
+        balanceType: 'Cr',
+        regNo: '',
+        dlNo: '',
+        gstNo: ''
     });
 
     const { data: suppliers, isLoading } = useQuery({
@@ -101,29 +106,31 @@ export default function SuppliersPage() {
             // Normalizing keys to UpperCase for case-insensitive matching
             const existingMap = new Map<string, Supplier>();
             suppliers?.forEach((s: Supplier) => {
-                if (s.supplierCode) existingMap.set(s.supplierCode.toUpperCase(), s);
+                if (s.alias) existingMap.set(s.alias.toUpperCase(), s);
                 existingMap.set(s.supplierName.toUpperCase(), s);
             });
 
             for (const row of data) {
                 try {
-                    const code = (row['Supplier Code'] || row['supplierCode'] || '').toString().trim();
-                    const name = (row['Alias'] || row['Supplier Name'] || row['supplierName'] || row['name'] || '').toString().trim();
+                    const alias = (row['Alias'] || '').toString().trim();
+                    const name = (row['Supplier Name'] || row['supplierName'] || row['name'] || '').toString().trim();
 
                     if (!name) continue; // Skip empty rows
 
-                    const matchKey = code ? code.toUpperCase() : name.toUpperCase();
+                    const matchKey = alias ? alias.toUpperCase() : name.toUpperCase();
                     const existing = existingMap.get(matchKey);
 
                     const payload = {
-                        supplierCode: code,
+                        alias: alias,
                         supplierName: name,
-                        contactPerson: (row['Contact Person'] || row['contactPerson'] || '').toString(),
                         mobile: (row['Mobile'] || row['mobile'] || row['phone'] || '').toString(),
-                        email: (row['Email'] || row['email'] || '').toString(),
-                        gstNumber: (row['GSTNo'] || row['GST Number'] || row['gstNumber'] || row['gst'] || '').toString(),
-                        address: ((row['Address'] || '') + (row['City'] ? `, ${row['City']}` : '')).trim(),
-                        creditDays: row['Credit Days'] || row['creditDays']
+                        address: (row['Address'] || '').toString(),
+                        city: (row['City'] || '').toString(),
+                        closingBalance: (row['Closing Balance'] || row['closingBalance'] || '0').toString(),
+                        balanceType: (row['Balance Type'] || row['balanceType'] || 'Cr').toString(),
+                        regNo: (row['Reg No'] || row['regNo'] || '').toString(),
+                        dlNo: (row['DL No'] || row['dlNo'] || '').toString(),
+                        gstNo: (row['GST No'] || row['gstNo'] || row['GST Number'] || row['gstNumber'] || row['gst'] || '').toString()
                     };
 
                     if (existing) {
@@ -149,28 +156,32 @@ export default function SuppliersPage() {
 
     const resetForm = () => {
         setFormData({
-            supplierCode: '',
+            alias: '',
             supplierName: '',
-            contactPerson: '',
             mobile: '',
-            email: '',
-            gstNumber: '',
             address: '',
-            creditDays: ''
+            city: '',
+            closingBalance: '',
+            balanceType: 'Cr',
+            regNo: '',
+            dlNo: '',
+            gstNo: ''
         });
     };
 
     const handleEdit = (supplier: Supplier) => {
         setEditingSupplier(supplier);
         setFormData({
-            supplierCode: supplier.supplierCode || '',
+            alias: supplier.alias || '',
             supplierName: supplier.supplierName,
-            contactPerson: supplier.contactPerson || '',
             mobile: supplier.mobile || '',
-            email: supplier.email || '',
-            gstNumber: supplier.gstNumber || '',
             address: supplier.address || '',
-            creditDays: supplier.creditDays?.toString() || ''
+            city: supplier.city || '',
+            closingBalance: supplier.closingBalance || '',
+            balanceType: supplier.balanceType || 'Cr',
+            regNo: supplier.regNo || '',
+            dlNo: supplier.dlNo || '',
+            gstNo: supplier.gstNo || ''
         });
         setIsModalOpen(true);
     };
@@ -188,14 +199,16 @@ export default function SuppliersPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         const data = {
-            supplierCode: formData.supplierCode?.toUpperCase() || undefined,
+            alias: formData.alias.toUpperCase(),
             supplierName: formData.supplierName.toUpperCase(),
-            contactPerson: formData.contactPerson?.toUpperCase() || undefined,
             mobile: formData.mobile || undefined,
-            email: formData.email || undefined,
-            gstNumber: formData.gstNumber?.toUpperCase() || undefined,
             address: formData.address?.toUpperCase() || undefined,
-            creditDays: formData.creditDays ? parseInt(formData.creditDays) : undefined
+            city: formData.city?.toUpperCase() || undefined,
+            closingBalance: formData.closingBalance || '0',
+            balanceType: formData.balanceType,
+            regNo: formData.regNo || undefined,
+            dlNo: formData.dlNo || undefined,
+            gstNo: formData.gstNo || undefined
         };
 
         if (editingSupplier) {
@@ -205,72 +218,93 @@ export default function SuppliersPage() {
         }
     };
 
-    const handleNumericInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleNumericInput = (e: React.ChangeEvent<HTMLInputElement>, field: string) => {
         const value = e.target.value;
-        // Allow only integers
-        if (value === '' || /^\d+$/.test(value)) {
-            setFormData({ ...formData, creditDays: value });
+        if (value === '' || /^\d*\.?\d*$/.test(value)) {
+            setFormData({ ...formData, [field]: value });
         }
     };
 
     const columns = useMemo<ColumnDef<Supplier>[]>(() => [
         {
             header: 'Code',
-            accessorKey: 'supplierCode',
-            size: 100,
-            cell: ({ row }) => (
-                <span className="text-xs font-bold text-brand-600">{row.original.supplierCode || '-'}</span>
-            )
+            size: 80,
+            cell: ({ row }) => <span className="font-mono text-[10px] text-neutral-400 font-bold">#{row.original.id?.toString().padStart(4, '0')}</span>
         },
         {
-            header: 'Supplier Name',
+            header: 'Name',
             accessorKey: 'supplierName',
-            size: 300,
+            size: 220,
+            cell: ({ row }) => <span className="font-bold text-neutral-900 uppercase truncate text-[11px]" title={row.original.supplierName}>{row.original.supplierName}</span>
+        },
+        {
+            header: 'Area',
+            accessorKey: 'area',
+            size: 150,
+            cell: ({ row }) => <span className="text-[11px] text-neutral-500 uppercase font-medium">{row.original.area || '-'}</span>
+        },
+        {
+            header: 'Alias',
+            accessorKey: 'alias',
+            size: 100,
+            cell: ({ row }) => <span className="text-[10px] text-neutral-400 font-bold italic uppercase">{row.original.alias || '-'}</span>
+        },
+        {
+            header: 'Mobile',
+            size: 120,
+            cell: ({ row }) => <span className="tabular-nums text-[11px] text-neutral-600">{row.original.mobile || '-'}</span>
+        },
+        {
+            header: 'Address',
+            size: 250,
+            cell: ({ row }) => <span className="text-[10px] text-neutral-400 truncate max-w-[240px]" title={row.original.address}>{row.original.address || '-'}</span>
+        },
+        {
+            header: 'City',
+            size: 120,
+            cell: ({ row }) => <span className="text-[11px] font-bold text-neutral-700 uppercase">{row.original.city || '-'}</span>
+        },
+        {
+            header: 'Closing Balance',
+            size: 140,
+            meta: { align: 'right' },
             cell: ({ row }) => (
-                <span className="text-xs font-semibold text-neutral-900 truncate" title={row.original.supplierName}>
-                    {row.original.supplierName}
+                <span className={`text-[11px] font-black ${parseFloat(row.original.closingBalance || '0') > 0 ? 'text-error-600' : 'text-success-600'}`}>
+                    ₹{parseFloat(row.original.closingBalance || '0').toFixed(2)}
                 </span>
             )
         },
         {
-            header: 'Contact',
-            accessorKey: 'contactPerson',
-            size: 150,
-            cell: ({ row }) => (
-                <div className="flex flex-col">
-                    <span className="text-xs text-neutral-900 truncate">{row.original.contactPerson || '-'}</span>
-                    <span className="text-[10px] text-neutral-500">{row.original.mobile}</span>
-                </div>
-            )
-        },
-        {
-            header: 'GST',
-            accessorKey: 'gstNumber',
-            size: 140,
-            cell: ({ row }) => (
-                <span className="text-xs text-neutral-600">{row.original.gstNumber || '-'}</span>
-            )
-        },
-        {
-            header: 'Credit Days',
-            accessorKey: 'creditDays',
+            header: 'Dr / Cr',
             size: 80,
-            meta: { align: 'right' },
-            cell: ({ row }) => (
-                <span className="text-xs font-bold text-neutral-900">{row.original.creditDays || 0}</span>
-            )
+            meta: { align: 'center' },
+            cell: ({ row }) => <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-tighter">{row.original.balanceType || 'Cr'}</span>
         },
         {
-            header: 'Actions',
-            size: 100,
-            meta: { align: 'center' },
+            header: 'Reg No',
+            size: 120,
+            cell: ({ row }) => <span className="text-[10px] text-neutral-400">{row.original.regNo || '-'}</span>
+        },
+        {
+            header: 'Dl No',
+            size: 120,
+            cell: ({ row }) => <span className="text-[10px] text-neutral-400">{row.original.dlNo || '-'}</span>
+        },
+        {
+            header: 'GST No',
+            size: 150,
+            cell: ({ row }) => <span className="text-[10px] font-bold text-neutral-800 uppercase tracking-tight">{row.original.gstNo || '-'}</span>
+        },
+        {
+            header: 'ACTIONS',
+            size: 80,
             cell: ({ row }) => (
-                <div className="flex gap-2 justify-center">
+                <div className="flex gap-1 justify-center">
                     <button
                         onClick={() => handleEdit(row.original)}
-                        className="p-1 text-brand-600 hover:bg-brand-100 transition-colors"
+                        className="p-1.5 text-neutral-300 hover:text-brand-600 hover:bg-brand-50 rounded transition-colors"
                     >
-                        <Edit size={16} />
+                        <Edit size={14} />
                     </button>
                     <button
                         onClick={() => {
@@ -278,14 +312,14 @@ export default function SuppliersPage() {
                                 deleteMutation.mutate(row.original.id);
                             }
                         }}
-                        className="p-1 text-danger-600 hover:bg-danger-100 transition-colors"
+                        className="p-1.5 text-neutral-300 hover:text-danger-600 hover:bg-danger-50 rounded transition-colors"
                     >
-                        <Trash2 size={16} />
+                        <Trash2 size={14} />
                     </button>
                 </div>
             )
         }
-    ], []);
+    ], [deleteMutation]);
 
     return (
         <div className="flex flex-col h-full bg-transparent">
@@ -345,15 +379,6 @@ export default function SuppliersPage() {
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-neutral-700 mb-1">Supplier Code</label>
-                                    <input
-                                        type="text"
-                                        value={formData.supplierCode}
-                                        onChange={(e) => setFormData({ ...formData, supplierCode: e.target.value })}
-                                        className="w-full px-3 py-2 border border-neutral-300 rounded-none focus:ring-2 focus:ring-brand-500"
-                                    />
-                                </div>
-                                <div>
                                     <label className="block text-sm font-medium text-neutral-700 mb-1">Supplier Name *</label>
                                     <input
                                         type="text"
@@ -363,17 +388,17 @@ export default function SuppliersPage() {
                                         className="w-full px-3 py-2 border border-neutral-300 rounded-none focus:ring-2 focus:ring-brand-500"
                                     />
                                 </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-neutral-700 mb-1">Contact Person</label>
+                                    <label className="block text-sm font-medium text-neutral-700 mb-1">Alias/Short Name</label>
                                     <input
                                         type="text"
-                                        value={formData.contactPerson}
-                                        onChange={(e) => setFormData({ ...formData, contactPerson: e.target.value })}
+                                        value={formData.alias}
+                                        onChange={(e) => setFormData({ ...formData, alias: e.target.value })}
                                         className="w-full px-3 py-2 border border-neutral-300 rounded-none focus:ring-2 focus:ring-brand-500"
                                     />
                                 </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-neutral-700 mb-1">Mobile</label>
                                     <input
@@ -383,25 +408,37 @@ export default function SuppliersPage() {
                                         className="w-full px-3 py-2 border border-neutral-300 rounded-none focus:ring-2 focus:ring-brand-500"
                                     />
                                 </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-neutral-700 mb-1">City</label>
+                                    <input
+                                        type="text"
+                                        value={formData.city}
+                                        onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                                        className="w-full px-3 py-2 border border-neutral-300 rounded-none focus:ring-2 focus:ring-brand-500"
+                                    />
+                                </div>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-neutral-700 mb-1">Email</label>
+                                    <label className="block text-sm font-medium text-neutral-700 mb-1">Closing Balance</label>
                                     <input
-                                        type="email"
-                                        value={formData.email}
-                                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                        type="text"
+                                        value={formData.closingBalance}
+                                        onChange={(e) => handleNumericInput(e, 'closingBalance')}
+                                        placeholder="0.00"
                                         className="w-full px-3 py-2 border border-neutral-300 rounded-none focus:ring-2 focus:ring-brand-500"
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-neutral-700 mb-1">GST Number</label>
-                                    <input
-                                        type="text"
-                                        value={formData.gstNumber}
-                                        onChange={(e) => setFormData({ ...formData, gstNumber: e.target.value })}
+                                    <label className="block text-sm font-medium text-neutral-700 mb-1">Balance Type</label>
+                                    <select
+                                        value={formData.balanceType}
+                                        onChange={(e) => setFormData({ ...formData, balanceType: e.target.value })}
                                         className="w-full px-3 py-2 border border-neutral-300 rounded-none focus:ring-2 focus:ring-brand-500"
-                                    />
+                                    >
+                                        <option value="Dr">Debit (Dr)</option>
+                                        <option value="Cr">Credit (Cr)</option>
+                                    </select>
                                 </div>
                             </div>
                             <div>
@@ -413,15 +450,34 @@ export default function SuppliersPage() {
                                     className="w-full px-3 py-2 border border-neutral-300 rounded-none focus:ring-2 focus:ring-brand-500"
                                 />
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-neutral-700 mb-1">Credit Days</label>
-                                <input
-                                    type="text"
-                                    value={formData.creditDays}
-                                    onChange={handleNumericInput}
-                                    placeholder="0"
-                                    className="w-full px-3 py-2 border border-neutral-300 rounded-none focus:ring-2 focus:ring-brand-500"
-                                />
+                            <div className="grid grid-cols-3 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-neutral-700 mb-1">GST No</label>
+                                    <input
+                                        type="text"
+                                        value={formData.gstNo}
+                                        onChange={(e) => setFormData({ ...formData, gstNo: e.target.value })}
+                                        className="w-full px-3 py-2 border border-neutral-300 rounded-none focus:ring-2 focus:ring-brand-500 uppercase"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-neutral-700 mb-1">DL No</label>
+                                    <input
+                                        type="text"
+                                        value={formData.dlNo}
+                                        onChange={(e) => setFormData({ ...formData, dlNo: e.target.value })}
+                                        className="w-full px-3 py-2 border border-neutral-300 rounded-none focus:ring-2 focus:ring-brand-500 uppercase"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-neutral-700 mb-1">Reg No</label>
+                                    <input
+                                        type="text"
+                                        value={formData.regNo}
+                                        onChange={(e) => setFormData({ ...formData, regNo: e.target.value })}
+                                        className="w-full px-3 py-2 border border-neutral-300 rounded-none focus:ring-2 focus:ring-brand-500 uppercase"
+                                    />
+                                </div>
                             </div>
                             <div className="flex gap-3 justify-end mt-6">
                                 <button

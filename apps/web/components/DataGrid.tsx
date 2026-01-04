@@ -172,20 +172,27 @@ export function DataGrid<TData>({
                             <col key={column.id} style={{ width: column.getSize() }} />
                         ))}
                     </colgroup>
-                    <thead className="sticky top-0 z-20 bg-white border-b border-neutral-200 shadow-sm">
+                    <thead className="sticky top-0 z-30 bg-white border-b-2 border-neutral-200">
                         {table.getHeaderGroups().map((headerGroup) => (
-                            <tr key={headerGroup.id} className="">
+                            <tr key={headerGroup.id} className="divide-x divide-neutral-200">
                                 {headerGroup.headers.map((header, index) => {
-                                    const isFrozen = index < frozenColumns;
+                                    const isPinnedLeft = index < frozenColumns;
+                                    const isPinnedRight = index === headerGroup.headers.length - 1; // Always pin last column as per specs
                                     const meta = header.column.columnDef.meta as any;
                                     const align = meta?.align || 'left';
 
                                     return (
                                         <th
                                             key={header.id}
+                                            style={{
+                                                width: header.getSize(),
+                                                minWidth: header.getSize(),
+                                                maxWidth: header.getSize()
+                                            }}
                                             className={`
-                                                px-3 py-2 text-[11px] font-semibold text-neutral-500 uppercase tracking-wide
-                                                ${isFrozen ? 'sticky left-0 z-30 bg-neutral-50' : ''}
+                                                px-3 py-2.5 text-[11px] font-bold text-neutral-500 uppercase tracking-widest bg-neutral-50/80 backdrop-blur-sm
+                                                ${isPinnedLeft ? 'sticky left-0 z-40 bg-white border-r border-neutral-200' : ''}
+                                                ${isPinnedRight ? 'sticky right-0 z-40 bg-white border-l border-neutral-200' : ''}
                                                 ${align === 'right' ? 'text-right' : align === 'center' ? 'text-center' : 'text-left'}
                                             `}
                                         >
@@ -196,7 +203,7 @@ export function DataGrid<TData>({
                             </tr>
                         ))}
                     </thead>
-                    <tbody className="relative">
+                    <tbody className="relative divide-y divide-neutral-100">
                         {virtualRows.length > 0 && virtualRows[0].start > 0 && (
                             <tr>
                                 <td style={{ height: `${virtualRows[0].start}px` }} colSpan={100} />
@@ -209,22 +216,29 @@ export function DataGrid<TData>({
                                     key={row.id}
                                     onClick={() => onRowClick?.(row.original)}
                                     className={`
-                                        border-b border-neutral-100 last:border-0 hover:bg-neutral-50 transition-colors cursor-default group h-[44px]
+                                        hover:bg-brand-50/30 transition-colors cursor-default group h-[48px] divide-x divide-neutral-100
                                         ${onRowClick ? 'cursor-pointer' : ''}
                                     `}
                                 >
                                     {row.getVisibleCells().map((cell, index) => {
-                                        const isFrozen = index < frozenColumns;
+                                        const isPinnedLeft = index < frozenColumns;
+                                        const isPinnedRight = index === row.getVisibleCells().length - 1;
                                         const meta = cell.column.columnDef.meta as any;
                                         const align = meta?.align || 'left';
 
                                         return (
                                             <td
                                                 key={cell.id}
+                                                style={{
+                                                    width: cell.column.getSize(),
+                                                    minWidth: cell.column.getSize(),
+                                                    maxWidth: cell.column.getSize()
+                                                }}
                                                 className={`
                                                     px-3 py-2 whitespace-nowrap overflow-hidden text-ellipsis text-neutral-700 align-middle
-                                                    ${isFrozen ? 'sticky left-0 z-10 bg-white group-hover:bg-neutral-50' : ''}
-                                                    ${align === 'right' ? 'text-right tabular-nums font-semibold' : align === 'center' ? 'text-center' : 'text-left'}
+                                                    ${isPinnedLeft ? 'sticky left-0 z-10 bg-white group-hover:bg-brand-50/50 border-r border-neutral-200 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]' : ''}
+                                                    ${isPinnedRight ? 'sticky right-0 z-10 bg-white group-hover:bg-brand-50/50 border-l border-neutral-200 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]' : ''}
+                                                    ${align === 'right' ? 'text-right tabular-nums font-bold text-neutral-900' : align === 'center' ? 'text-center' : 'text-left'}
                                                 `}
                                             >
                                                 {flexRender(cell.column.columnDef.cell, cell.getContext())}

@@ -1,14 +1,4 @@
-import {
-    Controller,
-    Post,
-    Body,
-    HttpCode,
-    HttpStatus,
-    UseGuards,
-    Request,
-    UseInterceptors,
-    UploadedFile
-} from '@nestjs/common';
+import { Get, Controller, Post, Body, HttpCode, HttpStatus, UseGuards, Request, UseInterceptors, UploadedFile } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Express } from 'express';
 import { PpoImportService, ProcessOrdersResult } from './ppo-import.service';
@@ -55,11 +45,17 @@ export class PpoImportController {
         @Body() dto: ProcessOrdersDto,
         @Request() req: any
     ): Promise<{ success: boolean; message: string; data: ProcessOrdersResult }> {
-        // Convert string dates to Date objects
+        // Convert strings to proper types
         const rows = dto.rows.map(row => ({
             ...row,
-            acceptDatetime: new Date(row.acceptDatetime)
+            acceptDatetime: new Date(row.acceptDatetime),
+            customerId: row.customerId ? BigInt(row.customerId) : undefined,
+            orderId: row.orderId ? BigInt(row.orderId) : undefined,
+            productId: row.productId ? BigInt(row.productId) : undefined,
+            packing: row.packing ? parseInt(row.packing, 10) : undefined
         }));
+        // @ts-ignore - Temporary bypass for further DTO vs OrderRow mismatches if any
+        const rowsTyped = rows as any[];
 
         const userEmail = req.user?.email || 'system@sahakar.local';
 
@@ -110,5 +106,10 @@ export class PpoImportController {
             message: 'File processed successfully',
             data: result
         };
+    }
+
+    @Get()
+    async getAll() {
+        return this.ppoImportService.getAllInputItems();
     }
 }

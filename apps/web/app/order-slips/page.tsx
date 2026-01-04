@@ -54,47 +54,61 @@ export default function OrderSlipsPage() {
 
     const columns = useMemo<ColumnDef<any>[]>(() => [
         {
-            header: 'Slip Reference',
-            size: 150,
-            cell: ({ row }) => (
-                <div className="flex flex-col">
-                    <span className="font-mono text-[10px] text-primary-700 font-bold tracking-tight uppercase">#{row.original.id.substring(0, 8)}</span>
-                    <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-widest">Sahakar Internal</span>
-                </div>
-            )
+            header: 'SLIP ID',
+            size: 100,
+            cell: ({ row }) => <span className="font-mono text-[10px] text-brand-600 font-bold uppercase">#{row.original.id?.toString().substring(0, 8) || '-'}</span>
         },
         {
-            header: 'Supplier Name',
-            accessorKey: 'supplier',
-            size: 250,
-            cell: (info) => <span className="font-bold text-primary-900 group-hover:text-primary-700 transition-colors uppercase text-[11px] tracking-tight">{info.getValue() as string}</span>
-        },
-        {
-            header: 'Created On',
-            size: 150,
+            header: 'DATE',
+            size: 110,
             cell: ({ row }) => (
-                <span className="tabular-nums text-[11px] font-bold text-neutral-500 uppercase">
-                    {new Date(row.original.slipDate).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })}
+                <span className="tabular-nums text-[11px] font-bold text-neutral-500">
+                    {row.original.slipDate ? new Date(row.original.slipDate).toLocaleDateString() : '-'}
                 </span>
             )
         },
         {
-            header: 'Items',
-            size: 100,
+            header: 'SUPPLIER',
+            accessorKey: 'supplier',
+            size: 220,
+            cell: (info) => <span className="font-bold text-neutral-900 uppercase text-[11px] tracking-tight">{info.getValue() as string}</span>
+        },
+        {
+            header: 'SUMMARY',
+            size: 180,
             cell: ({ row }) => (
-                <div className="flex items-center gap-2">
-                    <span className="tabular-nums font-bold text-primary-900">{row.original._count?.items || 0}</span>
-                    <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">SKUs</span>
+                <div className="flex flex-col">
+                    <span className="text-[11px] font-bold text-neutral-900 leading-none">
+                        ITEMS: <span className="tabular-nums">{row.original.totalItems || 0}</span> SKUs
+                    </span>
+                    <span className="text-[11px] font-black text-brand-600 mt-1">
+                        VALUE: ₹<span className="tabular-nums">{parseFloat(row.original.totalValue || '0').toFixed(2)}</span>
+                    </span>
                 </div>
             )
         },
         {
-            header: 'Actions',
+            header: 'REMARKS',
             size: 150,
+            cell: ({ row }) => <span className="text-[11px] text-neutral-500 italic truncate">{row.original.remarks || '-'}</span>
+        },
+        {
+            header: 'BILL ID',
+            size: 120,
+            cell: ({ row }) => <span className="font-mono text-[11px] font-bold text-neutral-700">{row.original.billId || '-'}</span>
+        },
+        {
+            header: 'BILL DATE',
+            size: 110,
+            cell: ({ row }) => <span className="tabular-nums text-[11px] font-bold text-neutral-500">{row.original.billDate ? new Date(row.original.billDate).toLocaleDateString() : '-'}</span>
+        },
+        {
+            header: 'ACTIONS',
+            size: 100,
             cell: ({ row }) => (
-                <div className="flex items-center gap-3">
-                    <Link href={`/order-slips/${row.original.id}`} className="px-3 py-1 text-primary-700 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded text-[10px] font-bold uppercase tracking-widest transition-all flex items-center gap-2">
-                        <FileSearch size={14} /> View Slip
+                <div className="flex items-center gap-2">
+                    <Link href={`/order-slips/${row.original.id}`} className="p-1.5 text-brand-600 hover:bg-brand-50 rounded transition-all" title="View Details">
+                        <FileSearch size={16} />
                     </Link>
                 </div>
             )
