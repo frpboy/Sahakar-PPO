@@ -180,6 +180,57 @@ export class PpoImportService {
         return result;
     }
 
+
+
+    /**
+     * Parse Excel file and process orders
+     */
+    async parseAndProcessOrders(
+        fileBuffer: Buffer,
+        userEmail: string
+    ): Promise<ProcessOrdersResult> {
+        const XLSX = require('xlsx');
+        const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+
+        // Convert to JSON
+        const rawRows = XLSX.utils.sheet_to_json(sheet);
+
+        // Map to OrderRow
+        const rows: OrderRow[] = rawRows.map((row: any) => ({
+            acceptDatetime: new Date(), // Default to now if missing, or specific column
+            customerId: row['Customer ID']?.toString(),
+            orderId: row['Order ID']?.toString() || row['Order_ID']?.toString(),
+            productId: row['Product ID']?.toString() || row['Item_ID']?.toString(),
+            productName: row['Product Name']?.toString(),
+            packing: row['Packing']?.toString(),
+            category: row['Category']?.toString(),
+            subcategory: row['Sub Category']?.toString(),
+            primarySupplier: row['Supplier 1']?.toString(),
+            secondarySupplier: row['Supplier 2']?.toString(),
+            rep: row['REP Name']?.toString(),
+            mobile: row['Mobile']?.toString(),
+            mrp: parseFloat(row['MRP'] || '0'),
+            reqQty: parseInt(row['Qty'] || row['Quantity'] || '0', 10)
+        }));
+
+        // Validate rows
+        const validRows = rows.filter(r => r.productId && r.reqQty > 0);
+
+        if (validRows.length === 0) {
+            throw new Error('No valid rows found in Excel file');
+        }
+
+        // Use acceptDatetime from first row if available in Excel, else fallback to now
+        // But canonical spec says locks are based on acceptDate. 
+        // We will assume today for import.
+        const importDate = new Date();
+        validRows.forEach(r => r.acceptDatetime = importDate);
+
+        return this.processOrders(validRows, userEmail);
+    }
+
     /**
      * Generate hash for row deduplication
      */

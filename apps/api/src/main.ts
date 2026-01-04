@@ -30,14 +30,20 @@ createNestServer(server)
 
 export const api = functions.region('asia-south1').https.onRequest(server);
 
-// Local testing (only run if not exported)
-if (require.main === module) {
+// Local testing (only run if not exported/deployed to Firebase)
+if (!process.env.FIREBASE_CONFIG) {
     async function bootstrap() {
+        console.log('Starting local bootstrap...');
         const app = await NestFactory.create(AppModule);
-        app.enableCors({ origin: '*' });
+        app.enableCors({ origin: '*', credentials: true });
+        app.use((req, res, next) => {
+            console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
+            next();
+        });
         const port = process.env.PORT || 8080;
-        await app.listen(port);
-        console.log(`API is running on port: ${port}`);
+        await app.listen(port, '0.0.0.0');
+        console.log(`API is running on: http://localhost:${port}`);
+        console.log(`API is running on: http://0.0.0.0:${port}`);
     }
-    bootstrap();
+    bootstrap().catch(err => console.error('Bootstrap failed:', err));
 }

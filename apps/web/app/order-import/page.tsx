@@ -18,7 +18,16 @@ export default function OrderImportPage() {
     };
 
     const handleUpload = async () => {
-        if (!file || !currentUser) return;
+        console.log('handleUpload triggered', { file, currentUser });
+        if (!file) {
+            alert('Please select a file first');
+            return;
+        }
+        if (!currentUser) {
+            console.error('User not logged in or role not fetched');
+            alert('User context missing. Please refresh the page.');
+            return;
+        }
 
         setUploading(true);
         setResult(null);
@@ -29,7 +38,8 @@ export default function OrderImportPage() {
 
         try {
             const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://asia-south1-sahakar-ppo.cloudfunctions.net/api';
-            const res = await fetch(`${apiUrl}/order-requests/import`, {
+            console.log('Fetching from:', apiUrl);
+            const res = await fetch(`${apiUrl}/ppo/import/upload`, {
                 method: 'POST',
                 body: formData,
             });

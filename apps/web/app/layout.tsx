@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import Providers from './providers';
@@ -12,11 +12,20 @@ const inter = Inter({
     variable: '--font-inter'
 });
 
+// Next.js 16+ requires viewport config in separate export
+export const viewport: Viewport = {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 5,
+    userScalable: true,
+    viewportFit: 'cover',
+    themeColor: '#4f46e5'
+};
+
 export const metadata: Metadata = {
     title: 'Sahakar PPO - Procurement Order Processing',
     description: 'Enterprise Procurement Order Processing System',
     manifest: '/manifest.json',
-    themeColor: '#4f46e5',
     appleWebApp: {
         capable: true,
         statusBarStyle: 'default',
@@ -24,13 +33,6 @@ export const metadata: Metadata = {
     },
     formatDetection: {
         telephone: false
-    },
-    viewport: {
-        width: 'device-width',
-        initialScale: 1,
-        maximumScale: 5,
-        userScalable: true,
-        viewportFit: 'cover'
     }
 };
 

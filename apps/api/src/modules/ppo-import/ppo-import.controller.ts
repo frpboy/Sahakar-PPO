@@ -5,8 +5,12 @@ import {
     HttpCode,
     HttpStatus,
     UseGuards,
-    Request
+    Request,
+    UseInterceptors,
+    UploadedFile
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { Express } from 'express';
 import { PpoImportService, ProcessOrdersResult } from './ppo-import.service';
 
 interface ProcessOrdersDto {
@@ -57,6 +61,31 @@ export class PpoImportController {
         return {
             success: true,
             message: 'Orders processed successfully',
+            data: result
+        };
+    }
+    /**
+     * POST /ppo/import/upload
+     * 
+     * Upload an Excel file for processing
+     */
+    @Post('upload')
+    @UseInterceptors(FileInterceptor('file'))
+    @HttpCode(HttpStatus.OK)
+    async uploadFile(
+        @UploadedFile() file: Express.Multer.File,
+        @Request() req: any
+    ): Promise<{ success: boolean; message: string; data: ProcessOrdersResult }> {
+        if (!file) {
+            throw new Error('No file uploaded');
+        }
+
+        const userEmail = req.user?.email || 'system@sahakar.local';
+        const result = await this.ppoImportService.parseAndProcessOrders(file.buffer, userEmail);
+
+        return {
+            success: true,
+            message: 'File processed successfully',
             data: result
         };
     }
