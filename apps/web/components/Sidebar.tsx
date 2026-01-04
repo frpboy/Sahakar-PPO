@@ -1,33 +1,22 @@
 'use client';
 
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
     LayoutDashboard,
-    Upload,
-    ClipboardList,
-    Truck,
-    FileText,
-    Archive,
+    ShoppingCart,
     Receipt,
-    ListChecks,
+    ShieldCheck,
     BarChart3,
-    Factory,
-    Package,
-    RefreshCw,
-    Users,
-    Shield,
+    Database,
     Settings,
-    ScrollText,
-    Clock,
-    LogOut,
-    ChevronLeft,
+    FileText,
+    ChevronDown,
     ChevronRight,
-    ArrowLeft,
-    PieChart,
-    AlertTriangle,
-    Activity,
-    History
+    Package,
+    ChevronLeft,
+    Users
 } from 'lucide-react';
 import { useUserRole } from '../context/UserRoleContext';
 
@@ -36,74 +25,163 @@ interface SidebarProps {
     onToggle: () => void;
 }
 
-const MENU_GROUPS = [
+type MenuSection = {
+    title: string;
+    icon: any;
+    items: { label: string; href: string }[];
+    // roles?: string[]; // Implementing implicit role visibility via code for now
+};
+
+const MENU_SECTIONS: MenuSection[] = [
     {
-        title: 'Operations',
+        title: 'Overview',
+        icon: LayoutDashboard,
         items: [
-            { label: 'Dashboard', href: '/', icon: LayoutDashboard },
-            { label: 'PPO Input', href: '/order-import', icon: Upload },
-            { label: 'Pending POs', href: '/pending-orders', icon: ClipboardList },
-            { label: 'REP Orders', href: '/rep-allocation', icon: Truck },
+            { label: 'Dashboard', href: '/' }
         ]
     },
     {
-        title: 'Billing',
+        title: 'Procurement',
+        icon: ShoppingCart,
         items: [
-            { label: "Today's Slips", href: '/order-slips', icon: FileText },
-            { label: 'Slip History', href: '/order-slips/history', icon: Archive },
-            { label: 'Billing Execution', href: '/billing', icon: Receipt },
+            { label: 'PPO Input', href: '/order-import' },
+            { label: 'Pending Purchase Orders', href: '/pending-orders' },
+            { label: 'REP Orders', href: '/rep-allocation' }
         ]
     },
     {
-        title: 'Order Slip Status',
+        title: 'Billing & Execution',
+        icon: Receipt,
         items: [
-            { label: 'Status Summary', href: '/status-summary', icon: PieChart },
-            { label: 'Supplier Reliability', href: '/supplier-reliability', icon: Factory },
-            { label: 'Fraud Alerts', href: '/fraud-alerts', icon: AlertTriangle },
-            { label: 'Aging Report', href: '/aging-report', icon: History },
+            { label: "Today's Order Slips", href: '/order-slips' },
+            { label: 'Billing Execution', href: '/billing' },
+            { label: 'Order Slip History', href: '/order-slips/history' }
         ]
     },
     {
-        title: 'Analysis',
+        title: 'Status & Compliance',
+        icon: ShieldCheck,
         items: [
-            { label: 'Status Ledger', href: '/ledger', icon: ListChecks },
-            { label: 'Analysis', href: '/analysis', icon: BarChart3 },
+            { label: 'Master Status Ledger', href: '/ledger' },
+            { label: 'Status Summary', href: '/status-summary' },
+            { label: 'Supplier Reliability', href: '/supplier-reliability' },
+            { label: 'Aging Report', href: '/aging-report' },
+            { label: 'Fraud Alerts', href: '/fraud-alerts' }
+        ]
+    },
+    {
+        title: 'Analytics',
+        icon: BarChart3,
+        items: [
+            { label: 'Operational Analysis', href: '/analysis' },
+            { label: 'Funnel Analysis', href: '/analysis?tab=funnel' },
+            { label: 'Variance / Gap Analysis', href: '/analysis?tab=variance' }
         ]
     },
     {
         title: 'Masters',
+        icon: Database,
         items: [
-            { label: 'Suppliers', href: '/suppliers', icon: Factory },
-            { label: 'Products', href: '/products', icon: Package },
-            { label: 'Name Changes', href: '/name-changes', icon: RefreshCw },
-            { label: 'REP Master', href: '/rep-master', icon: Users },
+            { label: 'Suppliers', href: '/suppliers' },
+            { label: 'Products', href: '/products' },
+            { label: 'Item Name Changes', href: '/name-changes' },
+            { label: 'REP Master', href: '/rep-master' }
         ]
     },
     {
-        title: 'System',
+        title: 'System Admin',
+        icon: Settings,
         items: [
-            { label: 'Users & Roles', href: '/users', icon: Shield },
-            { label: 'Settings', href: '/settings', icon: Settings },
-            { label: 'Audit Logs', href: '/logs', icon: ScrollText },
-            { label: 'System Events', href: '/logs/events', icon: Activity },
-            { label: 'Duty Sessions', href: '/duty-sessions', icon: Clock },
+            { label: 'Users & Roles', href: '/users' },
+            { label: 'System Settings', href: '/settings' },
+            { label: 'Duty Sessions', href: '/duty-sessions' }
+        ]
+    },
+    {
+        title: 'Audit & Logs',
+        icon: FileText,
+        items: [
+            { label: 'Audit Logs', href: '/logs' },
+            { label: 'System Events', href: '/logs/events' }
         ]
     }
 ];
 
 export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
     const pathname = usePathname();
-    const { role } = useUserRole();
+    const { role } = useUserRole(); // Keep for future role logic
+
+    // State for expanded sections
+    // Default: strict object instead of array for faster lookup
+    const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
+
+    // Load persisted state on mount
+    useEffect(() => {
+        const saved = localStorage.getItem('sidebar_state');
+        if (saved) {
+            try {
+                setOpenSections(JSON.parse(saved));
+            } catch (e) {
+                console.error('Failed to parse sidebar state', e);
+            }
+        }
+    }, []);
+
+    // Auto-expand based on route
+    useEffect(() => {
+        const newOpenSections = { ...openSections };
+        let changed = false;
+
+        MENU_SECTIONS.forEach(section => {
+            const hasActiveItem = section.items.some(item =>
+                item.href === '/' ? pathname === '/' : pathname.startsWith(item.href)
+            );
+            if (hasActiveItem && !newOpenSections[section.title]) {
+                newOpenSections[section.title] = true;
+                changed = true;
+            }
+        });
+
+        if (changed) {
+            setOpenSections(newOpenSections);
+            // Don't save auto-expansion to localStorage? Or should we?
+            // User requested "Remember last-open section", which usually implies manual toggles.
+            // But "Auto-expand based on route" is also requested.
+            // I'll save it to keep UI consistent on refresh.
+            localStorage.setItem('sidebar_state', JSON.stringify(newOpenSections));
+        }
+    }, [pathname]);
+
+    const toggleSection = (title: string) => {
+        if (isCollapsed) return; // Don't toggle in collapsed mode
+        const newState = {
+            ...openSections,
+            [title]: !openSections[title]
+        };
+        setOpenSections(newState);
+        localStorage.setItem('sidebar_state', JSON.stringify(newState));
+    };
 
     return (
-        <aside className={`${isCollapsed ? 'w-20' : 'w-64'} h-screen bg-white border-r border-neutral-200/60 fixed left-0 top-0 flex flex-col z-50 smooth-transition shadow-sm`}>
-            <div className="h-20 flex items-center justify-between px-6 border-b border-neutral-100/50">
+        <aside
+            className={`
+                ${isCollapsed ? 'w-20' : 'w-72'} 
+                h-screen bg-white border-r border-neutral-200/60 
+                fixed left-0 top-0 flex flex-col z-50 
+                transition-all duration-300 ease-in-out shadow-sm
+            `}
+        >
+            {/* Header */}
+            <div className="h-20 flex items-center justify-between px-5 border-b border-neutral-100/50">
                 {!isCollapsed && (
                     <div className="flex items-center gap-3 animate-in fade-in slide-in-from-left-2 duration-300">
                         <div className="w-9 h-9 bg-brand-600 rounded-xl flex items-center justify-center shadow-lg shadow-brand-500/30">
                             <Package className="text-white w-5 h-5" />
                         </div>
-                        <span className="text-xl font-bold text-neutral-900 tracking-tight">Sahakar <span className="text-brand-600">PPO</span></span>
+                        <div className="flex flex-col">
+                            <span className="text-lg font-bold text-neutral-900 tracking-tight leading-none">Sahakar <span className="text-brand-600">PPO</span></span>
+                            <span className="text-[10px] text-neutral-400 font-medium tracking-wide mt-1">OPERATIONAL COMMAND</span>
+                        </div>
                     </div>
                 )}
                 <button
@@ -114,53 +192,85 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                 </button>
             </div>
 
-            <nav className="flex-1 overflow-y-auto px-3 py-6 space-y-8 scrollbar-hide">
-                {MENU_GROUPS.map((group) => (
-                    <div key={group.title} className="space-y-1">
-                        {!isCollapsed && (
-                            <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest px-4 mb-3 animate-in fade-in slide-in-from-left-1 duration-300">{group.title}</div>
-                        )}
-                        {group.items.map((item) => {
-                            const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
-                            const Icon = item.icon;
+            {/* Scrollable Navigation */}
+            <nav className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-2 scrollbar-hide">
+                {MENU_SECTIONS.map((section) => {
+                    const isOpen = openSections[section.title] && !isCollapsed;
+                    const Icon = section.icon;
+                    // Check if any child is active
+                    const isSectionActive = section.items.some(item =>
+                        item.href === '/' ? pathname === '/' : pathname.startsWith(item.href)
+                    );
 
-                            return (
-                                <Link
-                                    key={item.href}
-                                    href={item.href}
-                                    title={isCollapsed ? item.label : undefined}
-                                    className={`
-                                        flex items-center px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 group relative
-                                        ${isActive
-                                            ? 'bg-brand-50 text-brand-700'
-                                            : 'text-neutral-500 hover:bg-neutral-50 hover:text-brand-600'}
-                                        ${isCollapsed ? 'justify-center' : 'justify-between'}
-                                    `}
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <Icon size={20} className={`smooth-transition ${isActive ? 'text-brand-600' : 'text-neutral-400 group-hover:text-brand-500'}`} />
-                                        {!isCollapsed && <span className="truncate max-w-[140px]">{item.label}</span>}
-                                    </div>
-                                    {!isCollapsed && isActive && <div className="w-1.5 h-1.5 rounded-full bg-brand-600 shadow-glow shadow-brand-500/50" />}
-                                    {isCollapsed && isActive && (
-                                        <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-brand-600 rounded-l-full shadow-glow shadow-brand-500/50" />
+                    return (
+                        <div key={section.title} className="space-y-1">
+                            {/* Section Header */}
+                            <button
+                                onClick={() => toggleSection(section.title)}
+                                title={isCollapsed ? section.title : undefined}
+                                className={`
+                                    w-full flex items-center px-3 py-2.5 rounded-xl transition-all duration-200 group
+                                    ${isSectionActive ? 'bg-brand-50/50 text-brand-700' : 'hover:bg-neutral-50 text-neutral-600'}
+                                    ${isCollapsed ? 'justify-center' : 'justify-between'}
+                                `}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <Icon
+                                        size={20}
+                                        strokeWidth={isSectionActive ? 2.5 : 2}
+                                        className={`transition-colors duration-200 ${isSectionActive ? 'text-brand-600' : 'text-neutral-400 group-hover:text-neutral-600'}`}
+                                    />
+                                    {!isCollapsed && (
+                                        <span className={`text-sm font-semibold tracking-tight ${isSectionActive ? 'text-brand-900' : ''}`}>
+                                            {section.title}
+                                        </span>
                                     )}
-                                </Link>
-                            );
-                        })}
-                    </div>
-                ))}
+                                </div>
+                                {!isCollapsed && (
+                                    <ChevronDown
+                                        size={16}
+                                        className={`text-neutral-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+                                    />
+                                )}
+                            </button>
+
+                            {/* Submenu (Only if Expanded and not Collapsed) */}
+                            {(!isCollapsed && isOpen) && (
+                                <div className="pl-11 pr-2 space-y-0.5 animate-in slide-in-from-top-1 fade-in duration-200">
+                                    {section.items.map((item) => {
+                                        const isActive = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
+                                        return (
+                                            <Link
+                                                key={item.href}
+                                                href={item.href}
+                                                className={`
+                                                    block px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-200 border-l-2
+                                                    ${isActive
+                                                        ? 'border-brand-500 bg-brand-50 text-brand-700'
+                                                        : 'border-transparent text-neutral-500 hover:text-neutral-900 hover:bg-neutral-50'}
+                                                `}
+                                            >
+                                                {item.label}
+                                            </Link>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
             </nav>
 
-            <div className="p-4 border-t border-neutral-100/50">
-                <div className={`w-full flex items-center gap-3 p-3 rounded-xl text-neutral-500 group ${isCollapsed ? 'justify-center' : ''}`}>
-                    <div className="w-8 h-8 rounded-lg bg-neutral-100 flex items-center justify-center text-neutral-400 group-hover:bg-brand-50 group-hover:text-brand-600 smooth-transition">
+            {/* Footer */}
+            <div className="p-4 border-t border-neutral-100/50 bg-white">
+                <div className={`w-full flex items-center gap-3 p-3 rounded-xl bg-neutral-50 border border-neutral-100/50 group ${isCollapsed ? 'justify-center' : ''}`}>
+                    <div className="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center text-neutral-400 group-hover:text-brand-600 group-hover:scale-110 transition-all duration-300">
                         <Users size={16} />
                     </div>
                     {!isCollapsed && (
-                        <div className="flex flex-col">
-                            <span className="text-xs font-bold text-neutral-900">Support Hub</span>
-                            <span className="text-[10px] text-neutral-400 font-medium tracking-tight">Sahakar Desk</span>
+                        <div className="flex flex-col overflow-hidden">
+                            <span className="text-xs font-bold text-neutral-900 truncate">Support Hub</span>
+                            <span className="text-[10px] text-neutral-400 font-medium tracking-tight truncate">Sahakar Desk</span>
                         </div>
                     )}
                 </div>
