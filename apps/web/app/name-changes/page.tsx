@@ -15,6 +15,8 @@ interface NameChange {
     effectiveFrom: string;
     effectiveTo?: string;
     createdAt: string;
+    productName?: string;
+    supplierName?: string;
 }
 
 export default function NameChangesPage() {
@@ -23,9 +25,9 @@ export default function NameChangesPage() {
     const { data: nameChanges, isLoading } = useQuery({
         queryKey: ['name-changes'],
         queryFn: async () => {
-            // TODO: Add GET /name-changes endpoint
-            // For now, return empty
-            return [];
+            const res = await fetch(`${apiUrl}/name-changes`);
+            if (!res.ok) throw new Error('Failed to fetch name changes');
+            return res.json();
         }
     });
 
@@ -38,6 +40,14 @@ export default function NameChangesPage() {
                 <span className="text-xs text-neutral-900">
                     {new Date(row.original.createdAt).toLocaleDateString()}
                 </span>
+            )
+        },
+        {
+            header: 'Product',
+            accessorKey: 'productName',
+            size: 180,
+            cell: ({ row }) => (
+                <span className="text-xs font-semibold text-brand-600">{row.original.productName || 'Unknown'}</span>
             )
         },
         {
@@ -54,6 +64,14 @@ export default function NameChangesPage() {
             size: 200,
             cell: ({ row }) => (
                 <span className="text-xs font-semibold text-neutral-900">{row.original.newName}</span>
+            )
+        },
+        {
+            header: 'Supplier',
+            accessorKey: 'supplierName',
+            size: 150,
+            cell: ({ row }) => (
+                <span className="text-xs text-neutral-600">{row.original.supplierName || '-'}</span>
             )
         },
         {
@@ -79,14 +97,7 @@ export default function NameChangesPage() {
             </header>
 
             <div className="app-card overflow-hidden flex-1">
-                {nameChanges && nameChanges.length > 0 ? (
-                    <DataGrid data={nameChanges} columns={columns} isLoading={isLoading} />
-                ) : (
-                    <div className="p-12 text-center">
-                        <p className="text-sm text-neutral-500">No name changes recorded yet.</p>
-                        <p className="text-xs text-neutral-400 mt-2">Backend: Add GET /name-changes endpoint to display data</p>
-                    </div>
-                )}
+                <DataGrid data={nameChanges || []} columns={columns} isLoading={isLoading} />
             </div>
         </div>
     );

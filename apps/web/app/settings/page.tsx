@@ -1,9 +1,20 @@
 'use client';
-import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
 import { Settings as SettingsIcon, Save } from 'lucide-react';
 
+interface AppSettings {
+    dateFormat: string;
+    currency: string;
+    timezone: string;
+    autoBackup: boolean;
+    notificationsEnabled: boolean;
+}
+
 export default function SettingsPage() {
-    const [settings, setSettings] = useState({
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://asia-south1-sahakar-ppo.cloudfunctions.net/api';
+    const queryClient = useQueryClient();
+    const [settings, setSettings] = useState<AppSettings>({
         dateFormat: 'DD/MM/YYYY',
         currency: 'INR',
         timezone: 'Asia/Kolkata',
@@ -11,9 +22,39 @@ export default function SettingsPage() {
         notificationsEnabled: true
     });
 
+    const { data: serverSettings } = useQuery({
+        queryKey: ['settings'],
+        queryFn: async () => {
+            const res = await fetch(`${apiUrl}/settings`);
+            if (!res.ok) throw new Error('Failed to fetch settings');
+            return res.json();
+        }
+    });
+
+    useEffect(() => {
+        if (serverSettings) {
+            setSettings(serverSettings);
+        }
+    }, [serverSettings]);
+
+    const saveMutation = useMutation({
+        mutationFn: async (data: Partial<AppSettings>) => {
+            const res = await fetch(`${apiUrl}/settings`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            if (!res.ok) throw new Error('Failed to save settings');
+            return res.json();
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['settings'] });
+            alert('Settings saved successfully!');
+        }
+    });
+
     const handleSave = () => {
-        // TODO: Implement settings save backend
-        alert('Settings saved successfully');
+        saveMutation.mutate(settings);
     };
 
     return (
@@ -28,9 +69,9 @@ export default function SettingsPage() {
                     </h1>
                     <p className="text-sm text-neutral-500 mt-1">Configure application preferences</p>
                 </div>
-                <button onClick={handleSave} className="btn-brand flex items-center gap-2">
+                <button onClick={handleSave} disabled={saveMutation.isPending} className="btn-brand flex items-center gap-2">
                     <Save size={18} />
-                    Save Changes
+                    {saveMutation.isPending ? 'Saving...' : 'Save Changes'}
                 </button>
             </header>
 
@@ -99,9 +140,9 @@ export default function SettingsPage() {
                         </div>
                     </div>
 
-                    <div className="bg-neutral-50 p-4 border border-neutral-200">
-                        <p className="text-xs text-neutral-600">
-                            <strong>Note:</strong> Settings will be saved to browser localStorage. Add backend API (POST /settings) for persistent storage.
+                    <div className="bg-success-50 p-4 border border-success-200">
+                        <p className="text-xs text-success-800">
+                            <strong>✅ Persistent Storage:</strong> Settings are now saved to the backend API. Changes will be preserved across sessions.
                         </p>
                     </div>
                 </div>
