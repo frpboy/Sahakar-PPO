@@ -98,12 +98,12 @@ export default function ProductsPage() {
             for (const row of data) {
                 try {
                     await createMutation.mutateAsync({
-                        legacyId: row['Legacy ID'] || row['legacyId'],
-                        productCode: row['Product Code'] || row['productCode'],
-                        itemName: row['Item Name'] || row['itemName'] || row['name'],
-                        packing: row['Packing'] || row['packing'],
-                        category: row['Category'] || row['category'],
-                        subcategory: row['Subcategory'] || row['subcategory'],
+                        legacyId: (row['Legacy ID'] || row['legacyId'] || row['product_id'] || '').toString(),
+                        productCode: (row['Product Code'] || row['productCode'] || '').toString(),
+                        itemName: (row['Item Name'] || row['itemName'] || row['name'] || row['product_name'] || '').toString(),
+                        packing: (row['Packing'] || row['packing'] || '').toString(),
+                        category: (row['Category'] || row['category'] || '').toString(),
+                        subcategory: (row['Subcategory'] || row['subcategory'] || '').toString(),
                         mrp: row['MRP'] || row['mrp']
                     });
                     successCount++;
