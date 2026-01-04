@@ -136,7 +136,9 @@ export class PpoImportService {
             }
         }
 
-        const validRows = rows.filter(r => (r.productId || r.legacyProductId) && r.reqQty > 0);
+        // Valid Rows: Require reqQty > 0 only.
+        // We now allow rows without productId (they will be inserted into orderRequests but skipped for pendingItems)
+        const validRows = rows.filter(r => r.reqQty > 0);
 
         if (validRows.length === 0) {
             throw new Error(`No valid rows found. Detected headers: ${detectedHeaders.join(', ')}`);
@@ -157,14 +159,12 @@ export class PpoImportService {
         try {
             // DB Lookup
             console.log('Fetching products from DB...');
-            // Need to handle potential DB connection errors gracefully
-            let productList;
+            let productList = [];
             try {
                 productList = await db.select().from(products);
                 console.log(`Fetched ${productList.length} products`);
             } catch (e) {
                 console.error('Failed to fetch products:', e);
-                // Fallback or abort? Abort for now
                 throw new Error(`Database connection failed: ${e.message}`);
             }
 
@@ -187,14 +187,16 @@ export class PpoImportService {
                     }
                 }
 
-                if (row.productId) {
-                    dedupedRows.push(row);
-                } else {
-                    errors.push(`Order ${row.orderId}: Product not found (Legacy ID: ${row.legacyProductId})`);
+                // Push ALL rows, even if productId is missing
+                dedupedRows.push(row);
+
+                if (!row.productId) {
+                    // Log a warning but don't stop processing
+                    // errors.push(`Warning: Order ${row.orderId} has unknown product (Legacy ID: ${row.legacyProductId || 'N/A'}) - Ingested as UNMATCHED`);
                 }
             }
 
-            console.log(`Matched products for ${dedupedRows.length} rows`);
+            console.log(`Processing ${dedupedRows.length} rows`);
 
             // Transaction
             if (dedupedRows.length > 0) {
@@ -206,7 +208,7 @@ export class PpoImportService {
                                 acceptDatetime: r.acceptDatetime,
                                 orderId: r.orderId,
                                 customerId: r.customerId,
-                                productId: r.productId,
+                                productId: r.productId || null, // Allow null
                                 reqQty: r.reqQty,
                                 customerName: r.customerName,
                                 legacyProductId: r.legacyProductId,
@@ -223,17 +225,21 @@ export class PpoImportService {
                                 oQty: r.oQty,
                                 cQty: r.cQty,
                                 modification: r.modification,
-                                stage: 'PENDING',
+                                stage: r.productId ? 'PENDING' : 'UNMATCHED',
                                 hash: hash
                             }).onConflictDoNothing().returning();
 
                             if (inserted) {
                                 processed++;
-                                await tx.insert(pendingItems).values({
-                                    productId: r.productId,
-                                    reqQty: r.reqQty,
-                                    state: 'PENDING'
-                                });
+
+                                // Only create pending item if product is identified
+                                if (r.productId) {
+                                    await tx.insert(pendingItems).values({
+                                        productId: r.productId,
+                                        reqQty: r.reqQty,
+                                        state: 'PENDING'
+                                    });
+                                }
 
                                 await tx.insert(auditEvents).values({
                                     entityType: 'ORDER',
