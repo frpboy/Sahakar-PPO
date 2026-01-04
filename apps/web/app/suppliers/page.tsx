@@ -217,7 +217,7 @@ export default function SuppliersPage() {
         {
             header: 'Code',
             accessorKey: 'supplierCode',
-            size: 100, // Increased
+            size: 100,
             cell: ({ row }) => (
                 <span className="text-xs font-bold text-brand-600">{row.original.supplierCode || '-'}</span>
             )
@@ -225,7 +225,7 @@ export default function SuppliersPage() {
         {
             header: 'Supplier Name',
             accessorKey: 'supplierName',
-            size: 250, // Increased
+            size: 300,
             cell: ({ row }) => (
                 <span className="text-xs font-semibold text-neutral-900 truncate" title={row.original.supplierName}>
                     {row.original.supplierName}
@@ -235,7 +235,7 @@ export default function SuppliersPage() {
         {
             header: 'Contact',
             accessorKey: 'contactPerson',
-            size: 150, // Increased
+            size: 150,
             cell: ({ row }) => (
                 <div className="flex flex-col">
                     <span className="text-xs text-neutral-900 truncate">{row.original.contactPerson || '-'}</span>
@@ -246,7 +246,7 @@ export default function SuppliersPage() {
         {
             header: 'GST',
             accessorKey: 'gstNumber',
-            size: 140, // Increased
+            size: 140,
             cell: ({ row }) => (
                 <span className="text-xs text-neutral-600">{row.original.gstNumber || '-'}</span>
             )
@@ -255,6 +255,7 @@ export default function SuppliersPage() {
             header: 'Credit Days',
             accessorKey: 'creditDays',
             size: 80,
+            meta: { align: 'right' },
             cell: ({ row }) => (
                 <span className="text-xs font-bold text-neutral-900">{row.original.creditDays || 0}</span>
             )
@@ -262,8 +263,9 @@ export default function SuppliersPage() {
         {
             header: 'Actions',
             size: 100,
+            meta: { align: 'center' },
             cell: ({ row }) => (
-                <div className="flex gap-2">
+                <div className="flex gap-2 justify-center">
                     <button
                         onClick={() => handleEdit(row.original)}
                         className="p-1 text-brand-600 hover:bg-brand-100 transition-colors"

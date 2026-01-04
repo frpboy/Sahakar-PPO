@@ -22,11 +22,14 @@ export default function StatusSummaryPage() {
         {
             header: 'Metric',
             accessorKey: 'label',
+            size: 250,
             cell: ({ row }) => <span className="font-bold text-[10px] uppercase">{row.original.label}</span>
         },
         {
             header: 'Count',
             accessorKey: 'value',
+            size: 100,
+            meta: { align: 'right' },
             cell: ({ row }) => <span className="font-extrabold tabular-nums text-brand-600">{row.original.value}</span>
         }
     ];

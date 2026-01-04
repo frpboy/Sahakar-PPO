@@ -347,7 +347,7 @@ export default function ProductsPage() {
         {
             header: 'Product',
             accessorKey: 'itemName',
-            size: 280,
+            size: 360,
             cell: ({ row }) => (
                 <div className="flex flex-col">
                     <span className="text-xs font-semibold text-neutral-900 truncate" title={row.original.itemName}>
@@ -368,33 +368,34 @@ export default function ProductsPage() {
             cell: ({ row }) => <span className="text-xs text-neutral-600">{row.original.packing || '-'}</span>
         },
         {
-            header: () => <div className="text-right">Pricing (₹)</div>,
+            header: 'Pricing (₹)',
             accessorKey: 'mrp',
             size: 120,
+            meta: { align: 'right' },
             cell: ({ row }) => (
-                <div className="flex flex-col text-right">
+                <div className="flex flex-col">
                     <span className="text-xs font-bold text-neutral-900">MRP: {formatCurrency(row.original.mrp)}</span>
                     <span className="text-[10px] text-neutral-500">PTR: {formatCurrency(row.original.ptr)}</span>
                 </div>
             )
         },
         {
-            header: () => <div className="text-right">Stock</div>,
+            header: 'Stock',
             accessorKey: 'stock',
             size: 100,
+            meta: { align: 'right' },
             cell: ({ row }) => (
-                <div className="text-right">
-                    <span className={`text-xs font-bold ${row.original.stock && row.original.stock > 0 ? 'text-success-600' : 'text-danger-600'}`}>
-                        {row.original.stock || 0}
-                    </span>
-                </div>
+                <span className={`text-xs font-bold ${row.original.stock && row.original.stock > 0 ? 'text-success-600' : 'text-danger-600'}`}>
+                    {row.original.stock || 0}
+                </span>
             )
         },
         {
             header: 'Actions',
             size: 100,
+            meta: { align: 'center' },
             cell: ({ row }) => (
-                <div className="flex gap-2 justify-end">
+                <div className="flex gap-2 justify-center">
                     <button
                         onClick={() => handleEdit(row.original)}
                         className="p-1 text-brand-600 hover:bg-brand-100 transition-colors"

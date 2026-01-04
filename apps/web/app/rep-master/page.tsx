@@ -143,7 +143,7 @@ export default function RepMasterPage() {
         {
             header: 'Name',
             accessorKey: 'name',
-            size: 180,
+            size: 250,
             cell: ({ row }) => (
                 <span className="text-xs font-semibold text-neutral-900">{row.original.name}</span>
             )
@@ -175,8 +175,9 @@ export default function RepMasterPage() {
         {
             header: 'Actions',
             size: 100,
+            meta: { align: 'center' },
             cell: ({ row }) => (
-                <div className="flex gap-2">
+                <div className="flex gap-2 justify-center">
                     <button
                         onClick={() => handleEdit(row.original)}
                         className="p-1 text-brand-600 hover:bg-brand-100 transition-colors"
