@@ -326,7 +326,7 @@ export default function ProductsPage() {
         {
             header: 'Code',
             accessorKey: 'productCode',
-            size: 80,
+            size: 100,
             cell: ({ row }) => (
                 <div className="flex flex-col">
                     <span className="text-xs font-bold text-brand-600">{row.original.productCode || '-'}</span>
@@ -337,7 +337,7 @@ export default function ProductsPage() {
         {
             header: 'Product',
             accessorKey: 'itemName',
-            size: 250,
+            size: 280,
             cell: ({ row }) => (
                 <div className="flex flex-col">
                     <span className="text-xs font-semibold text-neutral-900 truncate" title={row.original.itemName}>
@@ -358,7 +358,7 @@ export default function ProductsPage() {
             cell: ({ row }) => <span className="text-xs text-neutral-600">{row.original.packing || '-'}</span>
         },
         {
-            header: 'Pricing (₹)',
+            header: () => <div className="text-right">Pricing (₹)</div>,
             accessorKey: 'mrp',
             size: 120,
             cell: ({ row }) => (
@@ -369,13 +369,15 @@ export default function ProductsPage() {
             )
         },
         {
-            header: 'Stock',
+            header: () => <div className="text-right">Stock</div>,
             accessorKey: 'stock',
-            size: 80,
+            size: 100,
             cell: ({ row }) => (
-                <span className={`text-xs font-bold ${row.original.stock && row.original.stock > 0 ? 'text-success-600' : 'text-danger-600'}`}>
-                    {row.original.stock || 0}
-                </span>
+                <div className="text-right">
+                    <span className={`text-xs font-bold ${row.original.stock && row.original.stock > 0 ? 'text-success-600' : 'text-danger-600'}`}>
+                        {row.original.stock || 0}
+                    </span>
+                </div>
             )
         },
         {
