@@ -3,7 +3,12 @@
 import React, { useMemo, useRef } from 'react';
 import {
     useReactTable,
+    getCoreRowModel,
     getPaginationRowModel,
+    flexRender,
+    ColumnDef,
+    Row,
+    ColumnResizeMode,
 } from '@tanstack/react-table';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { ChevronFirst, ChevronLast, ChevronLeft, ChevronRight } from 'lucide-react';
