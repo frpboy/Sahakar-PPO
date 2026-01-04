@@ -13,8 +13,25 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-    title: 'Sahakar PPO',
-    description: 'Procurement Orchestration System',
+    title: 'Sahakar PPO - Procurement Order Processing',
+    description: 'Enterprise Procurement Order Processing System',
+    manifest: '/manifest.json',
+    themeColor: '#4f46e5',
+    appleWebApp: {
+        capable: true,
+        statusBarStyle: 'default',
+        title: 'Sahakar PPO'
+    },
+    formatDetection: {
+        telephone: false
+    },
+    viewport: {
+        width: 'device-width',
+        initialScale: 1,
+        maximumScale: 5,
+        userScalable: true,
+        viewportFit: 'cover'
+    }
 };
 
 export default function RootLayout({
