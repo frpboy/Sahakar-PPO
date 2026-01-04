@@ -5,6 +5,14 @@ import { DataGrid } from '../../components/DataGrid';
 import { ExcelImportButton } from '../../components/ExcelImportButton';
 import { Store, Plus, Edit, Trash2 } from 'lucide-react';
 import type { ColumnDef } from '@tanstack/react-table';
+import { FilterPanel, FilterState } from '../../components/FilterPanel';
+import { TableToolbar } from '../../components/TableToolbar';
+import { SortOption } from '../../components/SortMenu';
+import { useTableState } from '../../hooks/useTableState';
+import { StatusBadge } from '../../components/StatusBadge';
+import { ConfirmModal } from '../../components/ConfirmModal';
+import { useToast } from '../../components/Toast';
+import { useUserRole } from '../../context/UserRoleContext';
 
 interface Supplier {
     id: string;
@@ -25,7 +33,8 @@ interface Supplier {
 export default function SuppliersPage() {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://asia-south1-sahakar-ppo.cloudfunctions.net/api';
     const queryClient = useQueryClient();
-    const [search, setSearch] = useState('');
+    const { showToast } = useToast();
+
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
     const [formData, setFormData] = useState({
@@ -41,10 +50,28 @@ export default function SuppliersPage() {
         gstNo: ''
     });
 
+    const {
+        filters, sort, isFilterOpen, setIsFilterOpen,
+        applyFilters, removeFilter, clearAllFilters, applySort,
+        savedFilters, activeFilterCount
+    } = useTableState({
+        storageKey: 'suppliers',
+        defaultSort: { id: 'name_asc', label: 'Name (A-Z)', field: 'supplierName', direction: 'asc' }
+    });
+
+    const sortOptions: SortOption[] = [
+        { id: 'name_asc', label: 'Supplier Name (A-Z)', field: 'supplierName', direction: 'asc' },
+        { id: 'name_desc', label: 'Supplier Name (Z-A)', field: 'supplierName', direction: 'desc' },
+        { id: 'city_asc', label: 'City (A-Z)', field: 'city', direction: 'asc' },
+        { id: 'city_desc', label: 'City (Z-A)', field: 'city', direction: 'desc' },
+        { id: 'bal_desc', label: 'Balance (High → Low)', field: 'closingBalance', direction: 'desc' },
+        { id: 'bal_asc', label: 'Balance (Low → High)', field: 'closingBalance', direction: 'asc' },
+    ];
+
     const { data: suppliers, isLoading } = useQuery({
-        queryKey: ['suppliers', search],
+        queryKey: ['suppliers'],
         queryFn: async () => {
-            const res = await fetch(`${apiUrl}/suppliers?search=${search}`);
+            const res = await fetch(`${apiUrl}/suppliers`);
             if (!res.ok) throw new Error('Failed to fetch suppliers');
             return res.json();
         }
@@ -225,11 +252,63 @@ export default function SuppliersPage() {
         }
     };
 
+    const filteredItems = useMemo(() => {
+        if (!suppliers) return [];
+        let result = [...suppliers];
+
+        // Apply Search/Filters
+        if (filters.productName) { // Using productName filter as a generic search for supplier in this context
+            result = result.filter(item =>
+                item.supplierName?.toLowerCase().includes(filters.productName!.toLowerCase()) ||
+                item.alias?.toLowerCase().includes(filters.productName!.toLowerCase())
+            );
+        }
+        if (filters.supplier) {
+            result = result.filter(item =>
+                item.supplierName?.toLowerCase().includes(filters.supplier!.toLowerCase())
+            );
+        }
+        if (filters.area) { // Custom filter in FilterPanel
+            result = result.filter(item =>
+                item.city?.toLowerCase().includes(filters.area!.toLowerCase()) ||
+                item.address?.toLowerCase().includes(filters.area!.toLowerCase())
+            );
+        }
+
+        // Apply Sorting
+        if (sort) {
+            result.sort((a, b) => {
+                let valA: any = '';
+                let valB: any = '';
+
+                if (sort.field === 'supplierName') {
+                    valA = a.supplierName || '';
+                    valB = b.supplierName || '';
+                } else if (sort.field === 'city') {
+                    valA = a.city || '';
+                    valB = b.city || '';
+                } else if (sort.field === 'closingBalance') {
+                    valA = parseFloat(a.closingBalance || '0');
+                    valB = parseFloat(b.closingBalance || '0');
+                }
+
+                if (valA < valB) return sort.direction === 'asc' ? -1 : 1;
+                if (valA > valB) return sort.direction === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
+
+        return result;
+    }, [suppliers, filters, sort]);
+
     const columns = useMemo<ColumnDef<Supplier>[]>(() => [
         {
             header: 'Code',
             size: 80,
-            cell: ({ row }) => <span className="font-mono text-[10px] text-neutral-400 font-bold">#{row.original.id?.toString().padStart(4, '0')}</span>
+            cell: ({ row }) => {
+                const code = row.original.alias || row.original.id?.toString().substring(0, 6).toUpperCase();
+                return <span className="font-mono text-[10px] text-neutral-400 font-bold">#{code}</span>
+            }
         },
         {
             header: 'Name',
@@ -322,53 +401,63 @@ export default function SuppliersPage() {
     ], [deleteMutation]);
 
     return (
-        <div className="flex flex-col h-full bg-transparent">
-            <header className="mb-6 flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold text-neutral-900 flex items-center gap-3">
-                        <div className="w-10 h-10 bg-white rounded-none shadow-soft flex items-center justify-center border border-neutral-200/60">
-                            <Store size={22} className="text-brand-600" />
-                        </div>
-                        Suppliers Master
-                    </h1>
-                    <p className="text-sm text-neutral-500 mt-1">Manage supplier database and contacts</p>
-                </div>
-                <div className="flex gap-3">
-                    <ExcelImportButton onImport={handleExcelImport} entityType="suppliers" />
-                    <button
-                        onClick={() => {
-                            resetForm();
-                            setEditingSupplier(null);
-                            setIsModalOpen(true);
-                        }}
-                        className="btn-brand flex items-center gap-2"
-                    >
-                        <Plus size={18} />
-                        Add Supplier
-                    </button>
+        <div className="flex flex-col h-full bg-neutral-50/50">
+            <header className="px-6 py-4 bg-white border-b border-neutral-200">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-xl font-black text-neutral-900 tracking-tight flex items-center gap-2">
+                            <Store className="text-brand-600" />
+                            SUPPLIER MASTER HUB
+                        </h1>
+                        <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest mt-1">
+                            Enterprise Resource & Vendor Management Console
+                        </p>
+                    </div>
+                    <div className="flex gap-3">
+                        <ExcelImportButton onImport={handleExcelImport} entityType="suppliers" />
+                        <button
+                            onClick={() => {
+                                resetForm();
+                                setEditingSupplier(null);
+                                setIsModalOpen(true);
+                            }}
+                            className="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 text-xs font-bold uppercase tracking-widest transition-all flex items-center gap-2"
+                        >
+                            <Plus size={16} />
+                            Add Supplier
+                        </button>
+                    </div>
                 </div>
             </header>
 
-            <div className="mb-4">
-                <input
-                    type="text"
-                    placeholder="Search by name, code, or contact..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="w-full px-4 py-2 border border-neutral-300 rounded-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+            <main className="flex-1 p-6 overflow-hidden">
+                <TableToolbar
+                    onOpenFilter={() => setIsFilterOpen(true)}
+                    filters={filters as any}
+                    onRemoveFilter={removeFilter}
+                    onClearAll={clearAllFilters}
+                    sortOptions={sortOptions}
+                    activeSort={sort}
+                    onSort={applySort}
                 />
-            </div>
 
-            <div className="app-card overflow-hidden flex-1">
                 <DataGrid
-                    data={suppliers || []}
+                    data={filteredItems}
                     columns={columns}
                     isLoading={isLoading}
                     enableRowSelection={true}
                     onBulkDelete={handleBulkDelete}
                     getRowId={(row) => row.id}
                 />
-            </div>
+            </main>
+
+            <FilterPanel
+                isOpen={isFilterOpen}
+                onClose={() => setIsFilterOpen(false)}
+                filters={filters as any}
+                onApply={applyFilters}
+                onClear={clearAllFilters}
+            />
 
             {isModalOpen && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">

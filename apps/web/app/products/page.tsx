@@ -5,6 +5,14 @@ import { DataGrid } from '../../components/DataGrid';
 import { ExcelImportButton } from '../../components/ExcelImportButton';
 import { Package, Plus, Edit, Trash2, Search, Filter } from 'lucide-react';
 import type { ColumnDef } from '@tanstack/react-table';
+import { FilterPanel, FilterState } from '../../components/FilterPanel';
+import { TableToolbar } from '../../components/TableToolbar';
+import { SortOption } from '../../components/SortMenu';
+import { useTableState } from '../../hooks/useTableState';
+import { StatusBadge } from '../../components/StatusBadge';
+import { ConfirmModal } from '../../components/ConfirmModal';
+import { useToast } from '../../components/Toast';
+import { useUserRole } from '../../context/UserRoleContext';
 
 interface Product {
     id: string;
@@ -48,10 +56,32 @@ interface Rep {
 export default function ProductsPage() {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://asia-south1-sahakar-ppo.cloudfunctions.net/api';
     const queryClient = useQueryClient();
-    const [search, setSearch] = useState('');
+    const { showToast } = useToast();
+    const { can } = useUserRole();
+
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
     const [activeTab, setActiveTab] = useState<'general' | 'pricing' | 'tax' | 'suppliers'>('general');
+
+    const {
+        filters, sort, isFilterOpen, setIsFilterOpen,
+        applyFilters, removeFilter, clearAllFilters, applySort,
+        savedFilters, activeFilterCount
+    } = useTableState({
+        storageKey: 'products',
+        defaultSort: { id: 'name_asc', label: 'Name (A-Z)', field: 'name', direction: 'asc' }
+    });
+
+    const sortOptions: SortOption[] = [
+        { id: 'name_asc', label: 'Product Name (A-Z)', field: 'name', direction: 'asc' },
+        { id: 'name_desc', label: 'Product Name (Z-A)', field: 'name', direction: 'desc' },
+        { id: 'cat_asc', label: 'Category (A-Z)', field: 'category', direction: 'asc' },
+        { id: 'cat_desc', label: 'Category (Z-A)', field: 'category', direction: 'desc' },
+        { id: 'stock_desc', label: 'Stock (High → Low)', field: 'stock', direction: 'desc' },
+        { id: 'stock_asc', label: 'Stock (Low → High)', field: 'stock', direction: 'asc' },
+        { id: 'mrp_desc', label: 'MRP (High → Low)', field: 'mrp', direction: 'desc' },
+        { id: 'mrp_asc', label: 'MRP (Low → High)', field: 'mrp', direction: 'asc' },
+    ];
 
     const initialFormState = {
         legacyId: '',
@@ -74,6 +104,8 @@ export default function ProductsPage() {
         stock: '',
         primarySupplier: '',
         secondarySupplier: '',
+        leastPriceSupplier: '',
+        mostQtySupplier: '',
         rep: ''
     };
 
@@ -81,9 +113,9 @@ export default function ProductsPage() {
 
     // Fetch Products
     const { data: products, isLoading } = useQuery({
-        queryKey: ['products', search],
+        queryKey: ['products'],
         queryFn: async () => {
-            const res = await fetch(`${apiUrl}/products?search=${search}`);
+            const res = await fetch(`${apiUrl}/products`);
             if (!res.ok) throw new Error('Failed to fetch products');
             return res.json();
         }
@@ -273,6 +305,8 @@ export default function ProductsPage() {
             stock: product.stock?.toString() || '',
             primarySupplier: product.primarySupplier || '',
             secondarySupplier: product.secondarySupplier || '',
+            leastPriceSupplier: product.leastPriceSupplier || '',
+            mostQtySupplier: product.mostQtySupplier || '',
             rep: product.rep || ''
         });
         setIsModalOpen(true);
@@ -311,6 +345,8 @@ export default function ProductsPage() {
             stock: formData.stock ? parseInt(formData.stock) : 0,
             primarySupplier: formData.primarySupplier || undefined,
             secondarySupplier: formData.secondarySupplier || undefined,
+            leastPriceSupplier: formData.leastPriceSupplier || undefined,
+            mostQtySupplier: formData.mostQtySupplier || undefined,
             rep: formData.rep || undefined
         };
 
@@ -324,9 +360,72 @@ export default function ProductsPage() {
     const handleNumericInput = (e: React.ChangeEvent<HTMLInputElement>, field: string) => {
         const value = e.target.value;
         if (value === '' || /^\d*\.?\d*$/.test(value)) {
-            setFormData({ ...formData, [field]: value });
+            setFormData({ ...formData, [field]: value } as any);
         }
     };
+
+    const filteredItems = useMemo(() => {
+        if (!products) return [];
+        let result = [...products];
+
+        const f = filters as any;
+
+        // Apply Search/Filters
+        if (f.productName) {
+            result = result.filter(item =>
+                item.name?.toLowerCase().includes(f.productName!.toLowerCase()) ||
+                item.aliasName?.toLowerCase().includes(f.productName!.toLowerCase()) ||
+                item.productCode?.toLowerCase().includes(f.productName!.toLowerCase())
+            );
+        }
+        if (f.supplier) {
+            result = result.filter(item =>
+                item.primarySupplier?.toLowerCase().includes(f.supplier!.toLowerCase()) ||
+                item.secondarySupplier?.toLowerCase().includes(f.supplier!.toLowerCase())
+            );
+        }
+        if (f.category) {
+            result = result.filter(item =>
+                item.category?.toLowerCase().includes(f.category!.toLowerCase())
+            );
+        }
+        if (f.stage && f.stage.length > 0) {
+            result = result.filter(item => {
+                const stock = item.stock || 0;
+                if (f.stage!.includes('SHORT') && stock <= 0) return true;
+                if (f.stage!.includes('DONE') && stock > 0) return true;
+                return false;
+            });
+        }
+
+        // Apply Sorting
+        if (sort) {
+            result.sort((a, b) => {
+                let valA: any = '';
+                let valB: any = '';
+
+                if (sort.field === 'name') {
+                    valA = a.name || '';
+                    valB = b.name || '';
+                } else if (sort.field === 'category') {
+                    valA = a.category || '';
+                    valB = b.category || '';
+                } else if (sort.field === 'stock') {
+                    valA = a.stock || 0;
+                    valB = b.stock || 0;
+                } else if (sort.field === 'mrp') {
+                    valA = parseFloat(a.mrp || '0');
+                    valB = parseFloat(b.mrp || '0');
+                }
+
+                if (valA < valB) return sort.direction === 'asc' ? -1 : 1;
+                if (valA > valB) return sort.direction === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
+
+        return result;
+    }, [products, filters, sort]);
 
     const formatCurrency = (val: string | number | undefined) => {
         if (val === undefined || val === null || val === '') return '-';
@@ -338,7 +437,10 @@ export default function ProductsPage() {
         {
             header: 'PROD ID',
             size: 80,
-            cell: ({ row }) => <span className="font-mono text-[10px] text-neutral-400 font-bold">#{row.original.id?.toString().padStart(4, '0')}</span>
+            cell: ({ row }) => {
+                const id = row.original.productCode || row.original.legacyId || row.original.id?.toString().substring(0, 6).toUpperCase();
+                return <span className="font-mono text-[10px] text-neutral-400 font-bold">#{id}</span>
+            }
         },
         {
             header: 'Name',
@@ -433,7 +535,7 @@ export default function ProductsPage() {
             header: 'Stock',
             size: 80,
             meta: { align: 'right' },
-            cell: ({ row }) => <span className={`tabular-nums font-black ${row.original.stock && row.original.stock > 0 ? 'text-success-600' : 'text-danger-600'}`}>{row.original.stock || 0}</span>
+            cell: ({ row }) => <StatusBadge status={row.original.stock && row.original.stock > 0 ? 'DONE' : 'SHORT'} />
         },
         {
             header: 'MRP',
@@ -510,59 +612,63 @@ export default function ProductsPage() {
     );
 
     return (
-        <div className="flex flex-col h-full bg-transparent">
-            {/* Header */}
-            <header className="mb-6 flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold text-neutral-900 flex items-center gap-3">
-                        <div className="w-10 h-10 bg-white shadow-soft flex items-center justify-center border border-neutral-200/60">
-                            <Package size={22} className="text-brand-600" />
-                        </div>
-                        Products Master
-                    </h1>
-                    <p className="text-sm text-neutral-500 mt-1">Manage catalog, pricing, and supplier mappings</p>
-                </div>
-                <div className="flex gap-3">
-                    <ExcelImportButton onImport={handleExcelImport} entityType="products" />
-                    <button
-                        onClick={() => {
-                            resetForm();
-                            setEditingProduct(null);
-                            setIsModalOpen(true);
-                        }}
-                        className="btn-brand flex items-center gap-2"
-                    >
-                        <Plus size={18} />
-                        Add Product
-                    </button>
+        <div className="flex flex-col h-full bg-neutral-50/50">
+            <header className="px-6 py-4 bg-white border-b border-neutral-200">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-xl font-black text-neutral-900 tracking-tight flex items-center gap-2">
+                            <Package className="text-brand-600" />
+                            PRODUCTS MASTER CATALOG
+                        </h1>
+                        <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest mt-1">
+                            SKU Registry & Global Price List Management
+                        </p>
+                    </div>
+                    <div className="flex gap-3">
+                        <ExcelImportButton onImport={handleExcelImport} entityType="products" />
+                        <button
+                            onClick={() => {
+                                resetForm();
+                                setEditingProduct(null);
+                                setIsModalOpen(true);
+                            }}
+                            className="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 text-xs font-bold uppercase tracking-widest transition-all flex items-center gap-2"
+                        >
+                            <Plus size={16} />
+                            Add Product
+                        </button>
+                    </div>
                 </div>
             </header>
 
-            {/* Search */}
-            <div className="mb-4 flex gap-2">
-                <div className="relative flex-1">
-                    <Search className="absolute left-3 top-2.5 text-neutral-400" size={18} />
-                    <input
-                        type="text"
-                        placeholder="Search by name, code, legacy ID, alias..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 border border-neutral-300 rounded-sm focus:ring-1 focus:ring-brand-500 focus:border-brand-500"
-                    />
-                </div>
-            </div>
+            <main className="flex-1 p-6 overflow-hidden">
+                <TableToolbar
+                    onOpenFilter={() => setIsFilterOpen(true)}
+                    filters={filters as any}
+                    onRemoveFilter={removeFilter}
+                    onClearAll={clearAllFilters}
+                    sortOptions={sortOptions}
+                    activeSort={sort}
+                    onSort={applySort}
+                />
 
-            {/* Grid */}
-            <div className="app-card overflow-hidden flex-1 flex flex-col">
                 <DataGrid
-                    data={products || []}
+                    data={filteredItems}
                     columns={columns}
                     isLoading={isLoading}
                     enableRowSelection={true}
                     onBulkDelete={handleBulkDelete}
                     getRowId={(row) => row.id}
                 />
-            </div>
+            </main>
+
+            <FilterPanel
+                isOpen={isFilterOpen}
+                onClose={() => setIsFilterOpen(false)}
+                filters={filters as any}
+                onApply={applyFilters}
+                onClear={clearAllFilters}
+            />
 
             {/* Modal */}
             {isModalOpen && (
@@ -636,11 +742,63 @@ export default function ProductsPage() {
 
                                 {activeTab === 'suppliers' && (
                                     <div className="grid grid-cols-1 gap-6">
-                                        <InputField label="Primary Supplier" field="primarySupplier" placeholder="Search Supplier..." />
-                                        <InputField label="Secondary Supplier" field="secondarySupplier" placeholder="Search Supplier..." />
-                                        <InputField label="Least Price Supplier" field="leastPriceSupplier" placeholder="Supplier with lowest price" />
-                                        <InputField label="Most Qty Supplier" field="mostQtySupplier" placeholder="Supplier with max stock" />
-                                        <InputField label="REP" field="rep" placeholder="Search Representative..." />
+                                        <div>
+                                            <label className="block text-xs font-medium text-neutral-700 mb-1">Primary Supplier</label>
+                                            <input
+                                                list="supplier-options"
+                                                value={formData.primarySupplier}
+                                                onChange={(e) => setFormData({ ...formData, primarySupplier: e.target.value })}
+                                                placeholder="Search Supplier..."
+                                                className="w-full px-3 py-2 border border-neutral-300 rounded-sm text-sm focus:ring-1 focus:ring-brand-500"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-neutral-700 mb-1">Secondary Supplier</label>
+                                            <input
+                                                list="supplier-options"
+                                                value={formData.secondarySupplier}
+                                                onChange={(e) => setFormData({ ...formData, secondarySupplier: e.target.value })}
+                                                placeholder="Search Supplier..."
+                                                className="w-full px-3 py-2 border border-neutral-300 rounded-sm text-sm focus:ring-1 focus:ring-brand-500"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-neutral-700 mb-1">Least Price Supplier</label>
+                                            <input
+                                                list="supplier-options"
+                                                value={formData.leastPriceSupplier}
+                                                onChange={(e) => setFormData({ ...formData, leastPriceSupplier: e.target.value })}
+                                                placeholder="Supplier with lowest price"
+                                                className="w-full px-3 py-2 border border-neutral-300 rounded-sm text-sm focus:ring-1 focus:ring-brand-500"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-neutral-700 mb-1">Most Qty Supplier</label>
+                                            <input
+                                                list="supplier-options"
+                                                value={formData.mostQtySupplier}
+                                                onChange={(e) => setFormData({ ...formData, mostQtySupplier: e.target.value })}
+                                                placeholder="Supplier with max stock"
+                                                className="w-full px-3 py-2 border border-neutral-300 rounded-sm text-sm focus:ring-1 focus:ring-brand-500"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-neutral-700 mb-1">REP</label>
+                                            <input
+                                                list="rep-options"
+                                                value={formData.rep}
+                                                onChange={(e) => setFormData({ ...formData, rep: e.target.value })}
+                                                placeholder="Search Representative..."
+                                                className="w-full px-3 py-2 border border-neutral-300 rounded-sm text-sm focus:ring-1 focus:ring-brand-500"
+                                            />
+                                        </div>
+
+                                        <datalist id="supplier-options">
+                                            {suppliers?.map(s => <option key={s.id} value={s.supplierName} />)}
+                                        </datalist>
+                                        <datalist id="rep-options">
+                                            {reps?.map(r => <option key={r.id} value={r.name} />)}
+                                        </datalist>
                                     </div>
                                 )}
                             </form>

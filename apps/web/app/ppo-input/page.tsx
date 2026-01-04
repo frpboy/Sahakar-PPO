@@ -1,10 +1,14 @@
 'use client';
 import { useQuery } from '@tanstack/react-query';
-import { useMemo } from 'react';
 import { DataGrid } from '../../components/DataGrid';
+import { useState, useMemo } from 'react';
 import { FileText, Search } from 'lucide-react';
 import { ColumnDef } from '@tanstack/react-table';
-import { useState } from 'react';
+import { FilterPanel, FilterState } from '../../components/FilterPanel';
+import { TableToolbar } from '../../components/TableToolbar';
+import { SortOption } from '../../components/SortMenu';
+import { useTableState } from '../../hooks/useTableState';
+import { StatusBadge } from '../../components/StatusBadge';
 
 interface PpoInputRow {
     id: string;
@@ -37,7 +41,24 @@ interface PpoInputRow {
 
 export default function PpoInputPage() {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://asia-south1-sahakar-ppo.cloudfunctions.net/api';
-    const [search, setSearch] = useState('');
+
+    const {
+        filters, sort, isFilterOpen, setIsFilterOpen,
+        applyFilters, removeFilter, clearAllFilters, applySort,
+        savedFilters, activeFilterCount
+    } = useTableState({
+        storageKey: 'ppo_input',
+        defaultSort: { id: 'date_desc', label: 'Newest First', field: 'acceptedDate', direction: 'desc' }
+    });
+
+    const sortOptions: SortOption[] = [
+        { id: 'name_asc', label: 'Product Name (A-Z)', field: 'productName', direction: 'asc' },
+        { id: 'name_desc', label: 'Product Name (Z-A)', field: 'productName', direction: 'desc' },
+        { id: 'qty_desc', label: 'Req Qty (High → Low)', field: 'requestedQty', direction: 'desc' },
+        { id: 'qty_asc', label: 'Req Qty (Low → High)', field: 'requestedQty', direction: 'asc' },
+        { id: 'date_desc', label: 'Date (Newest)', field: 'acceptedDate', direction: 'desc' },
+        { id: 'date_asc', label: 'Date (Oldest)', field: 'acceptedDate', direction: 'asc' },
+    ];
 
     const { data: items, isLoading } = useQuery<PpoInputRow[]>({
         queryKey: ['ppo-input'],
@@ -119,14 +140,7 @@ export default function PpoInputPage() {
         {
             header: 'STATUS',
             size: 100,
-            cell: ({ row }) => (
-                <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase ${row.original.status?.toLowerCase().includes('error') ? 'bg-danger-100 text-danger-600' :
-                        row.original.status?.toLowerCase().includes('success') ? 'bg-success-100 text-success-600' :
-                            'bg-neutral-100 text-neutral-600'
-                    }`}>
-                    {row.original.status || 'NEW'}
-                </span>
-            )
+            cell: ({ row }) => <StatusBadge status={row.original.status?.toUpperCase() as any || 'DONE'} />
         },
         {
             header: 'NOTES',
@@ -190,47 +204,107 @@ export default function PpoInputPage() {
 
     const filteredItems = useMemo(() => {
         if (!items) return [];
-        return items.filter(item =>
-            item.productName?.toLowerCase().includes(search.toLowerCase()) ||
-            item.orderId?.toString().includes(search) ||
-            item.rep?.toLowerCase().includes(search.toLowerCase())
-        );
-    }, [items, search]);
+        let result = [...items];
+
+        // Apply Search/Filters
+        if (filters.productName) {
+            result = result.filter(item =>
+                item.productName?.toLowerCase().includes(filters.productName!.toLowerCase())
+            );
+        }
+        if (filters.orderId) {
+            result = result.filter(item =>
+                item.orderId?.toString().includes(filters.orderId!)
+            );
+        }
+        if (filters.rep && filters.rep.length > 0) {
+            result = result.filter(item =>
+                filters.rep!.includes(item.rep || '')
+            );
+        }
+        if (filters.stage && filters.stage.length > 0) {
+            result = result.filter(item =>
+                filters.stage!.includes(item.stage?.toUpperCase() || 'PENDING')
+            );
+        }
+        if (filters.dateFrom) {
+            result = result.filter(item =>
+                item.acceptedDate && item.acceptedDate >= filters.dateFrom!
+            );
+        }
+        if (filters.dateTo) {
+            result = result.filter(item =>
+                item.acceptedDate && item.acceptedDate <= filters.dateTo!
+            );
+        }
+
+        // Apply Sorting
+        if (sort) {
+            result.sort((a, b) => {
+                let valA: any = '';
+                let valB: any = '';
+
+                if (sort.field === 'productName') {
+                    valA = a.productName || '';
+                    valB = b.productName || '';
+                } else if (sort.field === 'requestedQty') {
+                    valA = a.requestedQty || 0;
+                    valB = b.requestedQty || 0;
+                } else if (sort.field === 'acceptedDate') {
+                    valA = a.acceptedDate || '';
+                    valB = b.acceptedDate || '';
+                }
+
+                if (valA < valB) return sort.direction === 'asc' ? -1 : 1;
+                if (valA > valB) return sort.direction === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
+
+        return result;
+    }, [items, filters, sort]);
 
     return (
-        <div className="flex flex-col h-full bg-transparent">
-            <header className="mb-6 flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold text-neutral-900 flex items-center gap-3">
-                        <div className="w-10 h-10 bg-white shadow-soft flex items-center justify-center border border-neutral-200/60">
-                            <FileText size={22} className="text-brand-600" />
-                        </div>
-                        PPO Input Ledger
-                    </h1>
-                    <p className="text-sm text-neutral-500 mt-1">Master registry of all ingested purchase orders</p>
+        <div className="flex flex-col h-full bg-neutral-50/50">
+            <header className="px-6 py-4 bg-white border-b border-neutral-200">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-xl font-black text-neutral-900 tracking-tight flex items-center gap-2">
+                            <FileText className="text-brand-600" />
+                            PPO INPUT LEDGER
+                        </h1>
+                        <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest mt-1">
+                            Primary Ledger of Global Intake Stream
+                        </p>
+                    </div>
                 </div>
             </header>
 
-            <div className="mb-4 flex gap-2">
-                <div className="relative flex-1">
-                    <Search className="absolute left-3 top-2.5 text-neutral-400" size={18} />
-                    <input
-                        type="text"
-                        placeholder="Search by product name, order ID, or REP..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 border border-neutral-300 rounded-sm focus:ring-1 focus:ring-brand-500 focus:border-brand-500"
-                    />
-                </div>
-            </div>
+            <main className="flex-1 p-6 overflow-hidden">
+                <TableToolbar
+                    onOpenFilter={() => setIsFilterOpen(true)}
+                    filters={filters}
+                    onRemoveFilter={removeFilter}
+                    onClearAll={clearAllFilters}
+                    sortOptions={sortOptions}
+                    activeSort={sort}
+                    onSort={applySort}
+                />
 
-            <div className="app-card overflow-hidden flex-1">
                 <DataGrid
                     data={filteredItems}
                     columns={columns}
                     isLoading={isLoading}
                 />
-            </div>
+            </main>
+
+            <FilterPanel
+                isOpen={isFilterOpen}
+                onClose={() => setIsFilterOpen(false)}
+                filters={filters}
+                onApply={applyFilters}
+                onClear={clearAllFilters}
+            />
         </div>
     );
 }

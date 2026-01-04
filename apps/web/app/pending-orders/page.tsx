@@ -10,6 +10,10 @@ import { ClipboardList, Edit, ArrowRight, Info, CheckCircle2, XCircle, Loader2 }
 import { ColumnDef } from '@tanstack/react-table';
 import { useUserRole } from '../../context/UserRoleContext';
 import { useOfflineSync } from '../../hooks/useOfflineSync';
+import { FilterPanel, FilterState } from '../../components/FilterPanel';
+import { TableToolbar } from '../../components/TableToolbar';
+import { SortOption } from '../../components/SortMenu';
+import { useTableState } from '../../hooks/useTableState';
 
 // Types
 // Types
@@ -49,9 +53,23 @@ export default function PendingOrdersPage() {
     const [editFormData, setEditFormData] = useState<Partial<PendingItem>>({});
     const [movingIds, setMovingIds] = useState<Set<string>>(new Set());
 
-    // Filter State
-    const [filters, setFilters] = useState<Record<string, string>>({});
-    const [searchTerm, setSearchTerm] = useState('');
+    const {
+        filters, sort, isFilterOpen, setIsFilterOpen,
+        applyFilters, removeFilter, clearAllFilters, applySort,
+        savedFilters, activeFilterCount
+    } = useTableState({
+        storageKey: 'pending_orders',
+        defaultSort: { id: 'date_desc', label: 'Newest First', field: 'accepted_date', direction: 'desc' }
+    });
+
+    const sortOptions: SortOption[] = [
+        { id: 'name_asc', label: 'Product Name (A-Z)', field: 'product_name', direction: 'asc' },
+        { id: 'name_desc', label: 'Product Name (Z-A)', field: 'product_name', direction: 'desc' },
+        { id: 'qty_desc', label: 'Req Qty (High → Low)', field: 'req_qty', direction: 'desc' },
+        { id: 'qty_asc', label: 'Req Qty (Low → High)', field: 'req_qty', direction: 'asc' },
+        { id: 'date_desc', label: 'Date (Newest)', field: 'accepted_date', direction: 'desc' },
+        { id: 'date_asc', label: 'Date (Oldest)', field: 'accepted_date', direction: 'asc' },
+    ];
 
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://asia-south1-sahakar-ppo.cloudfunctions.net/api';
 
@@ -148,24 +166,61 @@ export default function PendingOrdersPage() {
 
     const filteredItems = useMemo(() => {
         if (!items) return [];
-        return items.filter((item: PendingItem) => {
-            const searchLower = searchTerm.toLowerCase();
-            const productName = item.product_name?.toLowerCase() || '';
-            const matchesSearch = productName.includes(searchLower);
+        let result = [...items];
 
-            if (!matchesSearch) return false;
-            // Supplier filter? decided_supplier
-            if (filters.supplier && item.decided_supplier_name !== filters.supplier) return false;
+        // Apply Search/Filters
+        if (filters.productName) {
+            result = result.filter(item =>
+                item.product_name?.toLowerCase().includes(filters.productName!.toLowerCase())
+            );
+        }
+        if (filters.supplier) {
+            result = result.filter(item =>
+                item.decided_supplier_name?.toLowerCase().includes(filters.supplier!.toLowerCase()) ||
+                item.ordered_supplier?.toLowerCase().includes(filters.supplier!.toLowerCase())
+            );
+        }
+        if (filters.rep && filters.rep.length > 0) {
+            result = result.filter(item =>
+                filters.rep!.includes(item.rep || '')
+            );
+        }
+        if (filters.dateFrom) {
+            result = result.filter(item =>
+                item.accepted_date && item.accepted_date >= filters.dateFrom!
+            );
+        }
+        if (filters.dateTo) {
+            result = result.filter(item =>
+                item.accepted_date && item.accepted_date <= filters.dateTo!
+            );
+        }
 
-            return true;
-        });
-    }, [items, searchTerm, filters]);
+        // Apply Sorting
+        if (sort) {
+            result.sort((a, b) => {
+                let valA: any = '';
+                let valB: any = '';
 
-    const uniqueSuppliers = useMemo(() => {
-        if (!items) return [];
-        const suppliers = new Set(items.map((i: PendingItem) => i.decided_supplier_name).filter(Boolean));
-        return Array.from(suppliers).map(s => ({ label: s as string, value: s as string }));
-    }, [items]);
+                if (sort.field === 'product_name') {
+                    valA = a.product_name || '';
+                    valB = b.product_name || '';
+                } else if (sort.field === 'req_qty') {
+                    valA = a.req_qty || 0;
+                    valB = b.req_qty || 0;
+                } else if (sort.field === 'accepted_date') {
+                    valA = a.accepted_date || '';
+                    valB = b.accepted_date || '';
+                }
+
+                if (valA < valB) return sort.direction === 'asc' ? -1 : 1;
+                if (valA > valB) return sort.direction === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
+
+        return result;
+    }, [items, filters, sort]);
 
     const columns = useMemo<ColumnDef<PendingItem>[]>(() => [
         {
@@ -359,45 +414,47 @@ export default function PendingOrdersPage() {
     ], [editingId, editFormData, movingIds, handleMoveToRep, handleSave, handleEditClick]);
 
     return (
-        <div className="flex flex-col h-full bg-transparent font-sans">
-            <header className="mb-10 flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-extrabold text-neutral-900 tracking-tight flex items-center gap-4">
-                        <div className="w-12 h-12 bg-white rounded-none shadow-[0_1px_3px_rgba(16_24_40/0.1)] flex items-center justify-center border border-neutral-200/80">
-                            <ClipboardList size={28} className="text-brand-600" />
-                        </div>
-                        Pending PO Ledger
-                    </h1>
-                    <p className="text-sm text-neutral-400 font-medium mt-2">Awaiting supplier confirmation and inventory mapping for incoming orders.</p>
-                </div>
-                <div className="flex items-center gap-4">
-                    <FilterBar
-                        filters={[
-                            { key: 'supplier', label: 'Supplier', options: uniqueSuppliers }
-                        ]}
-                        onFilterChange={(key, val) => setFilters(prev => ({ ...prev, [key]: val }))}
-                        onSearch={setSearchTerm}
-                        onReset={() => { setFilters({}); setSearchTerm(''); }}
-                    />
+        <div className="flex flex-col h-full bg-neutral-50/50">
+            <header className="px-6 py-4 bg-white border-b border-neutral-200">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-xl font-black text-neutral-900 tracking-tight flex items-center gap-2">
+                            <ClipboardList className="text-brand-600" />
+                            PENDING PO PIPELINE
+                        </h1>
+                        <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest mt-1">
+                            High-Precision Supplier Reconciliation & Stock Mapping
+                        </p>
+                    </div>
                 </div>
             </header>
 
-            <main className="space-y-4">
-                <div className="flex items-center justify-between px-2 mb-1">
-                    <div className="flex items-center gap-3">
-                        <h2 className="text-sm font-semibold text-neutral-800">Supply Chain Reconciliation</h2>
-                        <span className="text-[10px] text-neutral-400 uppercase tracking-widest font-medium">Pending Allocations</span>
-                    </div>
-                </div>
-                <div className="app-card bg-white overflow-hidden">
-                    <DataGrid
-                        data={filteredItems}
-                        columns={columns}
-                        isLoading={isLoading}
-                        onRowClick={(item: PendingItem) => !editingId && handleEditClick(item)}
-                    />
-                </div>
+            <main className="flex-1 p-6 overflow-hidden">
+                <TableToolbar
+                    onOpenFilter={() => setIsFilterOpen(true)}
+                    filters={filters as any}
+                    onRemoveFilter={removeFilter}
+                    onClearAll={clearAllFilters}
+                    sortOptions={sortOptions}
+                    activeSort={sort}
+                    onSort={applySort}
+                />
+
+                <DataGrid
+                    data={filteredItems}
+                    columns={columns}
+                    isLoading={isLoading}
+                    onRowClick={(item: PendingItem) => !editingId && handleEditClick(item)}
+                />
             </main>
+
+            <FilterPanel
+                isOpen={isFilterOpen}
+                onClose={() => setIsFilterOpen(false)}
+                filters={filters as any}
+                onApply={applyFilters}
+                onClear={clearAllFilters}
+            />
 
 
 

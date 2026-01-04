@@ -9,6 +9,11 @@ import { useToast } from '../../components/Toast';
 import { useUserRole } from '../../context/UserRoleContext';
 import { FileSearch, Plus, Printer, Info } from 'lucide-react';
 import { ColumnDef } from '@tanstack/react-table';
+import { FilterPanel, FilterState } from '../../components/FilterPanel';
+import { TableToolbar } from '../../components/TableToolbar';
+import { SortOption } from '../../components/SortMenu';
+import { useTableState } from '../../hooks/useTableState';
+import { StatusBadge } from '../../components/StatusBadge';
 
 export default function OrderSlipsPage() {
     const { currentUser, can } = useUserRole();
@@ -18,7 +23,27 @@ export default function OrderSlipsPage() {
 
     const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
 
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://asia-south1-sahakar-ppo.cloudfunctions.net/api';
+
+    const {
+        filters, sort, isFilterOpen, setIsFilterOpen,
+        applyFilters, removeFilter, clearAllFilters, applySort,
+        savedFilters, activeFilterCount
+    } = useTableState({
+        storageKey: 'order_slips',
+        defaultSort: { id: 'date_desc', label: 'Newest First', field: 'slipDate', direction: 'desc' }
+    });
+
+    const sortOptions: SortOption[] = [
+        { id: 'name_asc', label: 'Supplier Name (A-Z)', field: 'supplier', direction: 'asc' },
+        { id: 'name_desc', label: 'Supplier Name (Z-A)', field: 'supplier', direction: 'desc' },
+        { id: 'qty_desc', label: 'Items (High → Low)', field: 'totalItems', direction: 'desc' },
+        { id: 'qty_asc', label: 'Items (Low → High)', field: 'totalItems', direction: 'asc' },
+        { id: 'val_desc', label: 'Value (High → Low)', field: 'totalValue', direction: 'desc' },
+        { id: 'val_asc', label: 'Value (Low → High)', field: 'totalValue', direction: 'asc' },
+        { id: 'date_desc', label: 'Date (Newest)', field: 'slipDate', direction: 'desc' },
+        { id: 'date_asc', label: 'Date (Oldest)', field: 'slipDate', direction: 'asc' },
+    ];
 
     const { data: slips, isLoading } = useQuery({
         queryKey: ['order-slips'],
@@ -115,53 +140,125 @@ export default function OrderSlipsPage() {
         }
     ], []);
 
-    return (
-        <div className="flex flex-col h-full bg-transparent font-sans">
-            <header className="mb-10 flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-extrabold text-neutral-900 tracking-tight flex items-center gap-4">
-                        <div className="w-12 h-12 bg-white rounded-none shadow-soft flex items-center justify-center border border-neutral-200/60">
-                            <Printer size={28} className="text-brand-600" />
-                        </div>
-                        Order Slips Ledger
-                    </h1>
-                    <p className="text-sm text-neutral-500 font-medium mt-2">Billing consolidation and dispatch readiness for supplier orders.</p>
-                </div>
+    const filteredItems = useMemo(() => {
+        if (!slips) return [];
+        let result = [...slips];
 
-                {can('generate_slips') && (
-                    <button
-                        onClick={() => setIsGenerateModalOpen(true)}
-                        className="btn-brand shadow-lg shadow-brand-500/20"
-                        disabled={generateMutation.isPending}
-                    >
-                        <Plus size={18} />
-                        {generateMutation.isPending ? 'Processing...' : 'Batch Generate Slips'}
-                    </button>
-                )}
+        // Apply Search/Filters
+        if (filters.productName) { // Using productName filter as a generic search for supplier in this context
+            result = result.filter(item =>
+                item.supplier?.toLowerCase().includes(filters.productName!.toLowerCase())
+            );
+        }
+        if (filters.supplier) {
+            result = result.filter(item =>
+                item.supplier?.toLowerCase().includes(filters.supplier!.toLowerCase())
+            );
+        }
+        if (filters.dateFrom) {
+            result = result.filter(item =>
+                item.slipDate && item.slipDate >= filters.dateFrom!
+            );
+        }
+        if (filters.dateTo) {
+            result = result.filter(item =>
+                item.slipDate && item.slipDate <= filters.dateTo!
+            );
+        }
+
+        // Apply Sorting
+        if (sort) {
+            result.sort((a, b) => {
+                let valA: any = '';
+                let valB: any = '';
+
+                if (sort.field === 'supplier') {
+                    valA = a.supplier || '';
+                    valB = b.supplier || '';
+                } else if (sort.field === 'totalItems') {
+                    valA = a.totalItems || 0;
+                    valB = b.totalItems || 0;
+                } else if (sort.field === 'totalValue') {
+                    valA = parseFloat(a.totalValue || '0');
+                    valB = parseFloat(b.totalValue || '0');
+                } else if (sort.field === 'slipDate') {
+                    valA = a.slipDate || '';
+                    valB = b.slipDate || '';
+                }
+
+                if (valA < valB) return sort.direction === 'asc' ? -1 : 1;
+                if (valA > valB) return sort.direction === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
+
+        return result;
+    }, [slips, filters, sort]);
+
+    return (
+        <div className="flex flex-col h-full bg-neutral-50/50">
+            <header className="px-6 py-4 bg-white border-b border-neutral-200">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-xl font-black text-neutral-900 tracking-tight flex items-center gap-2">
+                            <Printer className="text-brand-600" />
+                            ORDER SLIPS REPOSITORY
+                        </h1>
+                        <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest mt-1">
+                            Document Management & Fulfillment Registry
+                        </p>
+                    </div>
+                    {can('generate_slips') && (
+                        <button
+                            onClick={() => setIsGenerateModalOpen(true)}
+                            className="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 text-xs font-bold uppercase tracking-widest transition-all flex items-center gap-2"
+                            disabled={generateMutation.isPending}
+                        >
+                            <Plus size={16} />
+                            {generateMutation.isPending ? 'Generating...' : 'New Batch'}
+                        </button>
+                    )}
+                </div>
             </header>
 
-            <main className="space-y-6">
-                <div className="app-card bg-white p-2">
-                    <DataGrid
-                        data={slips || []}
-                        columns={columns}
-                        isLoading={isLoading}
-                        onRowClick={(row: any) => router.push(`/order-slips/${row.id}`)}
-                    />
-                </div>
+            <main className="flex-1 p-6 overflow-hidden">
+                <TableToolbar
+                    onOpenFilter={() => setIsFilterOpen(true)}
+                    filters={filters}
+                    onRemoveFilter={removeFilter}
+                    onClearAll={clearAllFilters}
+                    sortOptions={sortOptions}
+                    activeSort={sort}
+                    onSort={applySort}
+                />
 
-                {!isLoading && slips?.length === 0 && (
-                    <div className="app-card bg-white p-20 text-center">
+                <DataGrid
+                    data={filteredItems}
+                    columns={columns}
+                    isLoading={isLoading}
+                    onRowClick={(row: any) => router.push(`/order-slips/${row.id}`)}
+                />
+
+                {!isLoading && filteredItems.length === 0 && (
+                    <div className="app-card bg-white p-20 text-center mt-6">
                         <div className="max-w-xs mx-auto">
-                            <div className="w-16 h-16 bg-neutral-100/50 rounded-none flex items-center justify-center mx-auto mb-6">
-                                <Info size={32} className="text-neutral-300" />
+                            <div className="w-16 h-16 bg-neutral-50 rounded-none flex items-center justify-center mx-auto mb-6">
+                                <Printer size={32} className="text-neutral-200" />
                             </div>
-                            <h3 className="text-base font-bold text-neutral-900">No Active Slips Found</h3>
-                            <p className="text-xs text-neutral-400 mt-2 font-medium">Generate slips from the REP Allocation ledger to begin processing.</p>
+                            <h3 className="text-sm font-bold text-neutral-900 uppercase">No Data found</h3>
+                            <p className="text-[10px] text-neutral-400 mt-2 font-bold uppercase tracking-widest">Adjust filters or generate new slips</p>
                         </div>
                     </div>
                 )}
             </main>
+
+            <FilterPanel
+                isOpen={isFilterOpen}
+                onClose={() => setIsFilterOpen(false)}
+                filters={filters}
+                onApply={applyFilters}
+                onClear={clearAllFilters}
+            />
 
             <ConfirmModal
                 isOpen={isGenerateModalOpen}

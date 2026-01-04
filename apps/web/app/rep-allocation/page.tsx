@@ -2,14 +2,17 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState, useMemo } from 'react';
 import groupBy from 'lodash/groupBy';
+import { UserCircle, Edit, Undo, Info, CheckCircle2, XCircle } from 'lucide-react';
+import { ColumnDef } from '@tanstack/react-table';
 import { DataGrid } from '../../components/DataGrid';
-import { FilterBar } from '../../components/FilterBar';
-import { ConfirmModal } from '../../components/ConfirmModal';
 import { StatusBadge } from '../../components/StatusBadge';
 import { useToast } from '../../components/Toast';
 import { useUserRole } from '../../context/UserRoleContext';
-import { UserCircle, Edit, Undo, Info, CheckCircle2, XCircle } from 'lucide-react';
-import { ColumnDef } from '@tanstack/react-table';
+import { FilterPanel, FilterState } from '../../components/FilterPanel';
+import { TableToolbar } from '../../components/TableToolbar';
+import { SortOption } from '../../components/SortMenu';
+import { useTableState } from '../../hooks/useTableState';
+import { ConfirmModal } from '../../components/ConfirmModal';
 
 // Types
 type RepItem = {
@@ -50,7 +53,24 @@ export default function RepAllocationPage() {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editFormData, setEditFormData] = useState<any>({});
     const [returnId, setReturnId] = useState<string | null>(null);
-    const [searchTerm, setSearchTerm] = useState('');
+
+    const {
+        filters, sort, isFilterOpen, setIsFilterOpen,
+        applyFilters, removeFilter, clearAllFilters, applySort,
+        savedFilters, activeFilterCount
+    } = useTableState({
+        storageKey: 'rep_allocation',
+        defaultSort: { id: 'date_desc', label: 'Newest First', field: 'acceptedDate', direction: 'desc' }
+    });
+
+    const sortOptions: SortOption[] = [
+        { id: 'name_asc', label: 'Product Name (A-Z)', field: 'productName', direction: 'asc' },
+        { id: 'name_desc', label: 'Product Name (Z-A)', field: 'productName', direction: 'desc' },
+        { id: 'qty_desc', label: 'Req Qty (High → Low)', field: 'reqQty', direction: 'desc' },
+        { id: 'qty_asc', label: 'Req Qty (Low → High)', field: 'reqQty', direction: 'asc' },
+        { id: 'date_desc', label: 'Date (Newest)', field: 'acceptedDate', direction: 'desc' },
+        { id: 'date_asc', label: 'Date (Oldest)', field: 'acceptedDate', direction: 'asc' },
+    ];
 
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://asia-south1-sahakar-ppo.cloudfunctions.net/api';
 
@@ -99,17 +119,74 @@ export default function RepAllocationPage() {
         onError: (err: any) => showToast(err.message, 'error')
     });
 
-    const groupedItems = useMemo(() => {
-        if (!items) return {};
-        const filtered = items.filter((item: RepItem) => {
-            const searchLower = searchTerm.toLowerCase();
-            return (
-                item.pendingItem.orderRequest.productName.toLowerCase().includes(searchLower) ||
-                item.pendingItem.orderRequest.customerId.toLowerCase().includes(searchLower)
+    const filteredItems = useMemo(() => {
+        if (!items) return [];
+        let result = [...items];
+
+        // Apply Search/Filters
+        if (filters.productName) {
+            result = result.filter(item =>
+                item.pendingItem?.orderRequest?.productName?.toLowerCase().includes(filters.productName!.toLowerCase())
             );
-        });
-        return groupBy(filtered, (item: RepItem) => item.pendingItem.orderRequest.productName);
-    }, [items, searchTerm]);
+        }
+        if (filters.orderId) {
+            result = result.filter(item =>
+                item.pendingItem?.orderRequest?.orderId?.toString().includes(filters.orderId!)
+            );
+        }
+        if (filters.rep && filters.rep.length > 0) {
+            result = result.filter(item =>
+                filters.rep!.includes(item.pendingItem?.orderRequest?.rep || '')
+            );
+        }
+        if (filters.stage && filters.stage.length > 0) {
+            result = result.filter(item =>
+                filters.stage!.includes(item.orderStatus?.toUpperCase() || 'PENDING')
+            );
+        }
+        if (filters.dateFrom) {
+            result = result.filter(item =>
+                item.pendingItem?.orderRequest?.acceptedDate &&
+                item.pendingItem.orderRequest.acceptedDate >= filters.dateFrom!
+            );
+        }
+        if (filters.dateTo) {
+            result = result.filter(item =>
+                item.pendingItem?.orderRequest?.acceptedDate &&
+                item.pendingItem.orderRequest.acceptedDate <= filters.dateTo!
+            );
+        }
+
+        // Apply Sorting
+        if (sort) {
+            result.sort((a, b) => {
+                let valA: any = '';
+                let valB: any = '';
+
+                if (sort.field === 'productName') {
+                    valA = a.pendingItem?.orderRequest?.productName || '';
+                    valB = b.pendingItem?.orderRequest?.productName || '';
+                } else if (sort.field === 'reqQty') {
+                    valA = a.pendingItem?.orderRequest?.reqQty || 0;
+                    valB = b.pendingItem?.orderRequest?.reqQty || 0;
+                } else if (sort.field === 'acceptedDate') {
+                    valA = a.pendingItem?.orderRequest?.acceptedDate || '';
+                    valB = b.pendingItem?.orderRequest?.acceptedDate || '';
+                }
+
+                if (valA < valB) return sort.direction === 'asc' ? -1 : 1;
+                if (valA > valB) return sort.direction === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
+
+        return result;
+    }, [items, filters, sort]);
+
+    const groupedItems = useMemo(() => {
+        if (!filteredItems) return {};
+        return groupBy(filteredItems, (item: RepItem) => item.pendingItem.orderRequest.productName);
+    }, [filteredItems]);
 
     const handleEditClick = (item: RepItem) => {
         setEditingId(item.id);
@@ -118,6 +195,8 @@ export default function RepAllocationPage() {
             stockQty: item.pendingItem.stockQty,
             offerQty: item.pendingItem.offerQty,
             notes: item.pendingItem.notes,
+            orderStatus: item.orderStatus,
+            decidedSupplier: item.pendingItem.decidedSupplier
         });
     };
 
@@ -211,7 +290,7 @@ export default function RepAllocationPage() {
             size: 180,
             cell: ({ row }) => (
                 <button
-                    onClick={() => returnToPendingMutation.mutate(row.original.id)}
+                    onClick={() => setReturnId(row.original.id)}
                     disabled={returnToPendingMutation.isPending}
                     className="text-[10px] font-bold text-error-600 hover:text-error-700 bg-error-50 px-2 py-1 rounded-none border border-error-100 uppercase tracking-tight transition-colors"
                 >
@@ -291,61 +370,85 @@ export default function RepAllocationPage() {
     ], [editingId, editFormData, handleSave, handleEditClick, returnToPendingMutation]);
 
     return (
-        <div className="flex flex-col h-full bg-transparent font-sans">
-            <header className="mb-10 flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-extrabold text-neutral-900 tracking-tight flex items-center gap-4">
-                        <div className="w-12 h-12 bg-white rounded-none shadow-[0_1px_3px_rgba(16_24_40/0.1)] flex items-center justify-center border border-neutral-200/80">
-                            <UserCircle size={28} className="text-brand-600" />
-                        </div>
-                        Representation Allocation
-                    </h1>
-                    <p className="text-sm text-neutral-400 font-medium mt-2">Final representative validation and stock assignment for fulfillment.</p>
-                </div>
-                <div className="flex items-center gap-4">
-                    <FilterBar
-                        filters={[]}
-                        onFilterChange={() => { }}
-                        onSearch={setSearchTerm}
-                        onReset={() => setSearchTerm('')}
-                    />
+        <div className="flex flex-col h-full bg-neutral-50/50">
+            <header className="px-6 py-4 bg-white border-b border-neutral-200">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-xl font-black text-neutral-900 tracking-tight flex items-center gap-2">
+                            <UserCircle className="text-brand-600" />
+                            REP ALLOCATION PIPELINE
+                        </h1>
+                        <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest mt-1">
+                            High-Precision Secondary Distribution Control
+                        </p>
+                    </div>
                 </div>
             </header>
 
-            <main className="space-y-10">
-                {Object.entries(groupedItems).map(([productName, groupItems]: [string, any[]]) => (
-                    <section key={productName} className="flex flex-col gap-4">
-                        <div className="flex items-center justify-between px-2 mb-1">
-                            <div className="flex items-center gap-3">
-                                <h2 className="text-sm font-semibold text-neutral-800">{productName}</h2>
-                                <span className="text-[10px] text-neutral-400 uppercase tracking-widest font-medium">Product Allocation Group</span>
-                            </div>
-                            <div className="flex items-center gap-4">
-                                <div className="flex flex-col items-end">
-                                    <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">Target</span>
-                                    <span className="text-xs font-bold text-neutral-900 tabular-nums">
-                                        {groupItems.reduce((acc, i) => acc + (i.pendingItem?.orderRequest?.reqQty || 0), 0)}
-                                    </span>
-                                </div>
-                                <div className="w-px h-6 bg-neutral-200" />
-                                <div className="flex flex-col items-end">
-                                    <span className="text-[9px] font-bold text-brand-500 uppercase tracking-widest">Allocated</span>
-                                    <span className="text-xs font-bold text-brand-600 tabular-nums">
-                                        {groupItems.reduce((acc, i) => acc + (i.pendingItem?.orderedQty || 0), 0)}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="app-card overflow-hidden bg-white">
-                            <DataGrid
-                                data={groupItems}
-                                columns={columns}
-                            />
-                        </div>
-                    </section>
-                ))}
+            <main className="flex-1 p-6 overflow-hidden">
+                <FilterPanel
+                    isOpen={isFilterOpen}
+                    onClose={() => setIsFilterOpen(false)}
+                    filters={filters}
+                    onApply={applyFilters}
+                    onClear={clearAllFilters}
+                />
 
-                {Object.keys(groupedItems).length === 0 && !isLoading && (
+                <ConfirmModal
+                    isOpen={!!returnId}
+                    onCancel={() => setReturnId(null)}
+                    onConfirm={() => {
+                        if (returnId) returnToPendingMutation.mutate(returnId);
+                    }}
+                    title="Return to Pending?"
+                    message="This will remove the item from REP allocation and move it back to the daily pending pool."
+                    confirmLabel="Yes, Return"
+                    variant="danger"
+                />
+
+                <TableToolbar
+                    onOpenFilter={() => setIsFilterOpen(true)}
+                    filters={filters}
+                    onRemoveFilter={removeFilter}
+                    onClearAll={clearAllFilters}
+                    sortOptions={sortOptions}
+                    activeSort={sort}
+                    onSort={applySort}
+                />
+
+                {Object.keys(groupedItems).length > 0 ? (
+                    Object.entries(groupedItems).map(([productName, groupItems]: [string, any[]]) => (
+                        <section key={productName} className="flex flex-col gap-4 mb-8">
+                            <div className="flex items-center justify-between px-2 mb-1">
+                                <div className="flex items-center gap-3">
+                                    <h2 className="text-sm font-semibold text-neutral-800">{productName}</h2>
+                                    <span className="text-[10px] text-neutral-400 uppercase tracking-widest font-medium">Product Allocation Group</span>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                    <div className="flex flex-col items-end">
+                                        <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">Target</span>
+                                        <span className="text-xs font-bold text-neutral-900 tabular-nums">
+                                            {groupItems.reduce((acc, i) => acc + (i.pendingItem?.orderRequest?.reqQty || 0), 0)}
+                                        </span>
+                                    </div>
+                                    <div className="w-px h-6 bg-neutral-200" />
+                                    <div className="flex flex-col items-end">
+                                        <span className="text-[9px] font-bold text-brand-500 uppercase tracking-widest">Allocated</span>
+                                        <span className="text-xs font-bold text-brand-600 tabular-nums">
+                                            {groupItems.reduce((acc, i) => acc + (i.pendingItem?.orderedQty || 0), 0)}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="app-card overflow-hidden bg-white">
+                                <DataGrid
+                                    data={groupItems}
+                                    columns={columns}
+                                />
+                            </div>
+                        </section>
+                    ))
+                ) : (
                     <div className="app-card bg-white p-20 text-center">
                         <div className="max-w-xs mx-auto">
                             <div className="w-16 h-16 bg-neutral-50 rounded-none flex items-center justify-center mx-auto mb-6">
