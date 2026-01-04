@@ -166,81 +166,81 @@ export function DataGrid<TData>({
                 ref={parentRef}
                 className={`spreadsheet-grid overflow-auto flex-1 relative w-full border border-neutral-200 shadow-sm bg-white max-h-[calc(100vh-220px)] ${enableRowSelection && Object.keys(rowSelection).length > 0 ? 'border-t-0' : 'rounded-xl'}`}
             >
-                <div style={{ height: `${virtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
-                    <table className="w-full border-collapse text-[13px]" style={{ tableLayout: 'fixed' }}>
-                        <thead className="sticky top-0 z-20 bg-white border-b border-neutral-200 shadow-sm">
-                            {table.getHeaderGroups().map((headerGroup) => (
-                                <tr key={headerGroup.id} className="">
-                                    {headerGroup.headers.map((header, index) => {
+                <table className="w-full border-collapse table-fixed text-[13px]">
+                    <colgroup>
+                        {table.getAllLeafColumns().map((column) => (
+                            <col key={column.id} style={{ width: column.getSize() }} />
+                        ))}
+                    </colgroup>
+                    <thead className="sticky top-0 z-20 bg-white border-b border-neutral-200 shadow-sm">
+                        {table.getHeaderGroups().map((headerGroup) => (
+                            <tr key={headerGroup.id} className="">
+                                {headerGroup.headers.map((header, index) => {
+                                    const isFrozen = index < frozenColumns;
+                                    const meta = header.column.columnDef.meta as any;
+                                    const align = meta?.align || 'left';
+
+                                    return (
+                                        <th
+                                            key={header.id}
+                                            className={`
+                                                px-3 py-2 text-[11px] font-semibold text-neutral-500 uppercase tracking-wide
+                                                ${isFrozen ? 'sticky left-0 z-30 bg-neutral-50' : ''}
+                                                ${align === 'right' ? 'text-right' : align === 'center' ? 'text-center' : 'text-left'}
+                                            `}
+                                        >
+                                            {flexRender(header.column.columnDef.header, header.getContext())}
+                                        </th>
+                                    );
+                                })}
+                            </tr>
+                        ))}
+                    </thead>
+                    <tbody className="relative">
+                        {virtualRows.length > 0 && virtualRows[0].start > 0 && (
+                            <tr>
+                                <td style={{ height: `${virtualRows[0].start}px` }} colSpan={100} />
+                            </tr>
+                        )}
+                        {virtualRows.map((virtualRow) => {
+                            const row = rows[virtualRow.index];
+                            return (
+                                <tr
+                                    key={row.id}
+                                    onClick={() => onRowClick?.(row.original)}
+                                    className={`
+                                        border-b border-neutral-100 last:border-0 hover:bg-neutral-50 transition-colors cursor-default group h-[44px]
+                                        ${onRowClick ? 'cursor-pointer' : ''}
+                                    `}
+                                >
+                                    {row.getVisibleCells().map((cell, index) => {
                                         const isFrozen = index < frozenColumns;
-                                        // Cast to any to access meta
-                                        const meta = header.column.columnDef.meta as any;
+                                        const meta = cell.column.columnDef.meta as any;
                                         const align = meta?.align || 'left';
 
                                         return (
-                                            <th
-                                                key={header.id}
+                                            <td
+                                                key={cell.id}
                                                 className={`
-                        px-3 py-2 text-[11px] font-semibold text-neutral-500 uppercase tracking-wide
-                        ${isFrozen ? 'sticky left-0 z-30 bg-neutral-50' : ''}
-                        ${align === 'right' ? 'text-right' : align === 'center' ? 'text-center' : 'text-left'}
-                      `}
-                                                style={{
-                                                    width: header.getSize(),
-                                                    minWidth: header.column.columnDef.minSize,
-                                                }}
+                                                    px-3 py-2 whitespace-nowrap overflow-hidden text-ellipsis text-neutral-700 align-middle
+                                                    ${isFrozen ? 'sticky left-0 z-10 bg-white group-hover:bg-neutral-50' : ''}
+                                                    ${align === 'right' ? 'text-right tabular-nums font-semibold' : align === 'center' ? 'text-center' : 'text-left'}
+                                                `}
                                             >
-                                                {flexRender(header.column.columnDef.header, header.getContext())}
-                                            </th>
+                                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                            </td>
                                         );
                                     })}
                                 </tr>
-                            ))}
-                        </thead>
-                        <tbody className="relative">
-                            {virtualRows.map((virtualRow) => {
-                                const row = rows[virtualRow.index];
-                                return (
-                                    <tr
-                                        key={row.id}
-                                        onClick={() => onRowClick?.(row.original)}
-                                        className={`
-                    border-b border-neutral-100 last:border-0 hover:bg-neutral-50 transition-colors cursor-default group h-[44px]
-                    ${onRowClick ? 'cursor-pointer' : ''}
-                  `}
-                                        style={{
-                                            position: 'absolute',
-                                            top: 0,
-                                            left: 0,
-                                            width: '100%',
-                                            height: `44px`,
-                                            transform: `translateY(${virtualRow.start}px)`,
-                                        }}
-                                    >
-                                        {row.getVisibleCells().map((cell, index) => {
-                                            const isFrozen = index < frozenColumns;
-                                            const meta = cell.column.columnDef.meta as any;
-                                            const align = meta?.align || 'left';
-
-                                            return (
-                                                <td
-                                                    key={cell.id}
-                                                    className={`
-                          px-3 py-2 whitespace-nowrap overflow-hidden text-ellipsis text-neutral-700 align-middle
-                          ${isFrozen ? 'sticky left-0 z-10 bg-white group-hover:bg-neutral-50' : ''}
-                          ${align === 'right' ? 'text-right tabular-nums font-semibold' : align === 'center' ? 'text-center' : 'text-left'}
-                        `}
-                                                >
-                                                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                                </td>
-                                            );
-                                        })}
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
-                </div>
+                            );
+                        })}
+                        {virtualRows.length > 0 && virtualizer.getTotalSize() > virtualRows[virtualRows.length - 1].end && (
+                            <tr>
+                                <td style={{ height: `${virtualizer.getTotalSize() - virtualRows[virtualRows.length - 1].end}px` }} colSpan={100} />
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
                 {data.length === 0 && !isLoading && (
                     <div className="p-8 text-center text-neutral-400 italic text-sm">
                         No records found.
