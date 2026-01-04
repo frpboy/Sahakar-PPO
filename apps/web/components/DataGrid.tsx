@@ -31,7 +31,7 @@ interface DataGridProps<TData> {
 export function DataGrid<TData>({
     data,
     columns,
-    isLoading,
+    isLoading = false,
     onRowClick,
     stickyHeader = true,
     frozenColumns = 0,
@@ -167,7 +167,7 @@ export function DataGrid<TData>({
                 className={`spreadsheet-grid overflow-auto flex-1 relative w-full ${enableRowSelection && Object.keys(rowSelection).length > 0 ? 'border-x' : 'rounded-t-md border-t border-x'} border-neutral-200 shadow-sm bg-white`}
             >
                 <div style={{ height: `${virtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
-                    <table className="w-full border-collapse text-[13px]">
+                    <table className="w-full border-collapse text-[13px]" style={{ tableLayout: 'fixed' }}>
                         <thead className={stickyHeader ? 'sticky top-0 z-20 bg-neutral-50 shadow-sm' : ''}>
                             {table.getHeaderGroups().map((headerGroup) => (
                                 <tr key={headerGroup.id} className="border-b border-neutral-200/60">
@@ -178,7 +178,7 @@ export function DataGrid<TData>({
                                                 key={header.id}
                                                 className={`
                         px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-widest text-left
-                        ${isFrozen ? 'sticky left-0 z-10 bg-neutral-50' : ''}
+                        ${isFrozen ? 'sticky left-0 z-30 bg-neutral-50' : ''}
                       `}
                                                 style={{
                                                     width: header.getSize(),
