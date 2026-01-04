@@ -156,14 +156,24 @@ export default function ProductsPage() {
     const handleExcelImport = async (data: any[]) => {
         try {
             let successCount = 0;
+            let updateCount = 0;
             let errorCount = 0;
 
             // Create Lookups
-            const supplierMap = new Map<string, string>(); // Name -> ID
+            const supplierMap = new Map<string, string>();
             suppliers?.forEach(s => supplierMap.set(s.supplierName.toUpperCase(), s.id));
 
-            const repMap = new Map<string, string>(); // Name -> ID
-            reps?.forEach(r => repMap.set(r.name.toUpperCase(), r.id));
+            const repMap = new Map<string, string>();
+            reps?.forEach(r => r.name && repMap.set(r.name.toUpperCase(), r.id));
+
+            // Product Lookup for Upsert
+            // Keys: ProductCode (Primary), ItemName (Secondary)
+            const existingMap = new Map<string, Product>();
+            products?.forEach(p => {
+                if (p.productCode) existingMap.set(p.productCode.toUpperCase(), p);
+                existingMap.set(p.itemName.toUpperCase(), p);
+                if (p.legacyId) existingMap.set(p.legacyId.toString().toUpperCase(), p);
+            });
 
             for (const row of data) {
                 try {
@@ -176,10 +186,20 @@ export default function ProductsPage() {
                     const sSupId = supplierMap.get(sSupName);
                     const rId = repMap.get(repName);
 
-                    await createMutation.mutateAsync({
-                        legacyId: (row['id'] || row['Legacy ID'] || row['legacyId'] || '').toString(),
-                        productCode: (row['Product Code'] || row['productCode'] || '').toString(),
-                        itemName: (row['Name'] || row['Item Name'] || row['itemName'] || '').toString(),
+                    const productCode = (row['Product Code'] || row['productCode'] || '').toString().trim();
+                    const itemName = (row['Name'] || row['Item Name'] || row['itemName'] || '').toString().trim();
+                    const legacyId = (row['id'] || row['Legacy ID'] || row['legacyId'] || '').toString().trim();
+
+                    if (!itemName) continue;
+
+                    // Match existing
+                    const matchKey = productCode ? productCode.toUpperCase() : (legacyId ? legacyId.toUpperCase() : itemName.toUpperCase());
+                    const existing = existingMap.get(matchKey);
+
+                    const payload = {
+                        legacyId,
+                        productCode,
+                        itemName,
                         aliasName: (row['Alias Name'] || row['aliasName'] || '').toString(),
                         packing: (row['Packing'] || row['pack ing'] || row['packing'] || '').toString(),
                         category: (row['Category'] || row['category'] || '').toString(),
@@ -198,15 +218,25 @@ export default function ProductsPage() {
                         primarySupplierId: pSupId,
                         secondarySupplierId: sSupId,
                         repId: rId
-                    });
-                    successCount++;
+                    };
+
+                    if (existing) {
+                        // Update
+                        await updateMutation.mutateAsync({ id: existing.id, data: payload });
+                        updateCount++;
+                    } else {
+                        // Create
+                        await createMutation.mutateAsync(payload);
+                        successCount++;
+                    }
                 } catch (err) {
                     console.error('Import Row Error:', err);
                     errorCount++;
                 }
             }
 
-            alert(`Import complete: ${successCount} products added, ${errorCount} errors`);
+            alert(`Import complete: ${successCount} added, ${updateCount} updated, ${errorCount} errors`);
+            queryClient.invalidateQueries({ queryKey: ['products'] });
         } catch (error) {
             console.error('Import Error:', error);
             alert('Error importing products');
@@ -286,6 +316,12 @@ export default function ProductsPage() {
         }
     };
 
+    const formatCurrency = (val: string | number | undefined) => {
+        if (val === undefined || val === null || val === '') return '-';
+        const num = typeof val === 'string' ? parseFloat(val) : val;
+        return isNaN(num) ? '-' : num.toFixed(2);
+    };
+
     const columns = useMemo<ColumnDef<Product>[]>(() => [
         {
             header: 'Code',
@@ -327,8 +363,8 @@ export default function ProductsPage() {
             size: 120,
             cell: ({ row }) => (
                 <div className="flex flex-col text-right">
-                    <span className="text-xs font-bold text-neutral-900">MRP: {row.original.mrp?.toFixed(2) || '-'}</span>
-                    <span className="text-[10px] text-neutral-500">PTR: {row.original.ptr?.toFixed(2) || '-'}</span>
+                    <span className="text-xs font-bold text-neutral-900">MRP: {formatCurrency(row.original.mrp)}</span>
+                    <span className="text-[10px] text-neutral-500">PTR: {formatCurrency(row.original.ptr)}</span>
                 </div>
             )
         },
@@ -452,8 +488,8 @@ export default function ProductsPage() {
                                     key={tab.id}
                                     onClick={() => setActiveTab(tab.id as any)}
                                     className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.id
-                                            ? 'border-brand-600 text-brand-600 bg-white'
-                                            : 'border-transparent text-neutral-600 hover:text-neutral-900 hover:bg-white'
+                                        ? 'border-brand-600 text-brand-600 bg-white'
+                                        : 'border-transparent text-neutral-600 hover:text-neutral-900 hover:bg-white'
                                         }`}
                                 >
                                     {tab.label}

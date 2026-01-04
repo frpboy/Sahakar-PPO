@@ -94,27 +94,54 @@ export default function SuppliersPage() {
     const handleExcelImport = async (data: any[]) => {
         try {
             let successCount = 0;
+            let updateCount = 0;
             let errorCount = 0;
+
+            // Create Lookup for Existing Suppliers
+            // Normalizing keys to UpperCase for case-insensitive matching
+            const existingMap = new Map<string, Supplier>();
+            suppliers?.forEach(s => {
+                if (s.supplierCode) existingMap.set(s.supplierCode.toUpperCase(), s);
+                existingMap.set(s.supplierName.toUpperCase(), s);
+            });
 
             for (const row of data) {
                 try {
-                    await createMutation.mutateAsync({
-                        supplierCode: (row['Supplier Code'] || row['supplierCode'] || '').toString(),
-                        supplierName: (row['Alias'] || row['Supplier Name'] || row['supplierName'] || row['name'] || '').toString(),
+                    const code = (row['Supplier Code'] || row['supplierCode'] || '').toString().trim();
+                    const name = (row['Alias'] || row['Supplier Name'] || row['supplierName'] || row['name'] || '').toString().trim();
+
+                    if (!name) continue; // Skip empty rows
+
+                    const matchKey = code ? code.toUpperCase() : name.toUpperCase();
+                    const existing = existingMap.get(matchKey);
+
+                    const payload = {
+                        supplierCode: code,
+                        supplierName: name,
                         contactPerson: (row['Contact Person'] || row['contactPerson'] || '').toString(),
                         mobile: (row['Mobile'] || row['mobile'] || row['phone'] || '').toString(),
                         email: (row['Email'] || row['email'] || '').toString(),
                         gstNumber: (row['GSTNo'] || row['GST Number'] || row['gstNumber'] || row['gst'] || '').toString(),
                         address: ((row['Address'] || '') + (row['City'] ? `, ${row['City']}` : '')).trim(),
                         creditDays: row['Credit Days'] || row['creditDays']
-                    });
-                    successCount++;
+                    };
+
+                    if (existing) {
+                        // Update
+                        await updateMutation.mutateAsync({ id: existing.id, data: payload });
+                        updateCount++;
+                    } else {
+                        // Create
+                        await createMutation.mutateAsync(payload);
+                        successCount++;
+                    }
                 } catch (err) {
                     errorCount++;
                 }
             }
 
-            alert(`Import complete: ${successCount} suppliers added, ${errorCount} errors`);
+            alert(`Import complete: ${successCount} added, ${updateCount} updated, ${errorCount} errors`);
+            queryClient.invalidateQueries({ queryKey: ['suppliers'] });
         } catch (error) {
             alert('Error importing suppliers');
         }
@@ -180,7 +207,7 @@ export default function SuppliersPage() {
         {
             header: 'Code',
             accessorKey: 'supplierCode',
-            size: 80,
+            size: 100, // Increased
             cell: ({ row }) => (
                 <span className="text-xs font-bold text-brand-600">{row.original.supplierCode || '-'}</span>
             )
@@ -188,18 +215,20 @@ export default function SuppliersPage() {
         {
             header: 'Supplier Name',
             accessorKey: 'supplierName',
-            size: 200,
+            size: 250, // Increased
             cell: ({ row }) => (
-                <span className="text-xs font-semibold text-neutral-900">{row.original.supplierName}</span>
+                <span className="text-xs font-semibold text-neutral-900 truncate" title={row.original.supplierName}>
+                    {row.original.supplierName}
+                </span>
             )
         },
         {
             header: 'Contact',
             accessorKey: 'contactPerson',
-            size: 120,
+            size: 150, // Increased
             cell: ({ row }) => (
                 <div className="flex flex-col">
-                    <span className="text-xs text-neutral-900">{row.original.contactPerson || '-'}</span>
+                    <span className="text-xs text-neutral-900 truncate">{row.original.contactPerson || '-'}</span>
                     <span className="text-[10px] text-neutral-500">{row.original.mobile}</span>
                 </div>
             )
@@ -207,7 +236,7 @@ export default function SuppliersPage() {
         {
             header: 'GST',
             accessorKey: 'gstNumber',
-            size: 120,
+            size: 140, // Increased
             cell: ({ row }) => (
                 <span className="text-xs text-neutral-600">{row.original.gstNumber || '-'}</span>
             )

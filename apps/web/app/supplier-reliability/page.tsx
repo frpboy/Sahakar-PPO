@@ -32,11 +32,13 @@ export default function SupplierReliabilityPage() {
             header: 'Avg. Fill Rate',
             accessorKey: 'avgFillRate',
             cell: ({ row }) => {
-                const rate = parseFloat(row.original.avgFillRate).toFixed(1);
-                const isLow = parseFloat(rate) < 80;
+                const val = row.original.avgFillRate;
+                const num = val !== undefined && val !== null && val !== '' ? parseFloat(val) : NaN;
+                const rate = isNaN(num) ? '-' : num.toFixed(1) + '%';
+                const isLow = !isNaN(num) && num < 80;
                 return (
                     <span className={`font-bold tabular-nums ${isLow ? 'text-danger-500' : 'text-success-600'}`}>
-                        {rate}%
+                        {rate}
                     </span>
                 );
             }
