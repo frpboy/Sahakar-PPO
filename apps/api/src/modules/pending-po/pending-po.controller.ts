@@ -1,9 +1,14 @@
-import { Controller, Put, Post, Body, Param, Request } from '@nestjs/common';
+import { Controller, Get, Put, Post, Body, Param, Request } from '@nestjs/common';
 import { PendingPoService } from './pending-po.service';
 
-@Controller('pending-po')
+@Controller('pending-items')
 export class PendingPoController {
     constructor(private readonly service: PendingPoService) { }
+
+    @Get()
+    async getAllPendingItems() {
+        return await this.service.getAllPendingItems();
+    }
 
     @Put(':id/allocate')
     async updateAllocation(

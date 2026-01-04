@@ -27,7 +27,7 @@ import { RawBodyMiddleware } from './common/middleware/raw-body.middleware';
         PpoImportModule,
         ProductsModule,
         SuppliersModule,
-        // PendingPoModule,
+        PendingPoModule,
         // OrderSlipsModule,
         // BillingModule,
         // ConflictModule,

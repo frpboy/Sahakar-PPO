@@ -5,6 +5,40 @@ import { sql, eq, and } from 'drizzle-orm';
 @Injectable()
 export class PendingPoService {
     /**
+     * Get all pending items with product details
+     */
+    async getAllPendingItems() {
+        const items = await db.execute(sql`
+            SELECT 
+                pi.id,
+                pi.product_id,
+                pi.req_qty,
+                pi.ordered_qty,
+                pi.stock_qty,
+                pi.offer_qty,
+                pi.decided_supplier_id,
+                pi.allocator_notes,
+                pi.done,
+                pi.locked,
+                pi.state,
+                p.item_name as product_name,
+                p.packing,
+                p.mrp,
+                p.ptr,
+                p.category,
+                p.subcategory,
+                s.supplier_name as decided_supplier_name
+            FROM pending_items pi
+            LEFT JOIN products p ON pi.product_id = p.id
+            LEFT JOIN suppliers s ON pi.decided_supplier_id = s.id
+            WHERE pi.state = 'PENDING'
+            ORDER BY pi.created_at DESC
+        `);
+
+        return items.rows;
+    }
+
+    /**
      * Workflow 2: Pending PO Allocator
      * 
      * Rules:
