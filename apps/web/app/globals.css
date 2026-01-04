@@ -4,10 +4,13 @@
     /* System Palette (Vibrant & Modern) */
     --color-brand-950: #0F091F;
     --color-brand-900: #1E1B4B;
+    --color-brand-800: #3730A3;
     --color-brand-700: #4338CA;
     --color-brand-600: #4F46E5;
     --color-brand-500: #6366F1;
+    --color-brand-200: #C7D2FE;
     --color-brand-100: #E0E7FF;
+    --color-brand-50: #EEF2FF;
 
     --color-success-600: #059669;
     --color-success-500: #10B981;
