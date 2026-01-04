@@ -18,7 +18,8 @@ interface ProcessOrdersDto {
         acceptDatetime: string;
         customerId?: string;
         orderId?: string;
-        productId: string;
+        productId?: string;
+        legacyProductId?: string;
         productName?: string;
         packing?: string;
         category?: string;
@@ -29,6 +30,12 @@ interface ProcessOrdersDto {
         mobile?: string;
         mrp?: number;
         reqQty: number;
+        customerName?: string;
+        acceptedTime?: string;
+        oQty?: number;
+        cQty?: number;
+        modification?: string;
+        stage?: string;
     }>;
 }
 

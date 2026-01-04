@@ -87,6 +87,7 @@ export const suppliers = pgTable('suppliers', {
 
 export const products = pgTable('products', {
     id: uuid('id').primaryKey().defaultRandom(),
+    legacyId: varchar('legacy_id', { length: 50 }).unique(),
     productCode: varchar('product_code', { length: 50 }),
     itemName: varchar('item_name', { length: 500 }).notNull(),
     packing: varchar('packing', { length: 100 }),
@@ -142,6 +143,13 @@ export const orderRequests = pgTable('order_requests', {
     mobile: varchar('mobile', { length: 20 }),
     mrp: numeric('mrp', { precision: 10, scale: 2 }),
     reqQty: integer('req_qty'),
+    legacyProductId: varchar('legacy_product_id', { length: 50 }),
+    customerName: varchar('customer_name', { length: 255 }),
+    acceptedTime: varchar('accepted_time', { length: 20 }),
+    oQty: integer('o_qty'),
+    cQty: integer('c_qty'),
+    modification: varchar('modification', { length: 100 }),
+    stage: varchar('stage', { length: 50 }),
     hash: varchar('hash', { length: 64 }).unique(),
     createdAt: timestamp('created_at').defaultNow().notNull()
 });

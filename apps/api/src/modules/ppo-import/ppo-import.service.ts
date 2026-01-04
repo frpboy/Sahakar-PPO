@@ -8,7 +8,8 @@ interface OrderRow {
     acceptDatetime: Date;
     customerId?: string;
     orderId?: string;
-    productId: string;
+    productId?: string; // UUID from system, optional if finding by legacy
+    legacyProductId?: string; // ID from Excel
     productName?: string;
     packing?: string;
     category?: string;
@@ -19,6 +20,12 @@ interface OrderRow {
     mobile?: string;
     mrp?: number;
     reqQty: number;
+    customerName?: string;
+    acceptedTime?: string;
+    oQty?: number;
+    cQty?: number;
+    modification?: string;
+    stage?: string;
 }
 
 export interface ProcessOrdersResult {
@@ -66,17 +73,39 @@ export class PpoImportService {
 
             await tx.execute(sql`SELECT pg_advisory_xact_lock(${lockHash})`);
 
+            // 1a. Build Product Lookup Map (Legacy ID -> UUID)
+            const legacyIds = rows.map(r => r.legacyProductId).filter(id => !!id);
+            const productMap = new Map<string, string>(); // legacyId -> uuid
+
+            if (legacyIds.length > 0) {
+                // We need to import 'products' table reference or use raw sql
+                // Assuming 'products' is exported from @sahakar/database locally or available
+                const { products } = await import('@sahakar/database');
+                const foundProducts = await tx
+                    .select({ id: products.id, legacyId: products.legacyId })
+                    .from(products)
+                    .where(sql`${products.legacyId} IN ${legacyIds}`);
+
+                foundProducts.forEach(p => {
+                    if (p.legacyId) productMap.set(p.legacyId, p.id);
+                });
+            }
+
             // 2. Insert into order_requests (immutable, append-only)
             for (const row of rows) {
+                // Resolve UUID from Legacy ID if possible
+                const resolvedProductId = row.productId || (row.legacyProductId ? productMap.get(row.legacyProductId) : null);
+
                 // Generate hash for deduplication
-                const rowHash = this.generateRowHash(row);
+                const rowHash = this.generateRowHash({ ...row, productId: resolvedProductId || row.legacyProductId });
 
                 try {
                     await tx.insert(orderRequests).values({
                         acceptDatetime: row.acceptDatetime,
                         customerId: row.customerId,
                         orderId: row.orderId,
-                        productId: row.productId,
+                        productId: resolvedProductId, // Can be null
+                        legacyProductId: row.legacyProductId,
                         productName: row.productName,
                         packing: row.packing,
                         category: row.category,
@@ -87,6 +116,12 @@ export class PpoImportService {
                         mobile: row.mobile,
                         mrp: row.mrp ? row.mrp.toString() : null,
                         reqQty: row.reqQty,
+                        customerName: row.customerName,
+                        acceptedTime: row.acceptedTime,
+                        oQty: row.oQty,
+                        cQty: row.cQty,
+                        modification: row.modification,
+                        stage: row.stage,
                         hash: rowHash
                     });
                 } catch (error) {
@@ -95,6 +130,9 @@ export class PpoImportService {
                         result.duplicatesSkipped++;
                         continue;
                     }
+                    console.error('Error processing row:', row, error);
+                    // Don't throw for individual row errors, maybe? Or throw strictly?
+                    // Canonical spec says skip duplicates, throw others.
                     throw error;
                 }
             }
@@ -199,33 +237,53 @@ export class PpoImportService {
 
         // Map to OrderRow
         const rows: OrderRow[] = rawRows.map((row: any) => ({
-            acceptDatetime: new Date(), // Default to now if missing, or specific column
-            customerId: row['Customer ID']?.toString(),
-            orderId: row['Order ID']?.toString() || row['Order_ID']?.toString(),
-            productId: row['Product ID']?.toString() || row['Item_ID']?.toString(),
-            productName: row['Product Name']?.toString(),
+            acceptDatetime: new Date(), // Will be overridden or parsed
+            customerId: row['Customer id']?.toString() || row['Customer ID']?.toString(),
+            customerName: row['Customer Name']?.toString(), // New
+            orderId: row['order_id']?.toString() || row['Order ID']?.toString(),
+            legacyProductId: row['Product Id']?.toString() || row['Item_ID']?.toString(), // New map
+            productId: undefined, // Will be looked up
+            productName: row['product_name']?.toString() || row['Product Name']?.toString(),
             packing: row['Packing']?.toString(),
             category: row['Category']?.toString(),
-            subcategory: row['Sub Category']?.toString(),
-            primarySupplier: row['Supplier 1']?.toString(),
-            secondarySupplier: row['Supplier 2']?.toString(),
-            rep: row['REP Name']?.toString(),
+            subcategory: row['Subcategory']?.toString() || row['Sub Category']?.toString(),
+            primarySupplier: row['Primary Sup']?.toString() || row['Supplier 1']?.toString(),
+            secondarySupplier: row['Secondary Sup']?.toString() || row['Supplier 2']?.toString(),
+            rep: row['Rep']?.toString() || row['REP Name']?.toString(),
             mobile: row['Mobile']?.toString(),
-            mrp: parseFloat(row['MRP'] || '0'),
-            reqQty: parseInt(row['Qty'] || row['Quantity'] || '0', 10)
+            mrp: parseFloat(row['mrp'] || row['MRP'] || '0'),
+            reqQty: parseInt(row['Req Qty'] || row['Qty'] || '0', 10),
+            acceptedTime: row['Accepted Time']?.toString(), // New
+            oQty: parseInt(row['O.Qty'] || '0', 10), // New
+            cQty: parseInt(row['C.Qty'] || '0', 10), // New
+            modification: row['Modification']?.toString(), // New
+            stage: row['Stage']?.toString() // New
         }));
 
-        // Validate rows
-        const validRows = rows.filter(r => r.productId && r.reqQty > 0);
+        // Validation: Must have at least a product ID (legacy or uuid) and qty
+        const validRows = rows.filter(r => (r.productId || r.legacyProductId) && r.reqQty > 0);
 
         if (validRows.length === 0) {
             throw new Error('No valid rows found in Excel file');
         }
 
         // Use acceptDatetime from first row if available in Excel, else fallback to now
-        // But canonical spec says locks are based on acceptDate. 
-        // We will assume today for import.
-        const importDate = new Date();
+        // Legacy sheet has 'Accept date' e.g., '3-1-2026'
+        // We need to parse this manually if it comes as string
+        const firstRowDate = rawRows[0]?.['Accept date'];
+        let importDate = new Date();
+
+        if (firstRowDate) {
+            // Handle simple parsing if needed, or assume XLSX parsed it if date cell
+            // If string "3-1-2026", new Date() might fail depending on locale
+            // Let's rely on simple parsing or fallback
+            const parts = firstRowDate.toString().split('-');
+            if (parts.length === 3) {
+                // assume d-m-y or m-d-y? "3-1-2026" likely d-m-y
+                importDate = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+            }
+        }
+
         validRows.forEach(r => r.acceptDatetime = importDate);
 
         return this.processOrders(validRows, userEmail);
