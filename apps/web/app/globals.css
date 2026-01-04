@@ -67,11 +67,11 @@
     }
 
     .saas-card {
-        @apply bg-white border border-neutral-200/80 rounded-2xl shadow-[0_1px_2px_rgba(16, 24, 40, 0.04)] transition-all duration-300;
+        @apply bg-white border border-neutral-200/80 rounded-2xl shadow-[0_1px_2px_rgba(16_24_40/0.04)] transition-all duration-300;
     }
 
     .saas-card:hover {
-        @apply shadow-[0_8px_20px_rgba(15, 23, 42, 0.08)];
+        @apply shadow-[0_8px_20px_rgba(15_23_42/0.08)];
     }
 
     .glass-card {

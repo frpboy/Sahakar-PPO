@@ -199,7 +199,7 @@ export default function RepAllocationPage() {
             <header className="mb-10 flex items-center justify-between">
                 <div>
                     <h1 className="text-3xl font-extrabold text-neutral-900 tracking-tight flex items-center gap-4">
-                        <div className="w-12 h-12 bg-white rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.1)] flex items-center justify-center border border-neutral-200/80">
+                        <div className="w-12 h-12 bg-white rounded-2xl shadow-[0_1px_3px_rgba(16_24_40/0.1)] flex items-center justify-center border border-neutral-200/80">
                             <UserCircle size={28} className="text-brand-600" />
                         </div>
                         Representation Allocation
