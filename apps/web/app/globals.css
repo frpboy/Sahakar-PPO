@@ -14,15 +14,21 @@
 
     --color-success-600: #059669;
     --color-success-500: #10B981;
+    --color-success-200: #A7F3D0;
     --color-success-100: #D1FAE5;
+    --color-success-50: #ECFDF5;
 
     --color-warning-600: #D97706;
     --color-warning-500: #F59E0B;
+    --color-warning-200: #FCD34D;
     --color-warning-100: #FEF3C7;
+    --color-warning-50: #FFFBEB;
 
     --color-danger-600: #E11D48;
     --color-danger-500: #F43F5E;
+    --color-danger-200: #FECDD3;
     --color-danger-100: #FFE4E6;
+    --color-danger-50: #FFF1F2;
 
     --color-neutral-50: #F9FAFB;
     --color-neutral-100: #F3F4F6;
