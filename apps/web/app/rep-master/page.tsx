@@ -125,10 +125,17 @@ export default function RepMasterPage() {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        const data = {
+            name: formData.name.toUpperCase(),
+            mobile: formData.mobile || undefined,
+            email: formData.email || undefined,
+            designation: formData.designation?.toUpperCase() || undefined
+        };
+
         if (editingRep) {
-            updateMutation.mutate({ id: editingRep.id, data: formData });
+            updateMutation.mutate({ id: editingRep.id, data });
         } else {
-            createMutation.mutate(formData);
+            createMutation.mutate(data);
         }
     };
 

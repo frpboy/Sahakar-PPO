@@ -147,7 +147,12 @@ export default function ProductsPage() {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         const data = {
-            ...formData,
+            legacyId: formData.legacyId?.toUpperCase() || undefined,
+            productCode: formData.productCode?.toUpperCase() || undefined,
+            itemName: formData.itemName.toUpperCase(),
+            packing: formData.packing?.toUpperCase() || undefined,
+            category: formData.category?.toUpperCase() || undefined,
+            subcategory: formData.subcategory?.toUpperCase() || undefined,
             mrp: formData.mrp ? parseFloat(formData.mrp) : undefined
         };
 
@@ -155,6 +160,14 @@ export default function ProductsPage() {
             updateMutation.mutate({ id: editingProduct.id, data });
         } else {
             createMutation.mutate(data);
+        }
+    };
+
+    const handleNumericInput = (e: React.ChangeEvent<HTMLInputElement>, field: string) => {
+        const value = e.target.value;
+        // Allow only numbers and decimal point
+        if (value === '' || /^\d*\.?\d*$/.test(value)) {
+            setFormData({ ...formData, [field]: value });
         }
     };
 
@@ -317,10 +330,10 @@ export default function ProductsPage() {
                                 <div>
                                     <label className="block text-sm font-medium text-neutral-700 mb-1">MRP (₹)</label>
                                     <input
-                                        type="number"
-                                        step="0.01"
+                                        type="text"
                                         value={formData.mrp}
-                                        onChange={(e) => setFormData({ ...formData, mrp: e.target.value })}
+                                        onChange={(e) => handleNumericInput(e, 'mrp')}
+                                        placeholder="0.00"
                                         className="w-full px-3 py-2 border border-neutral-300 rounded-none focus:ring-2 focus:ring-brand-500"
                                     />
                                 </div>

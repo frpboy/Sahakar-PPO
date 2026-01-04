@@ -151,7 +151,13 @@ export default function SuppliersPage() {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         const data = {
-            ...formData,
+            supplierCode: formData.supplierCode?.toUpperCase() || undefined,
+            supplierName: formData.supplierName.toUpperCase(),
+            contactPerson: formData.contactPerson?.toUpperCase() || undefined,
+            mobile: formData.mobile || undefined,
+            email: formData.email || undefined,
+            gstNumber: formData.gstNumber?.toUpperCase() || undefined,
+            address: formData.address?.toUpperCase() || undefined,
             creditDays: formData.creditDays ? parseInt(formData.creditDays) : undefined
         };
 
@@ -159,6 +165,14 @@ export default function SuppliersPage() {
             updateMutation.mutate({ id: editingSupplier.id, data });
         } else {
             createMutation.mutate(data);
+        }
+    };
+
+    const handleNumericInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        // Allow only integers
+        if (value === '' || /^\d+$/.test(value)) {
+            setFormData({ ...formData, creditDays: value });
         }
     };
 
@@ -354,9 +368,10 @@ export default function SuppliersPage() {
                             <div>
                                 <label className="block text-sm font-medium text-neutral-700 mb-1">Credit Days</label>
                                 <input
-                                    type="number"
+                                    type="text"
                                     value={formData.creditDays}
-                                    onChange={(e) => setFormData({ ...formData, creditDays: e.target.value })}
+                                    onChange={handleNumericInput}
+                                    placeholder="0"
                                     className="w-full px-3 py-2 border border-neutral-300 rounded-none focus:ring-2 focus:ring-brand-500"
                                 />
                             </div>
