@@ -288,7 +288,9 @@ export class PpoImportService {
                 // Delete all existing pending items (we'll recalculate from scratch)
                 await tx.delete(pendingItems);
 
-                // Aggregate from order_requests where productId is not null and stage = 'PENDING'
+                // Aggregate from order_requests where productId is not null
+                // IMPORTANT: Only include orders with stage = 'PENDING'
+                // Orders with stage = 'COMPLETED' or 'Pending' (completed in ERP) are excluded
                 const { sql } = await import('drizzle-orm');
                 const aggregatedItems = await tx.execute(sql`
                     SELECT 
@@ -296,20 +298,29 @@ export class PpoImportService {
                         SUM(req_qty) as total_qty
                     FROM order_requests
                     WHERE product_id IS NOT NULL 
-                    AND stage = 'PENDING'
+                    AND (
+                        stage = 'PENDING' 
+                        OR stage = 'UNMATCHED'
+                    )
+                    AND LOWER(stage) NOT LIKE '%complet%'
+                    AND LOWER(stage) NOT LIKE '%done%'
+                    AND LOWER(stage) NOT LIKE '%executed%'
                     GROUP BY product_id
                 `);
 
-                // Insert aggregated pending_items
+                // Insert aggregated pending_items with state = 'PENDING'
                 for (const item of aggregatedItems.rows) {
-                    await tx.insert(pendingItems).values({
-                        productId: item.product_id as string,
-                        reqQty: parseInt(item.total_qty as string, 10),
-                        state: 'PENDING'
-                    });
+                    const totalQty = parseInt(item.total_qty as string, 10);
+                    if (totalQty > 0) {
+                        await tx.insert(pendingItems).values({
+                            productId: item.product_id as string,
+                            reqQty: totalQty,
+                            state: 'PENDING'
+                        });
+                    }
                 }
 
-                console.log(`Created ${aggregatedItems.rows.length} aggregated pending items`);
+                console.log(`Created ${aggregatedItems.rows.length} aggregated pending items (excluding completed orders)`);
             });
 
         } catch (dbError) {
