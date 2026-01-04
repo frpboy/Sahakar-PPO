@@ -15,17 +15,29 @@ import { ColumnDef } from '@tanstack/react-table';
 type RepItem = {
     id: string;
     orderStatus?: string;
+    notes?: string;
     pendingItem: {
         id: string;
         orderedQty: number;
         stockQty: number;
         offerQty: number;
         notes: string;
+        decidedSupplier?: string;
         orderRequest: {
             productName: string;
             orderId: string;
             customerId: string;
             reqQty: number;
+            mrp?: string;
+            packing?: string;
+            remarks?: string;
+            subcategory?: string;
+            rep?: string;
+            mobile?: string;
+            primarySup?: string;
+            secondarySup?: string;
+            acceptedDate?: string;
+            acceptedTime?: string;
         }
     }
 };
@@ -177,16 +189,16 @@ export default function RepAllocationPage() {
                 const item = row.original;
                 return editingId === item.id ? (
                     <select
-                        className="w-full bg-white border border-brand-500 p-1 text-[10px] font-bold uppercase"
-                        value={editFormData.orderStatus || 'Pending'}
+                        className="w-full bg-white border border-brand-500 p-1 text-[10px] font-bold uppercase cursor-pointer"
+                        value={editFormData.orderStatus || 'PENDING'}
                         onChange={(e) => handleInputChange('orderStatus', e.target.value)}
                     >
-                        <option value="Pending">Pending</option>
-                        <option value="Ordered">Ordered</option>
-                        <option value="Cancelled">Cancelled</option>
-                        <option value="Short">Short</option>
+                        <option value="PENDING">PENDING</option>
+                        <option value="ORDERED">ORDERED</option>
+                        <option value="CANCELLED">CANCELLED</option>
+                        <option value="SHORT">SHORT</option>
                     </select>
-                ) : <StatusBadge status={item.orderStatus || 'Pending'} />;
+                ) : <StatusBadge status={(item.orderStatus || 'PENDING').toUpperCase() as any} />;
             }
         },
         {

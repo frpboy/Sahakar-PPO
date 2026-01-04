@@ -9,9 +9,15 @@ export type StatusType =
     | 'PRODUCT CHANGED'
     | 'DAMAGED'
     | 'MISSING'
+    | 'PENDING'
+    | 'REP'
+    | 'SLIPPED'
+    | 'CLOSED'
+    | 'ORDERED'
+    | 'CANCELLED'
+    | 'SHORT'
     | 'DONE'
     | 'LOCKED'
-    | 'PENDING'
     | 'REP_ALLOCATION'
     | 'SLIP_GENERATED'
     | 'EXECUTED';
@@ -28,9 +34,15 @@ const statusMap: Record<StatusType, { bg: string, text: string, border: string, 
     'PRODUCT CHANGED': { bg: 'bg-warning-100/40', text: 'text-warning-600', border: 'border-warning-200/50', label: 'CHANGED' },
     'DAMAGED': { bg: 'bg-danger-100/40', text: 'text-danger-600', border: 'border-danger-200/50', label: 'DAMAGED' },
     'MISSING': { bg: 'bg-danger-100/40', text: 'text-danger-600', border: 'border-danger-200/50', label: 'MISSING' },
+    'PENDING': { bg: 'bg-warning-100/40', text: 'text-warning-600', border: 'border-warning-200/50', label: 'PENDING' },
+    'REP': { bg: 'bg-brand-50', text: 'text-brand-600', border: 'border-brand-200/50', label: 'REP' },
+    'SLIPPED': { bg: 'bg-indigo-50', text: 'text-indigo-600', border: 'border-indigo-200/50', label: 'SLIPPED' },
+    'CLOSED': { bg: 'bg-neutral-100', text: 'text-neutral-500', border: 'border-neutral-200/50', label: 'CLOSED' },
+    'ORDERED': { bg: 'bg-success-100/40', text: 'text-success-600', border: 'border-success-200/50', label: 'ORDERED' },
+    'CANCELLED': { bg: 'bg-danger-100/40', text: 'text-danger-600', border: 'border-danger-200/50', label: 'CANCELLED' },
+    'SHORT': { bg: 'bg-warning-100/40', text: 'text-warning-600', border: 'border-warning-200/50', label: 'SHORT' },
     'DONE': { bg: 'bg-brand-100/40', text: 'text-brand-600', border: 'border-brand-200/50', label: 'DONE' },
     'LOCKED': { bg: 'bg-neutral-100', text: 'text-neutral-400', border: 'border-neutral-200/50', label: 'LOCKED' },
-    'PENDING': { bg: 'bg-warning-100/40', text: 'text-warning-600', border: 'border-warning-200/50', label: 'PENDING' },
     'REP_ALLOCATION': { bg: 'bg-brand-50', text: 'text-brand-600', border: 'border-brand-200/50', label: 'REP ALLOC' },
     'SLIP_GENERATED': { bg: 'bg-indigo-50', text: 'text-indigo-600', border: 'border-indigo-200/50', label: 'SLIP GEN' },
     'EXECUTED': { bg: 'bg-success-100/40', text: 'text-success-600', border: 'border-success-200/50', label: 'EXECUTED' },
