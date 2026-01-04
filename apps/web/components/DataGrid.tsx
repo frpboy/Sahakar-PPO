@@ -112,7 +112,7 @@ export function DataGrid<TData>({
     const virtualizer = useVirtualizer({
         count: rows.length,
         getScrollElement: () => parentRef.current,
-        estimateSize: () => 52,
+        estimateSize: () => 44,
         overscan: 10,
     });
 
@@ -147,7 +147,7 @@ export function DataGrid<TData>({
         <div className="flex flex-col h-full">
             {/* Top Toolbar with Bulk Delete */}
             {enableRowSelection && onBulkDelete && Object.keys(rowSelection).length > 0 && (
-                <div className="bg-white border-x border-t border-neutral-200 rounded-t-md p-3 flex items-center justify-between">
+                <div className="bg-white border-x border-t border-neutral-200 rounded-t-xl p-3 flex items-center justify-between">
                     <span className="text-sm text-neutral-600 font-medium">
                         {Object.keys(rowSelection).length} item(s) selected
                     </span>
@@ -164,21 +164,26 @@ export function DataGrid<TData>({
             )}
             <div
                 ref={parentRef}
-                className={`spreadsheet-grid overflow-auto flex-1 relative w-full ${enableRowSelection && Object.keys(rowSelection).length > 0 ? 'border-x' : 'rounded-t-md border-t border-x'} border-neutral-200 shadow-sm bg-white`}
+                className={`spreadsheet-grid overflow-auto flex-1 relative w-full border border-neutral-200 shadow-sm bg-white max-h-[calc(100vh-220px)] ${enableRowSelection && Object.keys(rowSelection).length > 0 ? 'border-t-0' : 'rounded-xl'}`}
             >
                 <div style={{ height: `${virtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
                     <table className="w-full border-collapse text-[13px]" style={{ tableLayout: 'fixed' }}>
-                        <thead className={stickyHeader ? 'sticky top-0 z-20 bg-neutral-50 shadow-sm' : ''}>
+                        <thead className="sticky top-0 z-20 bg-white border-b border-neutral-200 shadow-sm">
                             {table.getHeaderGroups().map((headerGroup) => (
-                                <tr key={headerGroup.id} className="border-b border-neutral-200/60">
+                                <tr key={headerGroup.id} className="">
                                     {headerGroup.headers.map((header, index) => {
                                         const isFrozen = index < frozenColumns;
+                                        // Cast to any to access meta
+                                        const meta = header.column.columnDef.meta as any;
+                                        const align = meta?.align || 'left';
+
                                         return (
                                             <th
                                                 key={header.id}
                                                 className={`
-                        px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-widest text-left
+                        px-3 py-2 text-[11px] font-semibold text-neutral-500 uppercase tracking-wide
                         ${isFrozen ? 'sticky left-0 z-30 bg-neutral-50' : ''}
+                        ${align === 'right' ? 'text-right' : align === 'center' ? 'text-center' : 'text-left'}
                       `}
                                                 style={{
                                                     width: header.getSize(),
@@ -200,7 +205,7 @@ export function DataGrid<TData>({
                                         key={row.id}
                                         onClick={() => onRowClick?.(row.original)}
                                         className={`
-                    border-b border-neutral-200 hover:bg-neutral-50 transition-colors cursor-default group
+                    border-b border-neutral-100 last:border-0 hover:bg-neutral-50 transition-colors cursor-default group h-[44px]
                     ${onRowClick ? 'cursor-pointer' : ''}
                   `}
                                         style={{
@@ -208,18 +213,22 @@ export function DataGrid<TData>({
                                             top: 0,
                                             left: 0,
                                             width: '100%',
-                                            height: `${virtualRow.size}px`,
+                                            height: `44px`,
                                             transform: `translateY(${virtualRow.start}px)`,
                                         }}
                                     >
                                         {row.getVisibleCells().map((cell, index) => {
                                             const isFrozen = index < frozenColumns;
+                                            const meta = cell.column.columnDef.meta as any;
+                                            const align = meta?.align || 'left';
+
                                             return (
                                                 <td
                                                     key={cell.id}
                                                     className={`
-                          px-4 py-2 whitespace-nowrap overflow-hidden text-ellipsis text-neutral-700 align-middle
+                          px-3 py-2 whitespace-nowrap overflow-hidden text-ellipsis text-neutral-700 align-middle
                           ${isFrozen ? 'sticky left-0 z-10 bg-white group-hover:bg-neutral-50' : ''}
+                          ${align === 'right' ? 'text-right tabular-nums font-semibold' : align === 'center' ? 'text-center' : 'text-left'}
                         `}
                                                 >
                                                     {flexRender(cell.column.columnDef.cell, cell.getContext())}

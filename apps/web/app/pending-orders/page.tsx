@@ -4,9 +4,9 @@ import { useState, useMemo } from 'react';
 import { DataGrid } from '../../components/DataGrid';
 import { FilterBar } from '../../components/FilterBar';
 import { StatusBadge } from '../../components/StatusBadge';
-import { ConfirmModal } from '../../components/ConfirmModal';
+
 import { useToast } from '../../components/Toast';
-import { ClipboardList, Edit, Send, Info, CheckCircle2, XCircle } from 'lucide-react';
+import { ClipboardList, Edit, ArrowRight, Info, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import { ColumnDef } from '@tanstack/react-table';
 import { useUserRole } from '../../context/UserRoleContext';
 import { useOfflineSync } from '../../hooks/useOfflineSync';
@@ -38,7 +38,7 @@ export default function PendingOrdersPage() {
     // State
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editFormData, setEditFormData] = useState<Partial<PendingItem>>({});
-    const [confirmMoveId, setConfirmMoveId] = useState<string | null>(null);
+    const [movingIds, setMovingIds] = useState<Set<string>>(new Set());
 
     // Filter State
     const [filters, setFilters] = useState<Record<string, string>>({});
@@ -85,15 +85,29 @@ export default function PendingOrdersPage() {
             if (!res.ok) throw new Error('Move failed');
             return res.json();
         },
-        onSuccess: () => {
+        onSuccess: (_data, variables) => {
             queryClient.invalidateQueries({ queryKey: ['pending-items'] });
-            setConfirmMoveId(null);
-            showToast('Item moved to Rep Allocation', 'success');
+            setMovingIds(prev => {
+                const next = new Set(prev);
+                next.delete(variables);
+                return next;
+            });
+            showToast('Moved to REP allocation', 'success');
         },
-        onError: () => {
+        onError: (_err, variables) => {
+            setMovingIds(prev => {
+                const next = new Set(prev);
+                next.delete(variables);
+                return next;
+            });
             showToast('Failed to move item', 'error');
         }
     });
+
+    const handleMoveToRep = (id: string) => {
+        setMovingIds(prev => new Set(prev).add(id));
+        moveToRepMutation.mutate(id);
+    };
 
     const handleEditClick = (item: PendingItem) => {
         setEditingId(item.id);
@@ -147,119 +161,133 @@ export default function PendingOrdersPage() {
     const columns = useMemo<ColumnDef<PendingItem>[]>(() => [
         {
             header: 'Product Details',
-            size: 250,
+            size: 360,
+            meta: { align: 'left' } as any,
             cell: ({ row }) => {
                 const item = row.original;
                 return (
                     <div className="flex flex-col">
-                        <span className="font-bold text-primary-900 group-hover:text-primary-700 transition-colors uppercase text-[11px] tracking-tight">{item.product_name}</span>
-                        <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-tighter">{item.packing || '-'} {item.category ? `(${item.category})` : ''}</span>
+                        <span className="font-medium text-neutral-900 group-hover:text-primary-700 transition-colors uppercase text-[13px] tracking-tight">{item.product_name}</span>
+                        <span className="text-xs text-neutral-400 font-medium uppercase tracking-tighter mt-0.5">{item.packing || '-'} {item.category ? `(${item.category})` : ''}</span>
                     </div>
                 );
             }
         },
         {
             header: 'Supplier Priority',
-            size: 150,
+            size: 160,
+            meta: { align: 'left' } as any,
             cell: ({ row }) => {
                 const item = row.original;
                 return (
                     <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-primary-700">{item.decided_supplier_name || 'Pending Allocation'}</span>
+                        <span className="text-[11px] font-bold text-primary-700">{item.decided_supplier_name || 'Pending Allocation'}</span>
                     </div>
                 );
             }
         },
         {
-            header: 'Req',
+            header: 'REQ',
             accessorKey: 'req_qty',
-            size: 60,
-            cell: (info) => <span className="tabular-nums font-bold text-neutral-400">{info.getValue() as number}</span>
+            size: 80,
+            meta: { align: 'right' } as any,
+            cell: (info) => <span className="tabular-nums font-semibold text-neutral-600">{info.getValue() as number}</span>
         },
         {
-            header: 'Ordered',
-            size: 100,
+            header: 'ORDERED',
+            size: 90,
+            meta: { align: 'right' } as any,
             cell: ({ row }) => {
                 const item = row.original;
                 return editingId === item.id ? (
                     <input
                         type="number"
-                        className="w-full bg-white border border-primary-500 rounded px-1 py-1 text-xs font-bold tabular-nums focus:ring-2 focus:ring-primary-500/20 outline-none"
+                        className="w-full bg-white border border-primary-500 rounded px-1 py-1 text-xs font-bold tabular-nums focus:ring-2 focus:ring-primary-500/20 outline-none text-right"
                         value={editFormData.ordered_qty}
                         onChange={(e) => handleInputChange('ordered_qty', parseInt(e.target.value))}
                     />
-                ) : <span className="tabular-nums font-bold text-primary-900">{item.ordered_qty}</span>;
+                ) : <span className="tabular-nums font-semibold text-primary-900">{item.ordered_qty}</span>;
             }
         },
         {
-            header: 'Stock',
-            size: 100,
+            header: 'STOCK',
+            size: 80,
+            meta: { align: 'right' } as any,
             cell: ({ row }) => {
                 const item = row.original;
                 return editingId === item.id ? (
                     <input
                         type="number"
-                        className="w-full bg-white border border-primary-500 rounded px-1 py-1 text-xs font-bold tabular-nums focus:ring-2 focus:ring-primary-500/20 outline-none"
+                        className="w-full bg-white border border-primary-500 rounded px-1 py-1 text-xs font-bold tabular-nums focus:ring-2 focus:ring-primary-500/20 outline-none text-right"
                         value={editFormData.stock_qty}
                         onChange={(e) => handleInputChange('stock_qty', parseInt(e.target.value))}
                     />
-                ) : <span className="tabular-nums font-bold text-primary-900">{item.stock_qty}</span>;
+                ) : <span className="tabular-nums font-semibold text-neutral-600">{item.stock_qty}</span>;
             }
         },
         {
-            header: 'Offer',
-            size: 100,
+            header: 'OFFER',
+            size: 80,
+            meta: { align: 'right' } as any,
             cell: ({ row }) => {
                 const item = row.original;
                 return editingId === item.id ? (
                     <input
                         type="number"
-                        className="w-full bg-white border border-primary-500 rounded px-1 py-1 text-xs font-bold tabular-nums focus:ring-2 focus:ring-primary-500/20 outline-none"
+                        className="w-full bg-white border border-primary-500 rounded px-1 py-1 text-xs font-bold tabular-nums focus:ring-2 focus:ring-primary-500/20 outline-none text-right"
                         value={editFormData.offer_qty}
                         onChange={(e) => handleInputChange('offer_qty', parseInt(e.target.value))}
                     />
-                ) : <span className="tabular-nums font-bold text-primary-900">{item.offer_qty}</span>;
+                ) : <span className="tabular-nums font-semibold text-success-600">{item.offer_qty}</span>;
             }
         },
         {
             header: 'Actions',
-            size: 150,
+            size: 90,
+            meta: { align: 'center' } as any,
             cell: ({ row }) => {
                 const item = row.original;
+                const isMoving = movingIds.has(item.id);
+
                 return (
-                    <div className="flex items-center gap-3">
+                    <div className={`flex items-center justify-center gap-2 transition-opacity duration-300 ${isMoving ? 'opacity-50 pointer-events-none' : ''}`}>
                         {editingId === item.id ? (
                             <>
                                 <button
                                     onClick={() => handleSave(item.id)}
-                                    className="p-1 text-accent-600 hover:bg-accent-100 rounded transition-colors"
+                                    className="p-1.5 text-accent-600 hover:bg-accent-50 rounded-lg transition-colors"
                                     title="Save Changes"
                                 >
-                                    <CheckCircle2 size={18} />
+                                    <CheckCircle2 size={16} strokeWidth={2} />
                                 </button>
                                 <button
                                     onClick={() => setEditingId(null)}
-                                    className="p-1 text-error-600 hover:bg-error-100 rounded transition-colors"
+                                    className="p-1.5 text-error-600 hover:bg-error-50 rounded-lg transition-colors"
                                     title="Cancel"
                                 >
-                                    <XCircle size={18} />
+                                    <XCircle size={16} strokeWidth={2} />
                                 </button>
                             </>
                         ) : (
                             <>
                                 <button
                                     onClick={() => handleEditClick(item)}
-                                    className="text-neutral-400 hover:text-primary-700 transition-colors"
+                                    className="p-1.5 text-neutral-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
                                     title="Edit Row"
                                 >
-                                    <Edit size={18} />
+                                    <Edit size={16} strokeWidth={1.8} />
                                 </button>
                                 <button
-                                    onClick={() => setConfirmMoveId(item.id)}
-                                    className="text-neutral-400 hover:text-accent-600 transition-colors"
+                                    onClick={() => handleMoveToRep(item.id)}
+                                    className="p-1.5 text-neutral-400 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-colors relative"
                                     title="Move to Rep"
+                                    disabled={isMoving}
                                 >
-                                    <Send size={18} />
+                                    {isMoving ? (
+                                        <Loader2 size={16} className="animate-spin text-brand-600" />
+                                    ) : (
+                                        <ArrowRight size={16} strokeWidth={1.8} />
+                                    )}
                                 </button>
                             </>
                         )}
@@ -267,7 +295,7 @@ export default function PendingOrdersPage() {
                 );
             }
         }
-    ], [editingId, editFormData]);
+    ], [editingId, editFormData, movingIds, handleMoveToRep, handleSave]);
 
     return (
         <div className="flex flex-col h-full bg-transparent font-sans">
@@ -310,15 +338,7 @@ export default function PendingOrdersPage() {
                 </div>
             </main>
 
-            <ConfirmModal
-                isOpen={!!confirmMoveId}
-                onConfirm={() => confirmMoveId && moveToRepMutation.mutate(confirmMoveId)}
-                onCancel={() => setConfirmMoveId(null)}
-                title="Consolidate & Move to REP"
-                message="This will lock the current quantities and move the item to the Representation Allocation stage. Are you sure?"
-                confirmLabel="Confirm Move"
-                variant="primary"
-            />
+
 
             {/* Edit Drawer Overlay Placeholder (Actually a modal/overlay in System) */}
             {editingId && (
