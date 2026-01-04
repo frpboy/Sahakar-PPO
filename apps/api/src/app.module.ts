@@ -14,6 +14,7 @@ import { DutySessionsModule } from './modules/duty-sessions/duty-sessions.module
 import { AuditLogsModule } from './modules/audit-logs/audit-logs.module';
 import { NameChangesModule } from './modules/name-changes/name-changes.module';
 import { SettingsModule } from './modules/settings/settings.module';
+import { AnalysisModule } from './modules/analysis/analysis.module';
 import { RawBodyMiddleware } from './common/middleware/raw-body.middleware';
 
 @Module({
@@ -35,7 +36,8 @@ import { RawBodyMiddleware } from './common/middleware/raw-body.middleware';
         DutySessionsModule,
         AuditLogsModule,
         NameChangesModule,
-        SettingsModule
+        SettingsModule,
+        AnalysisModule
     ],
     controllers: [],
     providers: [],
@@ -47,4 +49,3 @@ export class AppModule implements NestModule {
             .forRoutes({ path: 'ppo/import/upload', method: RequestMethod.POST });
     }
 }
-

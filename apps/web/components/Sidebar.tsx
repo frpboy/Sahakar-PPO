@@ -23,7 +23,11 @@ import {
     LogOut,
     ChevronLeft,
     ChevronRight,
-    ArrowLeft
+    ArrowLeft,
+    PieChart,
+    AlertTriangle,
+    Activity,
+    History
 } from 'lucide-react';
 import { useUserRole } from '../context/UserRoleContext';
 
@@ -51,6 +55,15 @@ const MENU_GROUPS = [
         ]
     },
     {
+        title: 'Order Slip Status',
+        items: [
+            { label: 'Status Summary', href: '/status-summary', icon: PieChart },
+            { label: 'Supplier Reliability', href: '/supplier-reliability', icon: Factory },
+            { label: 'Fraud Alerts', href: '/fraud-alerts', icon: AlertTriangle },
+            { label: 'Aging Report', href: '/aging-report', icon: History },
+        ]
+    },
+    {
         title: 'Analysis',
         items: [
             { label: 'Status Ledger', href: '/ledger', icon: ListChecks },
@@ -72,6 +85,7 @@ const MENU_GROUPS = [
             { label: 'Users & Roles', href: '/users', icon: Shield },
             { label: 'Settings', href: '/settings', icon: Settings },
             { label: 'Audit Logs', href: '/logs', icon: ScrollText },
+            { label: 'System Events', href: '/logs/events', icon: Activity },
             { label: 'Duty Sessions', href: '/duty-sessions', icon: Clock },
         ]
     }
