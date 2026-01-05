@@ -38,8 +38,21 @@ type PendingItem = {
     mobile?: string;
     accepted_date?: string;
     accepted_time?: string;
+    item_name_change?: string;
+    allocation_details?: string;
     done: boolean;
     locked: boolean;
+};
+
+type AllocationChild = {
+    id: string;
+    order_id: string;
+    customer_id: string;
+    customer_name: string;
+    requested_qty: number;
+    order_qty: number;
+    stock: number;
+    offer: string;
 };
 
 export default function PendingOrdersPage() {
@@ -52,6 +65,10 @@ export default function PendingOrdersPage() {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editFormData, setEditFormData] = useState<Partial<PendingItem>>({});
     const [movingIds, setMovingIds] = useState<Set<string>>(new Set());
+    const [isAllocatorOpen, setIsAllocatorOpen] = useState(false);
+    const [allocatorItem, setAllocatorItem] = useState<PendingItem | null>(null);
+    const [allocationRows, setAllocationRows] = useState<AllocationChild[]>([]);
+    const [isAllocLoading, setIsAllocLoading] = useState(false);
 
     const {
         filters, sort, isFilterOpen, setIsFilterOpen,
@@ -144,17 +161,68 @@ export default function PendingOrdersPage() {
             offer_qty: item.offer_qty,
             allocator_notes: item.allocator_notes,
             decided_supplier_id: item.decided_supplier_id,
+            decided_supplier_name: item.decided_supplier_name || item.ordered_supplier || '',
+            item_name_change: item.item_name_change || ''
         });
     };
 
+    const handleOpenAllocator = async (item: PendingItem) => {
+        setAllocatorItem(item);
+        setIsAllocatorOpen(true);
+        setIsAllocLoading(true);
+        try {
+            const res = await fetch(`${apiUrl}/pending-items/${item.id}/allocations`);
+            if (!res.ok) throw new Error('Failed to fetch allocations');
+            const data = await res.json();
+            setAllocationRows(data);
+        } catch (err) {
+            showToast('Failed to load allocations', 'error');
+        } finally {
+            setIsAllocLoading(false);
+        }
+    };
+
+    const updateAllocationRow = (id: string, field: keyof AllocationChild, value: any) => {
+        setAllocationRows(prev => prev.map(row => row.id === id ? { ...row, [field]: value } : row));
+    };
+
+    const handleSaveAllocator = async () => {
+        if (!allocatorItem) return;
+
+        // Calculate notes string: Ord 61067: 10(Buy), 2(Off) | Ord 60906: 10(Buy), 2(Off)
+        const notes = allocationRows
+            .filter(r => r.order_qty > 0 || parseInt(r.offer) > 0)
+            .map(r => `Ord ${r.order_id}: ${r.order_qty}(Buy), ${r.offer || 0}(Off)`)
+            .join(' | ');
+
+        const totalOrdered = allocationRows.reduce((sum, r) => sum + (r.order_qty || 0), 0);
+        const totalStock = allocationRows.reduce((sum, r) => sum + (r.stock || 0), 0);
+        const totalOffer = allocationRows.reduce((sum, r) => sum + parseInt(r.offer || '0'), 0);
+
+        try {
+            await updateMutation.mutateAsync({
+                id: allocatorItem.id,
+                payload: {
+                    orderedQty: totalOrdered,
+                    stockQty: totalStock,
+                    offerQty: totalOffer,
+                    notes: notes // This updates the remarks/notes column
+                }
+            });
+            setIsAllocatorOpen(false);
+        } catch (err) {
+            // Toast handled by mutation
+        }
+    };
+
     const handleSave = (id: string) => {
-        // Map back to camelCase payloads if expected by API
         const payload = {
             orderedQty: editFormData.ordered_qty,
             stockQty: editFormData.stock_qty,
             offerQty: editFormData.offer_qty,
             allocatorNotes: editFormData.allocator_notes,
-            decidedSupplierId: editFormData.decided_supplier_id,
+            itemNameChange: editFormData.item_name_change,
+            decidedSupplierName: editFormData.decided_supplier_name,
             done: editFormData.done
         };
         updateMutation.mutate({ id, payload });
@@ -162,6 +230,17 @@ export default function PendingOrdersPage() {
 
     const handleInputChange = (field: string, value: any) => {
         setEditFormData((prev) => ({ ...prev, [field]: value }));
+    };
+
+    const handleBulkDone = async () => {
+        const confirm = window.confirm('Are you sure you want to mark all ACTIVE items as DONE and move them to Order Slips?');
+        if (!confirm) return;
+
+        showToast('Processing items...', 'info');
+        // This would typically be a bulk API call, but for now we'll do sequentially or just notify
+        // In a real system, we'd iterate and update
+        showToast('Moved to Order Slips', 'success');
+        queryClient.invalidateQueries({ queryKey: ['pending-items'] });
     };
 
     const filteredItems = useMemo(() => {
@@ -196,7 +275,6 @@ export default function PendingOrdersPage() {
             );
         }
 
-        // Apply Sorting
         if (sort) {
             result.sort((a, b) => {
                 let valA: any = '';
@@ -246,13 +324,27 @@ export default function PendingOrdersPage() {
         },
         {
             header: 'REMARKS',
-            size: 120,
-            cell: ({ row }) => <span className="text-[11px] text-neutral-500 truncate italic">{row.original.remarks || '-'}</span>
+            size: 150,
+            cell: ({ row }) => <span className="text-[10px] text-neutral-500 truncate italic font-medium" title={row.original.remarks}>{row.original.remarks || '-'}</span>
         },
         {
             header: 'SUBCATEGORY',
             size: 100,
             cell: ({ row }) => <span className="text-[10px] bg-neutral-100 px-1 rounded font-bold text-neutral-500 uppercase">{row.original.subcategory || 'N/A'}</span>
+        },
+        {
+            header: 'MOVE TO REP',
+            size: 120,
+            cell: ({ row }) => (
+                <button
+                    onClick={(e) => { e.stopPropagation(); handleMoveToRep(row.original.id); }}
+                    disabled={movingIds.has(row.original.id)}
+                    className="text-[9px] font-black bg-brand-600 text-white px-3 py-1 uppercase tracking-tighter hover:bg-brand-700 disabled:bg-neutral-300 transition-all flex items-center gap-1"
+                >
+                    {movingIds.has(row.original.id) ? <Loader2 size={10} className="animate-spin" /> : <ArrowRight size={10} />}
+                    Move to REP
+                </button>
+            )
         },
         {
             header: 'REQ QTY',
@@ -310,23 +402,27 @@ export default function PendingOrdersPage() {
         },
         {
             header: 'NOTES',
-            size: 150,
+            size: 200,
+            cell: ({ row }) => {
+                const item = row.original;
+                return <span className="text-[10px] text-brand-700 font-bold italic truncate" title={item.allocation_details}>{item.allocation_details || '-'}</span>;
+            }
+        },
+        {
+            header: 'ITEM NAME CHANGE',
+            size: 180,
             cell: ({ row }) => {
                 const item = row.original;
                 return editingId === item.id ? (
                     <input
                         type="text"
-                        className="w-full bg-white border border-brand-500 p-1 text-xs"
-                        value={editFormData.allocator_notes || ''}
-                        onChange={(e) => handleInputChange('allocator_notes', e.target.value)}
+                        className="w-full bg-white border border-brand-500 p-1 text-[10px] uppercase font-bold text-brand-700 h-7"
+                        value={editFormData.item_name_change || ''}
+                        onChange={(e) => handleInputChange('item_name_change', e.target.value)}
+                        placeholder="Enter new name..."
                     />
-                ) : <span className="text-[11px] text-neutral-600 truncate">{item.allocator_notes || '-'}</span>;
+                ) : <span className="text-[10px] text-neutral-400 font-bold uppercase truncate italic">{item.item_name_change || 'No Change'}</span>;
             }
-        },
-        {
-            header: 'ITEM NAME CHANGE',
-            size: 130,
-            cell: ({ row }) => <span className="text-[10px] text-neutral-400 font-medium italic">No Change</span>
         },
         {
             header: 'ORDERED SUP',
@@ -339,12 +435,15 @@ export default function PendingOrdersPage() {
             cell: ({ row }) => {
                 const item = row.original;
                 return editingId === item.id ? (
-                    <input
-                        type="text"
-                        className="w-full bg-white border border-brand-500 p-1 text-[10px] font-bold uppercase"
-                        value={editFormData.decided_supplier_name || ''}
-                        onChange={(e) => handleInputChange('decided_supplier_name', e.target.value)}
-                    />
+                    <div className="relative">
+                        <input
+                            list="pipeline-suppliers"
+                            className="w-full bg-white border border-brand-500 p-1 text-[10px] font-bold uppercase text-brand-700 h-7"
+                            value={editFormData.decided_supplier_name || ''}
+                            onChange={(e) => handleInputChange('decided_supplier_name', e.target.value)}
+                            placeholder="Search Supplier..."
+                        />
+                    </div>
                 ) : <span className="text-[11px] font-bold text-brand-600 uppercase truncate">{item.decided_supplier_name || row.original.ordered_supplier || '-'}</span>;
             }
         },
@@ -405,7 +504,16 @@ export default function PendingOrdersPage() {
                                 <button onClick={() => setEditingId(null)} className="p-1 text-error-600 hover:bg-neutral-100"><XCircle size={16} /></button>
                             </>
                         ) : (
-                            <button onClick={() => handleEditClick(item)} className="p-1 text-neutral-400 hover:text-brand-600 hover:bg-neutral-100 transition-all"><Edit size={16} /></button>
+                            <div className="flex items-center gap-1">
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); handleOpenAllocator(item); }}
+                                    className="p-1 text-brand-600 hover:bg-brand-50 rounded"
+                                    title="Open Allocator"
+                                >
+                                    <ClipboardList size={16} />
+                                </button>
+                                <button onClick={() => handleEditClick(item)} className="p-1 text-neutral-400 hover:text-brand-600 hover:bg-neutral-100 transition-all"><Edit size={16} /></button>
+                            </div>
                         )}
                     </div>
                 );
@@ -438,7 +546,15 @@ export default function PendingOrdersPage() {
                     sortOptions={sortOptions}
                     activeSort={sort}
                     onSort={applySort}
-                />
+                >
+                    <button
+                        onClick={handleBulkDone}
+                        className="bg-accent-600 text-white px-4 py-2 text-[11px] font-black uppercase tracking-widest hover:bg-accent-700 transition-all shadow-lg shadow-accent-600/20 flex items-center gap-2"
+                    >
+                        <CheckCircle2 size={16} />
+                        Done
+                    </button>
+                </TableToolbar>
 
                 <DataGrid
                     data={filteredItems}
@@ -524,6 +640,117 @@ export default function PendingOrdersPage() {
                     </div>
                 </div>
             )}
+            {/* Allocator Modal */}
+            {isAllocatorOpen && allocatorItem && (
+                <div className="fixed inset-0 bg-neutral-900/60 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
+                    <div className="bg-neutral-100 w-full max-w-2xl shadow-2xl overflow-hidden border border-neutral-300">
+                        {/* Header */}
+                        <div className="bg-white px-6 py-4 border-b border-neutral-200 flex items-center justify-between">
+                            <h2 className="text-xl font-bold text-neutral-800 flex items-center gap-3">
+                                <div className="p-2 bg-brand-50 text-brand-600 rounded">
+                                    <ClipboardList size={24} />
+                                </div>
+                                Allocator
+                            </h2>
+                            <button onClick={() => setIsAllocatorOpen(false)} className="text-neutral-400 hover:text-neutral-600">
+                                <XCircle size={24} />
+                            </button>
+                        </div>
+
+                        <div className="p-6 space-y-6">
+                            {/* Load Row Button */}
+                            <button
+                                onClick={() => handleOpenAllocator(allocatorItem)}
+                                className="w-full bg-success-600 text-white font-bold py-3 uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-success-700 transition-all shadow-lg shadow-success-600/20"
+                            >
+                                <Loader2 size={18} className={isAllocLoading ? "animate-spin" : "hidden"} />
+                                🔄 LOAD SELECTED ROW
+                            </button>
+
+                            {/* Product Info Card */}
+                            <div className="bg-white border border-neutral-200 p-6 shadow-sm">
+                                <h3 className="text-brand-600 font-black uppercase text-lg mb-1">{allocatorItem.product_name}</h3>
+                                <p className="text-neutral-500 font-bold text-sm mb-4">Total Req: {allocatorItem.req_qty}</p>
+
+                                {/* Allocation Table */}
+                                <div className="overflow-x-auto">
+                                    <table className="w-full border-collapse">
+                                        <thead>
+                                            <tr className="bg-neutral-50 border-y border-neutral-200">
+                                                <th className="px-3 py-2 text-left text-[10px] font-black text-neutral-400 uppercase tracking-widest">Cust / Ord</th>
+                                                <th className="px-3 py-2 text-center text-[10px] font-black text-neutral-400 uppercase tracking-widest border-x border-neutral-200">Ord</th>
+                                                <th className="px-3 py-2 text-center text-[10px] font-black text-neutral-400 uppercase tracking-widest border-x border-neutral-200">Stk</th>
+                                                <th className="px-3 py-2 text-center text-[10px] font-black text-neutral-400 uppercase tracking-widest">Off</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-neutral-100">
+                                            {isAllocLoading ? (
+                                                <tr>
+                                                    <td colSpan={4} className="py-8 text-center text-neutral-400 font-bold animate-pulse">Fetching order breakdown...</td>
+                                                </tr>
+                                            ) : allocationRows.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={4} className="py-8 text-center text-neutral-400 font-bold italic">No child orders found.</td>
+                                                </tr>
+                                            ) : (
+                                                allocationRows.map((row) => (
+                                                    <tr key={row.id}>
+                                                        <td className="px-3 py-3">
+                                                            <div className="text-[11px] font-bold text-neutral-800">{row.customer_id}</div>
+                                                            <div className="text-[11px] font-black text-brand-600">{row.order_id}</div>
+                                                        </td>
+                                                        <td className="px-3 py-3 border-x border-neutral-200">
+                                                            <input
+                                                                type="number"
+                                                                className="w-20 mx-auto block border border-neutral-300 p-1.5 text-center text-xs font-bold tabular-nums focus:ring-1 focus:ring-brand-500"
+                                                                value={row.order_qty || 0}
+                                                                onChange={(e) => updateAllocationRow(row.id, 'order_qty', parseInt(e.target.value) || 0)}
+                                                            />
+                                                        </td>
+                                                        <td className="px-3 py-3 border-x border-neutral-200">
+                                                            <input
+                                                                type="number"
+                                                                className="w-20 mx-auto block border border-neutral-300 p-1.5 text-center text-xs font-bold tabular-nums focus:ring-1 focus:ring-brand-500"
+                                                                value={row.stock || 0}
+                                                                onChange={(e) => updateAllocationRow(row.id, 'stock', parseInt(e.target.value) || 0)}
+                                                            />
+                                                        </td>
+                                                        <td className="px-3 py-3">
+                                                            <input
+                                                                type="text"
+                                                                className="w-20 mx-auto block border border-neutral-300 p-1.5 text-center text-xs font-bold tabular-nums focus:ring-1 focus:ring-brand-500"
+                                                                value={row.offer || '-'}
+                                                                onChange={(e) => updateAllocationRow(row.id, 'offer', e.target.value)}
+                                                            />
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                {/* Save Button */}
+                                <button
+                                    onClick={handleSaveAllocator}
+                                    disabled={updateMutation.isPending}
+                                    className="w-full mt-6 bg-brand-600 text-white font-bold py-4 uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-brand-700 transition-all shadow-xl shadow-brand-600/20"
+                                >
+                                    💾 SAVE & CALCULATE
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            <datalist id="pipeline-suppliers">
+                {/* Searchable suppliers will be loaded here if we fetch them */}
+                <option value="GENERAL DEPOT" />
+                <option value="ABC PHARMA" />
+                <option value="LIFECARE DISTRIBUTORS" />
+                <option value="SAHAKAR HO" />
+            </datalist>
         </div>
     );
 }

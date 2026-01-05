@@ -15,6 +15,7 @@ interface TableToolbarProps {
     onSort: (option: SortOption) => void;
     savedFilters?: Array<{ name: string, filters: FilterState }>;
     onApplySavedFilter?: (filters: FilterState) => void;
+    children?: React.ReactNode;
 }
 
 export function TableToolbar({
@@ -26,7 +27,8 @@ export function TableToolbar({
     activeSort,
     onSort,
     savedFilters = [],
-    onApplySavedFilter
+    onApplySavedFilter,
+    children
 }: TableToolbarProps) {
 
     // Helper to get active filter count
@@ -57,6 +59,7 @@ export function TableToolbar({
                             </div>
                         </div>
                     )}
+                    {children}
                 </div>
 
                 <div className="flex items-center gap-3">

@@ -10,14 +10,23 @@ export class PendingPoController {
         return await this.service.getAllPendingItems();
     }
 
+    @Get(':id/allocations')
+    async getAllocations(@Param('id') id: string) {
+        return await this.service.getAllocations(id);
+    }
+
     @Put(':id/allocate')
     async updateAllocation(
         @Param('id') id: string,
         @Body() data: {
-            orderedQty: number;
-            stockQty: number;
-            offerQty: number;
+            orderedQty?: number;
+            stockQty?: number;
+            offerQty?: number;
+            itemNameChange?: string;
+            decidedSupplierName?: string;
             allocatorNotes?: string;
+            notes?: string;
+            done?: boolean;
         },
         @Request() req: any
     ) {

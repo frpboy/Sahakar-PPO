@@ -131,6 +131,9 @@ export const pendingPoLedger = pgTable('pending_po_ledger', {
 
     supplierPriority: jsonb('supplier_priority'), // ordered supplier list
     allocationStatus: text('allocation_status'),
+    remarks: text('remarks'),
+    itemNameChange: text('item_name_change'),
+    allocationDetails: text('allocation_details'),
 
     locked: boolean('locked').default(false),
 

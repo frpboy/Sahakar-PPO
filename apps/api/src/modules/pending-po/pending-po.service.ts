@@ -19,6 +19,9 @@ export class PendingPoService {
                 pl.allocation_status,
                 pl.locked,
                 pl.supplier_priority,
+                pl.remarks,
+                pl.item_name_change,
+                pl.allocation_details,
                 p.name as product_name,
                 p.packing,
                 p.mrp,
@@ -37,11 +40,27 @@ export class PendingPoService {
                 (SELECT string_agg(DISTINCT primary_supplier, ', ') FROM ppo_input WHERE product_id = pl.product_id AND stage = 'Pending') as ordered_supplier
             FROM pending_po_ledger pl
             LEFT JOIN products p ON pl.product_id = p.id
-            WHERE pl.locked = false
+            WHERE pl.locked = false OR pl.allocation_status = 'PENDING'
             ORDER BY pl.created_at DESC
         `);
 
         return items.rows;
+    }
+
+    /**
+     * Get original ppo_input rows for aggregation
+     */
+    async getAllocations(pendingItemId: string) {
+        const [pivot] = await db.select().from(pendingPoLedger).where(eq(pendingPoLedger.id, BigInt(pendingItemId))).limit(1);
+        if (!pivot) throw new Error('Pending item not found');
+
+        const rows = await db.execute(sql`
+            SELECT 
+                id, order_id, customer_id, customer_name, requested_qty, order_qty, stock, offer
+            FROM ppo_input
+            WHERE product_id = ${pivot.productId} AND stage = 'Pending'
+        `);
+        return rows.rows;
     }
 
     /**
@@ -50,10 +69,14 @@ export class PendingPoService {
     async updateAllocation(
         pendingItemId: string,
         data: {
-            orderedQty: number;
-            stockQty: number;
-            offerQty: number;
+            orderedQty?: number;
+            stockQty?: number;
+            offerQty?: number;
+            itemNameChange?: string;
+            decidedSupplierName?: string;
             allocatorNotes?: string;
+            notes?: string;
+            done?: boolean;
         },
         userEmail: string
     ) {
@@ -66,9 +89,13 @@ export class PendingPoService {
 
             await tx.update(pendingPoLedger)
                 .set({
-                    orderedQty: data.orderedQty,
-                    stockQty: data.stockQty,
-                    offerQty: data.offerQty,
+                    orderedQty: data.orderedQty ?? item.orderedQty,
+                    stockQty: data.stockQty ?? item.stockQty,
+                    offerQty: data.offerQty ?? item.offerQty,
+                    itemNameChange: data.itemNameChange ?? item.itemNameChange,
+                    allocationDetails: data.notes ?? item.allocationDetails,
+                    allocationStatus: data.done ? 'DONE' : item.allocationStatus,
+                    locked: data.done ? true : item.locked,
                     updatedAt: new Date()
                 })
                 .where(eq(pendingPoLedger.id, BigInt(pendingItemId)));

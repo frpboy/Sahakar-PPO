@@ -244,9 +244,13 @@ export class PpoImportService {
 
             // Aggregate from ppo_input where stage is 'Pending'
             const aggregated = await tx.execute(sql`
-SELECT
-product_id,
-    SUM(requested_qty) as total_qty
+                SELECT 
+                    product_id,
+                    SUM(requested_qty) as total_qty,
+                    STRING_AGG(
+                        'Ord:' || order_id || ' Cust:' || COALESCE(customer_id::text, '0') || ' Qty:' || requested_qty,
+                        ', ' ORDER BY order_id
+                    ) as aggregated_remarks
                 FROM ppo_input
                 WHERE stage = 'Pending'
                 GROUP BY product_id
@@ -258,7 +262,8 @@ product_id,
                     await tx.insert(pendingPoLedger).values({
                         productId: BigInt(item.product_id as string),
                         reqQty: totalQty,
-                        allocationStatus: 'PENDING'
+                        allocationStatus: 'PENDING',
+                        remarks: item.aggregated_remarks as string
                     });
                 }
             }
