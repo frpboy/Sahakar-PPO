@@ -1,0 +1,99 @@
+
+> api@0.0.1 build
+> nest build
+
+src/modules/billing/billing.service.ts:46:45 - error TS2339: Property 'active' does not exist on type 'PgTableWithColumns<{ name: "duty_sessions"; schema: undefined; columns: { id: PgColumn<{ name: "id"; tableName: "duty_sessions"; dataType: "bigint"; columnType: "PgBigSerial64"; data: bigint; driverParam: string; notNull: true; ... 7 more ...; generated: undefined; }, {}, {}>; userId: PgColumn<...>; startTime: PgCol...'.
+
+46                             eq(dutySessions.active, true)
+                                               ~~~~~~
+src/modules/billing/billing.service.ts:119:24 - error TS2353: Object literal may only specify known properties, and 'active' does not exist in type '{ id?: bigint | SQL<unknown> | PgColumn<ColumnBaseConfig<ColumnDataType, string>, {}, {}>; updatedAt?: SQL<unknown> | Date | PgColumn<...>; userId?: bigint | ... 1 more ... | PgColumn<...>; startTime?: SQL<...> | ... 1 more ... | PgColumn<...>; endTime?: SQL<...> | ... 1 more ... | PgColumn<...>; }'.
+
+119                 .set({ active: false, endTime: new Date() })
+                           ~~~~~~
+src/modules/billing/billing.service.ts:123:41 - error TS2339: Property 'active' does not exist on type 'PgTableWithColumns<{ name: "duty_sessions"; schema: undefined; columns: { id: PgColumn<{ name: "id"; tableName: "duty_sessions"; dataType: "bigint"; columnType: "PgBigSerial64"; data: bigint; driverParam: string; notNull: true; ... 7 more ...; generated: undefined; }, {}, {}>; userId: PgColumn<...>; startTime: PgCol...'.
+
+123                         eq(dutySessions.active, true)
+                                            ~~~~~~
+src/modules/billing/billing.service.ts:128:43 - error TS2769: No overload matches this call.
+  Overload 1 of 2, '(value: { id?: bigint | SQL<unknown> | Placeholder<string, any>; updatedAt?: SQL<unknown> | Date | Placeholder<string, any>; userId?: bigint | SQL<unknown> | Placeholder<...>; startTime?: SQL<...> | ... 1 more ... | Placeholder<...>; endTime?: SQL<...> | ... 1 more ... | Placeholder<...>; }): PgInsertBase<...>', gave the following error.
+    Object literal may only specify known properties, and 'active' does not exist in type '{ id?: bigint | SQL<unknown> | Placeholder<string, any>; updatedAt?: SQL<unknown> | Date | Placeholder<string, any>; userId?: bigint | SQL<unknown> | Placeholder<...>; startTime?: SQL<...> | ... 1 more ... | Placeholder<...>; endTime?: SQL<...> | ... 1 more ... | Placeholder<...>; }'.
+  Overload 2 of 2, '(values: { id?: bigint | SQL<unknown> | Placeholder<string, any>; updatedAt?: SQL<unknown> | Date | Placeholder<string, any>; userId?: bigint | SQL<unknown> | Placeholder<...>; startTime?: SQL<...> | ... 1 more ... | Placeholder<...>; endTime?: SQL<...> | ... 1 more ... | Placeholder<...>; }[]): PgInsertBase<...>', gave the following error.
+    Object literal may only specify known properties, and 'userId' does not exist in type '{ id?: bigint | SQL<unknown> | Placeholder<string, any>; updatedAt?: SQL<unknown> | Date | Placeholder<string, any>; userId?: bigint | SQL<unknown> | Placeholder<...>; startTime?: SQL<...> | ... 1 more ... | Placeholder<...>; endTime?: SQL<...> | ... 1 more ... | Placeholder<...>; }[]'.
+
+128             await tx.insert(dutySessions).values({
+                                              ~~~~~~
+
+src/modules/billing/billing.service.ts:148:24 - error TS2353: Object literal may only specify known properties, and 'active' does not exist in type '{ id?: bigint | SQL<unknown> | PgColumn<ColumnBaseConfig<ColumnDataType, string>, {}, {}>; updatedAt?: SQL<unknown> | Date | PgColumn<...>; userId?: bigint | ... 1 more ... | PgColumn<...>; startTime?: SQL<...> | ... 1 more ... | PgColumn<...>; endTime?: SQL<...> | ... 1 more ... | PgColumn<...>; }'.
+
+148                 .set({ active: false, endTime: new Date() })
+                           ~~~~~~
+src/modules/billing/billing.service.ts:152:41 - error TS2339: Property 'active' does not exist on type 'PgTableWithColumns<{ name: "duty_sessions"; schema: undefined; columns: { id: PgColumn<{ name: "id"; tableName: "duty_sessions"; dataType: "bigint"; columnType: "PgBigSerial64"; data: bigint; driverParam: string; notNull: true; ... 7 more ...; generated: undefined; }, {}, {}>; userId: PgColumn<...>; startTime: PgCol...'.
+
+152                         eq(dutySessions.active, true)
+                                            ~~~~~~
+src/modules/duty-sessions/duty-sessions.service.ts:15:36 - error TS2339: Property 'active' does not exist on type 'PgTableWithColumns<{ name: "duty_sessions"; schema: undefined; columns: { id: PgColumn<{ name: "id"; tableName: "duty_sessions"; dataType: "bigint"; columnType: "PgBigSerial64"; data: bigint; driverParam: string; notNull: true; ... 7 more ...; generated: undefined; }, {}, {}>; userId: PgColumn<...>; startTime: PgCol...'.
+
+15             .where(eq(dutySessions.active, true));
+                                      ~~~~~~
+src/modules/pending-po/pending-po.service.ts:25:50 - error TS2339: Property 'name' does not exist on type 'PgTableWithColumns<{ name: "products"; schema: undefined; columns: { id: PgColumn<{ name: "id"; tableName: "products"; dataType: "bigint"; columnType: "PgBigInt64"; data: bigint; driverParam: string; notNull: true; hasDefault: false; ... 6 more ...; generated: undefined; }, {}, {}>; ... 25 more ...; updatedAt: PgCol...'.
+
+25             conditions.push(sql`LOWER(${products.name}) LIKE ${'%' + params.productName.toLowerCase() + '%'}`);
+                                                    ~~~~
+src/modules/pending-po/pending-po.service.ts:71:35 - error TS2339: Property 'name' does not exist on type 'PgTableWithColumns<{ name: "products"; schema: undefined; columns: { id: PgColumn<{ name: "id"; tableName: "products"; dataType: "bigint"; columnType: "PgBigInt64"; data: bigint; driverParam: string; notNull: true; hasDefault: false; ... 6 more ...; generated: undefined; }, {}, {}>; ... 25 more ...; updatedAt: PgCol...'.
+
+71             productName: products.name,
+                                     ~~~~
+src/modules/pending-po/pending-po.service.ts:99:35 - error TS2339: Property 'name' does not exist on type 'PgTableWithColumns<{ name: "products"; schema: undefined; columns: { id: PgColumn<{ name: "id"; tableName: "products"; dataType: "bigint"; columnType: "PgBigInt64"; data: bigint; driverParam: string; notNull: true; hasDefault: false; ... 6 more ...; generated: undefined; }, {}, {}>; ... 25 more ...; updatedAt: PgCol...'.
+
+99             productName: products.name,
+                                     ~~~~
+src/modules/ppo-import/ppo-import.service.ts:163:19 - error TS2339: Property 'name' does not exist on type '{ id: bigint; legacyId: string; productCode: string; itemName: string; aliasName: string; primarySupplier: string; secondarySupplier: string; leastPriceSupplier: string; mostQtySupplier: string; ... 17 more ...; updatedAt: Date; }'.
+
+163             if (p.name) productNameMap.set(p.name.toLowerCase(), p.id);
+                      ~~~~
+src/modules/ppo-import/ppo-import.service.ts:163:46 - error TS2339: Property 'name' does not exist on type '{ id: bigint; legacyId: string; productCode: string; itemName: string; aliasName: string; primarySupplier: string; secondarySupplier: string; leastPriceSupplier: string; mostQtySupplier: string; ... 17 more ...; updatedAt: Date; }'.
+
+163             if (p.name) productNameMap.set(p.name.toLowerCase(), p.id);
+                                                 ~~~~
+src/modules/rep-allocation/rep-allocation.service.ts:22:74 - error TS2339: Property 'name' does not exist on type 'PgTableWithColumns<{ name: "products"; schema: undefined; columns: { id: PgColumn<{ name: "id"; tableName: "products"; dataType: "bigint"; columnType: "PgBigInt64"; data: bigint; driverParam: string; notNull: true; hasDefault: false; ... 6 more ...; generated: undefined; }, {}, {}>; ... 25 more ...; updatedAt: PgCol...'.
+
+22         if (productName) whereClause = sql`${whereClause} AND ${products.name} ILIKE ${'%' + productName + '%'}`;
+                                                                            ~~~~
+src/modules/rep-allocation/rep-allocation.service.ts:38:35 - error TS2339: Property 'name' does not exist on type 'PgTableWithColumns<{ name: "products"; schema: undefined; columns: { id: PgColumn<{ name: "id"; tableName: "products"; dataType: "bigint"; columnType: "PgBigInt64"; data: bigint; driverParam: string; notNull: true; hasDefault: false; ... 6 more ...; generated: undefined; }, {}, {}>; ... 25 more ...; updatedAt: PgCol...'.
+
+38             productName: products.name,
+                                     ~~~~
+src/modules/rep-master/rep-master.service.ts:27:20 - error TS2769: No overload matches this call.
+  Overload 1 of 3, '(left: PgColumn<{ name: "id"; tableName: "rep_master"; dataType: "bigint"; columnType: "PgBigSerial64"; data: bigint; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>, right: bigint | SQLWrapper): SQL<...>', gave the following error.
+    Argument of type 'string' is not assignable to parameter of type 'bigint | SQLWrapper'.
+  Overload 2 of 3, '(left: Aliased<string>, right: string | SQLWrapper): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "rep_master"; dataType: "bigint"; columnType: "PgBigSerial64"; data: bigint; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'Aliased<string>'.
+      Type 'PgColumn<{ name: "id"; tableName: "rep_master"; dataType: "bigint"; columnType: "PgBigSerial64"; data: bigint; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is missing the following properties from type 'Aliased<string>': sql, fieldAlias
+  Overload 3 of 3, '(left: never, right: unknown): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "rep_master"; dataType: "bigint"; columnType: "PgBigSerial64"; data: bigint; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'never'.
+
+27             .where(eq(repMaster.id, id));
+                      ~~
+
+src/modules/rep-master/rep-master.service.ts:51:20 - error TS2769: No overload matches this call.
+  Overload 1 of 3, '(left: PgColumn<{ name: "id"; tableName: "rep_master"; dataType: "bigint"; columnType: "PgBigSerial64"; data: bigint; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>, right: bigint | SQLWrapper): SQL<...>', gave the following error.
+    Argument of type 'string' is not assignable to parameter of type 'bigint | SQLWrapper'.
+  Overload 2 of 3, '(left: Aliased<string>, right: string | SQLWrapper): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "rep_master"; dataType: "bigint"; columnType: "PgBigSerial64"; data: bigint; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'Aliased<string>'.
+      Type 'PgColumn<{ name: "id"; tableName: "rep_master"; dataType: "bigint"; columnType: "PgBigSerial64"; data: bigint; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is missing the following properties from type 'Aliased<string>': sql, fieldAlias
+  Overload 3 of 3, '(left: never, right: unknown): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "rep_master"; dataType: "bigint"; columnType: "PgBigSerial64"; data: bigint; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'never'.
+
+51             .where(eq(repMaster.id, id))
+                      ~~
+
+
+Found 16 error(s).
+
+npm error Lifecycle script `build` failed with error:
+npm error code 1
+npm error path D:\K4NN4N\Sahakar-PPO\apps\api
+npm error workspace api@0.0.1
+npm error location D:\K4NN4N\Sahakar-PPO\apps\api
+npm error command failed
+npm error command C:\WINDOWS\system32\cmd.exe /d /s /c nest build

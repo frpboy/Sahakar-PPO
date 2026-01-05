@@ -11,7 +11,7 @@ export class ProductsService {
                 .from(products)
                 .where(
                     or(
-                        like(products.itemName, `%${search}%`),
+                        like(products.name, `%${search}%`),
                         like(products.productCode, `%${search}%`),
                         like(products.legacyId, `%${search}%`)
                     )
@@ -24,7 +24,7 @@ export class ProductsService {
         const result = await db
             .select()
             .from(products)
-            .where(eq(products.id, id));
+            .where(eq(products.id, BigInt(id)));
         return result[0] || null;
     }
 
@@ -96,7 +96,7 @@ export class ProductsService {
         const result = await db
             .update(products)
             .set(updateData)
-            .where(eq(products.id, id))
+            .where(eq(products.id, BigInt(id)))
             .returning();
         return result[0] || null;
     }

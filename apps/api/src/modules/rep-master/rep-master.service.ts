@@ -24,7 +24,7 @@ export class RepMasterService {
         const result = await db
             .select()
             .from(repMaster)
-            .where(eq(repMaster.id, id));
+            .where(eq(repMaster.id, BigInt(id)));
         return result[0] || null;
     }
 
@@ -48,7 +48,7 @@ export class RepMasterService {
         const result = await db
             .update(repMaster)
             .set({ ...data, updatedAt: new Date() })
-            .where(eq(repMaster.id, id))
+            .where(eq(repMaster.id, BigInt(id)))
             .returning();
         return result[0] || null;
     }

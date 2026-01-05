@@ -1,0 +1,118 @@
+
+> api@0.0.1 build
+> nest build
+
+src/modules/name-changes/name-changes.service.ts:2:14 - error TS2305: Module '"@sahakar/database"' has no exported member 'productNameChanges'.
+
+2 import { db, productNameChanges, products, suppliers } from '@sahakar/database';
+               ~~~~~~~~~~~~~~~~~~
+src/modules/name-changes/name-changes.service.ts:20:39 - error TS2339: Property 'itemName' does not exist on type 'PgTableWithColumns<{ name: "products"; schema: undefined; columns: { id: PgColumn<{ name: "id"; tableName: "products"; dataType: "bigint"; columnType: "PgBigInt64"; data: bigint; driverParam: string; notNull: true; hasDefault: false; ... 6 more ...; generated: undefined; }, {}, {}>; ... 25 more ...; updatedAt: PgCol...'.
+
+20                 productName: products.itemName,
+                                         ~~~~~~~~
+src/modules/name-changes/name-changes.service.ts:21:41 - error TS2339: Property 'supplierName' does not exist on type 'PgTableWithColumns<{ name: "suppliers"; schema: undefined; columns: { id: PgColumn<{ name: "id"; tableName: "suppliers"; dataType: "bigint"; columnType: "PgBigSerial64"; data: bigint; driverParam: string; notNull: true; ... 7 more ...; generated: undefined; }, {}, {}>; ... 12 more ...; updatedAt: PgColumn<...>; }; d...'.
+
+21                 supplierName: suppliers.supplierName
+                                           ~~~~~~~~~~~~
+src/modules/products/products.service.ts:14:39 - error TS2339: Property 'itemName' does not exist on type 'PgTableWithColumns<{ name: "products"; schema: undefined; columns: { id: PgColumn<{ name: "id"; tableName: "products"; dataType: "bigint"; columnType: "PgBigInt64"; data: bigint; driverParam: string; notNull: true; hasDefault: false; ... 6 more ...; generated: undefined; }, {}, {}>; ... 25 more ...; updatedAt: PgCol...'.
+
+14                         like(products.itemName, `%${search}%`),
+                                         ~~~~~~~~
+src/modules/products/products.service.ts:27:20 - error TS2769: No overload matches this call.
+  Overload 1 of 3, '(left: PgColumn<{ name: "id"; tableName: "products"; dataType: "bigint"; columnType: "PgBigInt64"; data: bigint; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>, right: bigint | SQLWrapper): SQL<...>', gave the following error.
+    Argument of type 'string' is not assignable to parameter of type 'bigint | SQLWrapper'.
+  Overload 2 of 3, '(left: Aliased<string>, right: string | SQLWrapper): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "products"; dataType: "bigint"; columnType: "PgBigInt64"; data: bigint; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'Aliased<string>'.
+      Type 'PgColumn<{ name: "id"; tableName: "products"; dataType: "bigint"; columnType: "PgBigInt64"; data: bigint; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is missing the following properties from type 'Aliased<string>': sql, fieldAlias
+  Overload 3 of 3, '(left: never, right: unknown): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "products"; dataType: "bigint"; columnType: "PgBigInt64"; data: bigint; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'never'.
+
+27             .where(eq(products.id, id));
+                      ~~
+
+src/modules/products/products.service.ts:99:20 - error TS2769: No overload matches this call.
+  Overload 1 of 3, '(left: PgColumn<{ name: "id"; tableName: "products"; dataType: "bigint"; columnType: "PgBigInt64"; data: bigint; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>, right: bigint | SQLWrapper): SQL<...>', gave the following error.
+    Argument of type 'string' is not assignable to parameter of type 'bigint | SQLWrapper'.
+  Overload 2 of 3, '(left: Aliased<string>, right: string | SQLWrapper): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "products"; dataType: "bigint"; columnType: "PgBigInt64"; data: bigint; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'Aliased<string>'.
+      Type 'PgColumn<{ name: "id"; tableName: "products"; dataType: "bigint"; columnType: "PgBigInt64"; data: bigint; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is missing the following properties from type 'Aliased<string>': sql, fieldAlias
+  Overload 3 of 3, '(left: never, right: unknown): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "products"; dataType: "bigint"; columnType: "PgBigInt64"; data: bigint; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'never'.
+
+99             .where(eq(products.id, id))
+                      ~~
+
+src/modules/rep-master/rep-master.service.ts:2:14 - error TS2305: Module '"@sahakar/database"' has no exported member 'repMaster'.
+
+2 import { db, repMaster } from '@sahakar/database';
+               ~~~~~~~~~
+src/modules/suppliers/suppliers.service.ts:14:40 - error TS2339: Property 'supplierName' does not exist on type 'PgTableWithColumns<{ name: "suppliers"; schema: undefined; columns: { id: PgColumn<{ name: "id"; tableName: "suppliers"; dataType: "bigint"; columnType: "PgBigSerial64"; data: bigint; driverParam: string; notNull: true; ... 7 more ...; generated: undefined; }, {}, {}>; ... 12 more ...; updatedAt: PgColumn<...>; }; d...'.
+
+14                         like(suppliers.supplierName, `%${search}%`),
+                                          ~~~~~~~~~~~~
+src/modules/suppliers/suppliers.service.ts:15:40 - error TS2339: Property 'supplierCode' does not exist on type 'PgTableWithColumns<{ name: "suppliers"; schema: undefined; columns: { id: PgColumn<{ name: "id"; tableName: "suppliers"; dataType: "bigint"; columnType: "PgBigSerial64"; data: bigint; driverParam: string; notNull: true; ... 7 more ...; generated: undefined; }, {}, {}>; ... 12 more ...; updatedAt: PgColumn<...>; }; d...'.
+
+15                         like(suppliers.supplierCode, `%${search}%`),
+                                          ~~~~~~~~~~~~
+src/modules/suppliers/suppliers.service.ts:16:40 - error TS2339: Property 'contactPerson' does not exist on type 'PgTableWithColumns<{ name: "suppliers"; schema: undefined; columns: { id: PgColumn<{ name: "id"; tableName: "suppliers"; dataType: "bigint"; columnType: "PgBigSerial64"; data: bigint; driverParam: string; notNull: true; ... 7 more ...; generated: undefined; }, {}, {}>; ... 12 more ...; updatedAt: PgColumn<...>; }; d...'.
+
+16                         like(suppliers.contactPerson, `%${search}%`)
+                                          ~~~~~~~~~~~~~
+src/modules/suppliers/suppliers.service.ts:27:20 - error TS2769: No overload matches this call.
+  Overload 1 of 3, '(left: PgColumn<{ name: "id"; tableName: "suppliers"; dataType: "bigint"; columnType: "PgBigSerial64"; data: bigint; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>, right: bigint | SQLWrapper): SQL<...>', gave the following error.
+    Argument of type 'string' is not assignable to parameter of type 'bigint | SQLWrapper'.
+  Overload 2 of 3, '(left: Aliased<string>, right: string | SQLWrapper): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "suppliers"; dataType: "bigint"; columnType: "PgBigSerial64"; data: bigint; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'Aliased<string>'.
+      Type 'PgColumn<{ name: "id"; tableName: "suppliers"; dataType: "bigint"; columnType: "PgBigSerial64"; data: bigint; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is missing the following properties from type 'Aliased<string>': sql, fieldAlias
+  Overload 3 of 3, '(left: never, right: unknown): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "suppliers"; dataType: "bigint"; columnType: "PgBigSerial64"; data: bigint; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'never'.
+
+27             .where(eq(suppliers.id, id));
+                      ~~
+
+src/modules/suppliers/suppliers.service.ts:67:20 - error TS2769: No overload matches this call.
+  Overload 1 of 3, '(left: PgColumn<{ name: "id"; tableName: "suppliers"; dataType: "bigint"; columnType: "PgBigSerial64"; data: bigint; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>, right: bigint | SQLWrapper): SQL<...>', gave the following error.
+    Argument of type 'string' is not assignable to parameter of type 'bigint | SQLWrapper'.
+  Overload 2 of 3, '(left: Aliased<string>, right: string | SQLWrapper): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "suppliers"; dataType: "bigint"; columnType: "PgBigSerial64"; data: bigint; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'Aliased<string>'.
+      Type 'PgColumn<{ name: "id"; tableName: "suppliers"; dataType: "bigint"; columnType: "PgBigSerial64"; data: bigint; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is missing the following properties from type 'Aliased<string>': sql, fieldAlias
+  Overload 3 of 3, '(left: never, right: unknown): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "suppliers"; dataType: "bigint"; columnType: "PgBigSerial64"; data: bigint; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'never'.
+
+67             .where(eq(suppliers.id, id))
+                      ~~
+
+src/modules/users/users.service.ts:23:60 - error TS2769: No overload matches this call.
+  Overload 1 of 3, '(left: PgColumn<{ name: "id"; tableName: "users"; dataType: "bigint"; columnType: "PgBigInt64"; data: bigint; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>, right: bigint | SQLWrapper): SQL<...>', gave the following error.
+    Argument of type 'string' is not assignable to parameter of type 'bigint | SQLWrapper'.
+  Overload 2 of 3, '(left: Aliased<string>, right: string | SQLWrapper): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "users"; dataType: "bigint"; columnType: "PgBigInt64"; data: bigint; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'Aliased<string>'.
+      Type 'PgColumn<{ name: "id"; tableName: "users"; dataType: "bigint"; columnType: "PgBigInt64"; data: bigint; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is missing the following properties from type 'Aliased<string>': sql, fieldAlias
+  Overload 3 of 3, '(left: never, right: unknown): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "users"; dataType: "bigint"; columnType: "PgBigInt64"; data: bigint; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'never'.
+
+23         const result = await db.select().from(users).where(eq(users.id, id));
+                                                              ~~
+
+src/modules/users/users.service.ts:35:20 - error TS2769: No overload matches this call.
+  Overload 1 of 3, '(left: PgColumn<{ name: "id"; tableName: "users"; dataType: "bigint"; columnType: "PgBigInt64"; data: bigint; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>, right: bigint | SQLWrapper): SQL<...>', gave the following error.
+    Argument of type 'string' is not assignable to parameter of type 'bigint | SQLWrapper'.
+  Overload 2 of 3, '(left: Aliased<string>, right: string | SQLWrapper): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "users"; dataType: "bigint"; columnType: "PgBigInt64"; data: bigint; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'Aliased<string>'.
+      Type 'PgColumn<{ name: "id"; tableName: "users"; dataType: "bigint"; columnType: "PgBigInt64"; data: bigint; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is missing the following properties from type 'Aliased<string>': sql, fieldAlias
+  Overload 3 of 3, '(left: never, right: unknown): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "users"; dataType: "bigint"; columnType: "PgBigInt64"; data: bigint; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'never'.
+
+35             .where(eq(users.id, id))
+                      ~~
+
+
+Found 14 error(s).
+
+npm error Lifecycle script `build` failed with error:
+npm error code 1
+npm error path D:\K4NN4N\Sahakar-PPO\apps\api
+npm error workspace api@0.0.1
+npm error location D:\K4NN4N\Sahakar-PPO\apps\api
+npm error command failed
+npm error command C:\WINDOWS\system32\cmd.exe /d /s /c nest build

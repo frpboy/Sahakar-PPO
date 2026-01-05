@@ -17,7 +17,7 @@ export class NameChangesService {
                 effectiveTo: productNameChanges.effectiveTo,
                 active: productNameChanges.active,
                 createdAt: productNameChanges.createdAt,
-                productName: products.itemName,
+                productName: products.name,
                 supplierName: suppliers.supplierName
             })
             .from(productNameChanges)
@@ -32,6 +32,6 @@ export class NameChangesService {
         return await db
             .select()
             .from(productNameChanges)
-            .where(eq(productNameChanges.productId, productId));
+            .where(eq(productNameChanges.productId, BigInt(productId)));
     }
 }

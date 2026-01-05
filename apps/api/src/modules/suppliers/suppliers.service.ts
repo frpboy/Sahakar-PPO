@@ -24,7 +24,7 @@ export class SuppliersService {
         const result = await db
             .select()
             .from(suppliers)
-            .where(eq(suppliers.id, id));
+            .where(eq(suppliers.id, BigInt(id)));
         return result[0] || null;
     }
 
@@ -64,7 +64,7 @@ export class SuppliersService {
         const result = await db
             .update(suppliers)
             .set(updateData)
-            .where(eq(suppliers.id, id))
+            .where(eq(suppliers.id, BigInt(id)))
             .returning();
         return result[0] || null;
     }

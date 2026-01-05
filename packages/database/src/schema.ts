@@ -49,6 +49,9 @@ export const suppliers = pgTable('suppliers', {
     id: bigserial('id', { mode: 'bigint' }).primaryKey(),
 
     area: text('area'),
+    supplierName: text('supplier_name'),
+    supplierCode: text('supplier_code'),
+    contactPerson: text('contact_person'),
     alias: text('alias').notNull(),
 
     mobile: text('mobile'),
@@ -259,6 +262,30 @@ export const dutySessions = pgTable('duty_sessions', {
     startTime: timestamp('start_time').defaultNow().notNull(),
     endTime: timestamp('end_time'),
     active: boolean('active').default(true).notNull(),
+    updatedAt: timestamp('updated_at').defaultNow()
+});
+
+export const productNameChanges = pgTable('product_name_changes', {
+    id: bigserial('id', { mode: 'bigint' }).primaryKey(),
+    productId: bigint('product_id', { mode: 'bigint' }).references(() => products.id),
+    supplierId: bigint('supplier_id', { mode: 'bigint' }).references(() => suppliers.id),
+    oldName: text('old_name'),
+    newName: text('new_name').notNull(),
+    reason: text('reason'),
+    effectiveFrom: date('effective_from'),
+    effectiveTo: date('effective_to'),
+    active: boolean('active').default(true),
+    createdAt: timestamp('created_at').defaultNow()
+});
+
+export const repMaster = pgTable('rep_master', {
+    id: bigserial('id', { mode: 'bigint' }).primaryKey(),
+    name: text('name').notNull(),
+    mobile: text('mobile'),
+    email: text('email'),
+    designation: text('designation'),
+    active: boolean('active').default(true),
+    createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow()
 });
 

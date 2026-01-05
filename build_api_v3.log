@@ -1,0 +1,18 @@
+
+> api@0.0.1 build
+> nest build
+
+src/modules/name-changes/name-changes.service.ts:20:39 - error TS2339: Property 'itemName' does not exist on type 'PgTableWithColumns<{ name: "products"; schema: undefined; columns: { id: PgColumn<{ name: "id"; tableName: "products"; dataType: "bigint"; columnType: "PgBigInt64"; data: bigint; driverParam: string; notNull: true; hasDefault: false; ... 6 more ...; generated: undefined; }, {}, {}>; ... 25 more ...; updatedAt: PgCol...'.
+
+20                 productName: products.itemName,
+                                         ~~~~~~~~
+
+Found 1 error(s).
+
+npm error Lifecycle script `build` failed with error:
+npm error code 1
+npm error path D:\K4NN4N\Sahakar-PPO\apps\api
+npm error workspace api@0.0.1
+npm error location D:\K4NN4N\Sahakar-PPO\apps\api
+npm error command failed
+npm error command C:\WINDOWS\system32\cmd.exe /d /s /c nest build
