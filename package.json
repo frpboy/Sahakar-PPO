@@ -4,7 +4,7 @@
     "private": true,
     "packageManager": "npm@11.6.2",
     "scripts": {
-        "build": "turbo run build",
+        "build": "turbo run build --filter=web",
         "vercel-build": "cd apps/web && npm run build",
         "dev": "turbo run dev",
         "lint": "turbo run lint",
