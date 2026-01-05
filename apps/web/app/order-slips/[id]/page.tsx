@@ -76,7 +76,7 @@ export default function OrderSlipDetailPage() {
             size: 100,
             cell: ({ row }) => (
                 <span className="font-mono text-[9px] font-black text-neutral-400 uppercase tracking-tighter tabular-nums">
-                    {row.original.product_code || row.original.product_id?.toString().substring(0, 6)}
+                    {row.original.product_code || row.original.legacy_id || row.original.product_id?.toString().substring(0, 6)}
                 </span>
             )
         },
@@ -240,8 +240,8 @@ export default function OrderSlipDetailPage() {
                                 key={status}
                                 onClick={() => setStatusModal({ ...statusModal, selectedStatus: status })}
                                 className={`px-4 py-3 border text-[10px] font-black uppercase tracking-widest text-left transition-all flex items-center justify-between ${statusModal.selectedStatus === status
-                                        ? 'bg-brand-50 border-brand-500 text-brand-700 shadow-inner'
-                                        : 'bg-white border-neutral-100 text-neutral-400 hover:border-neutral-200 hover:bg-neutral-50'
+                                    ? 'bg-brand-50 border-brand-500 text-brand-700 shadow-inner'
+                                    : 'bg-white border-neutral-100 text-neutral-400 hover:border-neutral-200 hover:bg-neutral-50'
                                     }`}
                             >
                                 {status.replace('_', ' ')}

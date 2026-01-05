@@ -99,9 +99,13 @@ export default function PpoInputPage() {
         },
         {
             header: 'PROD ID',
-            size: 80,
+            size: 100,
             meta: { align: 'center' },
-            cell: ({ row }) => <span className="font-mono text-[10px] text-neutral-400">{row.original.productId?.toString().substring(0, 8) || '-'}</span>
+            cell: ({ row }) => {
+                const item = row.original as any;
+                const displayId = item.productCode || item.legacyId || item.productId?.toString().substring(0, 8);
+                return <span className="font-mono text-[10px] text-neutral-400">{displayId || '-'}</span>;
+            }
         },
         {
             header: 'ITEM NAME',

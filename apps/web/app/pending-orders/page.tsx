@@ -299,9 +299,13 @@ export default function PendingOrdersPage() {
         },
         {
             header: 'PROD ID',
-            size: 80,
+            size: 100,
             meta: { align: 'center' },
-            cell: ({ row }) => <span className="font-mono text-[10px] text-neutral-400">{row.original.product_id?.toString().substring(0, 8) || '-'}</span>
+            cell: ({ row }) => {
+                const item = row.original;
+                const displayId = item.productCode || item.legacyId || item.product_id?.toString().substring(0, 8);
+                return <span className="font-mono text-[10px] text-neutral-400">{displayId || '-'}</span>;
+            }
         },
         {
             header: 'ITEM NAME',

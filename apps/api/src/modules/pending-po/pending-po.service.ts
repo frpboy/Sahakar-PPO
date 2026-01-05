@@ -79,6 +79,8 @@ export class PendingPoService {
             genericName: products.genericName,
             patent: products.patent,
             hsnCode: products.hsnCode,
+            legacyId: products.legacyId,
+            productCode: products.productCode,
             rep: repSubquery.rep,
             mobile: repSubquery.mobile,
             accepted_date: repSubquery.acceptedDate,

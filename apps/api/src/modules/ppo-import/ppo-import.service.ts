@@ -421,8 +421,12 @@ export class PpoImportService {
             decidedSupplier: ppoInput.decidedSupplier,
             modification: ppoInput.modification,
             stage: ppoInput.stage,
-            createdAt: ppoInput.createdAt
-        }).from(ppoInput);
+            createdAt: ppoInput.createdAt,
+            legacyId: products.legacyId,
+            productCode: products.productCode
+        })
+            .from(ppoInput)
+            .leftJoin(products, eq(ppoInput.productId, products.id));
 
         if (conditions.length > 0) {
             query.where(and(...conditions as any));

@@ -125,7 +125,7 @@ export class OrderSlipsService {
     }
 
     async getAllSlips(query: any) {
-        let q = db.select().from(orderSlips);
+        let q: any = db.select().from(orderSlips);
 
         const conditions = [];
         if (query.supplier) {
@@ -155,6 +155,7 @@ export class OrderSlipsService {
                 q = q.orderBy(sql`${field} ${direction}`);
             }
         } else {
+            // @ts-ignore
             q = q.orderBy(sql`${orderSlips.createdAt} DESC`);
         }
 
@@ -176,6 +177,7 @@ export class OrderSlipsService {
                 p.name as product_name,
                 p.packing,
                 p.product_code,
+                p.legacy_id,
                 p.id as product_id
             FROM order_slip_items osi
             LEFT JOIN products p ON osi.product_id = p.id
