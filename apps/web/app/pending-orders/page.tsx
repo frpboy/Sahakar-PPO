@@ -42,6 +42,8 @@ type PendingItem = {
     allocation_details?: string;
     done: boolean;
     locked: boolean;
+    productCode?: string;
+    legacyId?: string;
 };
 
 type AllocationChild = {

@@ -52,10 +52,8 @@ export class BillingService {
                 }
             }
 
-            // BILLING_HEAD can override without duty session
-
             // Get current slip item
-            const items = await tx.select().from(orderSlipItems).where(eq(orderSlipItems.id, orderSlipItemId)).limit(1);
+            const items = await tx.select().from(orderSlipItems).where(eq(orderSlipItems.id, BigInt(orderSlipItemId))).limit(1);
 
             if (!items.length) {
                 throw new Error('Order slip item not found');
@@ -67,29 +65,31 @@ export class BillingService {
             await tx.update(orderSlipItems)
                 .set({
                     status: data.status as any,
-                    invoiceId: data.invoiceId
+                    invoiceId: data.invoiceId,
+                    notes: data.notes
                 })
-                .where(eq(orderSlipItems.id, orderSlipItemId));
+                .where(eq(orderSlipItems.id, BigInt(orderSlipItemId)));
 
             // Append-only status event
             await tx.insert(statusEvents).values({
-                orderSlipItemId: orderSlipItemId,
-                status: data.status,
-                qtyReceived: data.qtyReceived,
-                qtyDamaged: data.qtyDamaged,
-                qtyPending: data.qtyPending,
-                invoiceId: data.invoiceId,
-                notes: data.notes,
-                staffEmail: userEmail
+                entityType: 'SLIP_ITEM',
+                entityId: BigInt(orderSlipItemId),
+                oldStatus: item.status || 'Pending',
+                newStatus: data.status,
+                note: data.notes || `Updated via billing. Received: ${data.qtyReceived || 0}`,
+                createdBy: userEmail
             });
 
             // Audit event
             await tx.insert(auditEvents).values({
                 entityType: 'ORDER_SLIP_ITEM',
-                entityId: orderSlipItemId,
+                entityId: BigInt(orderSlipItemId),
                 action: 'UPDATE_BILLING_STATUS',
-                beforeState: JSON.stringify(item),
-                afterState: JSON.stringify({ ...item, status: data.status }),
+                payload: {
+                    before: item,
+                    after: { ...item, status: data.status, invoiceId: data.invoiceId },
+                    input: data
+                },
                 actor: userEmail
             });
 

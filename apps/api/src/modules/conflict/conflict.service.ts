@@ -49,16 +49,18 @@ export class ConflictService {
             // Log conflict resolution as audit event
             await tx.insert(auditEvents).values({
                 entityType: `CONFLICT_${conflict.entityType}`,
-                entityId: conflict.entityId,
+                entityId: BigInt(conflict.entityId),
                 action: `RESOLVE_${conflict.resolution}`,
-                beforeState: JSON.stringify({
-                    local: conflict.localVersion,
-                    server: conflict.serverVersion
-                }),
-                afterState: JSON.stringify({
-                    resolution: conflict.resolution,
-                    reason: conflict.reason
-                }),
+                payload: {
+                    before: {
+                        local: conflict.localVersion,
+                        server: conflict.serverVersion
+                    },
+                    after: {
+                        resolution: conflict.resolution,
+                        reason: conflict.reason
+                    }
+                },
                 actor: userEmail
             });
 

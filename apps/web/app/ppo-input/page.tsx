@@ -37,6 +37,8 @@ interface PpoInputRow {
     modification: string;
     stage: string;
     createdAt: string;
+    productCode?: string;
+    legacyId?: string;
 }
 
 export default function PpoInputPage() {
@@ -102,7 +104,7 @@ export default function PpoInputPage() {
             size: 100,
             meta: { align: 'center' },
             cell: ({ row }) => {
-                const item = row.original as any;
+                const item = row.original;
                 const displayId = item.productCode || item.legacyId || item.productId?.toString().substring(0, 8);
                 return <span className="font-mono text-[10px] text-neutral-400">{displayId || '-'}</span>;
             }
