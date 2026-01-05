@@ -106,6 +106,7 @@ export const ppoInput = pgTable('ppo_input', {
     value: numeric('value', { precision: 12, scale: 2 }),
     status: text('status'),
     notes: text('notes'),
+    remarks: text('remarks'),
     decidedSupplier: text('decided_supplier'),
 
     modification: text('modification'),
@@ -130,6 +131,7 @@ export const pendingPoLedger = pgTable('pending_po_ledger', {
     offerQty: integer('offer_qty'),
 
     supplierPriority: jsonb('supplier_priority'), // ordered supplier list
+    decidedSupplierName: text('decided_supplier_name'),
     allocationStatus: text('allocation_status'),
     remarks: text('remarks'),
     itemNameChange: text('item_name_change'),
@@ -155,6 +157,7 @@ export const repOrders = pgTable('rep_orders', {
     rate: numeric('rate', { precision: 10, scale: 2 }),
 
     sourcePendingPoId: bigint('source_pending_po_id', { mode: 'bigint' }),
+    status: text('status').default('PENDING'),
 
     createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow()
@@ -174,6 +177,8 @@ export const orderSlips = pgTable('order_slips', {
     totalValue: numeric('total_value', { precision: 12, scale: 2 }),
 
     remarks: text('remarks'),
+    status: text('status').default('GENERATED'),
+    displayId: text('display_id').unique(),
     billId: text('bill_id'),
     billDate: date('bill_date'),
 
@@ -190,6 +195,8 @@ export const orderSlipItems = pgTable('order_slip_items', {
     qty: integer('qty').notNull(),
     rate: numeric('rate', { precision: 10, scale: 2 }),
     status: text('status').default('Pending'),
+    invoiceId: text('invoice_id'),
+    notes: text('notes'),
     createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow()
 });

@@ -6,8 +6,8 @@ export class PendingPoController {
     constructor(private readonly service: PendingPoService) { }
 
     @Get()
-    async getAllPendingItems() {
-        return await this.service.getAllPendingItems();
+    async getAllPendingItems(@Request() req: any) {
+        return await this.service.getAllPendingItems(req.query);
     }
 
     @Get(':id/allocations')

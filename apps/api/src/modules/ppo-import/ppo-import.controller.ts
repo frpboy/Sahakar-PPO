@@ -79,15 +79,6 @@ export class PpoImportController {
         @UploadedFile() file: Express.Multer.File,
         @Request() req: any
     ): Promise<{ success: boolean; message: string; data: ProcessOrdersResult }> {
-        console.log('Upload endpoint hit');
-        console.log('File object:', file ? {
-            fieldname: file.fieldname,
-            originalname: file.originalname,
-            mimetype: file.mimetype,
-            size: file.size,
-            bufferLength: file.buffer?.length
-        } : 'null');
-
         if (!file) {
             throw new Error('No file uploaded');
         }
@@ -97,9 +88,9 @@ export class PpoImportController {
         }
 
         const userEmail = req.user?.email || req.body?.userEmail || 'system@sahakar.local';
-        console.log('Processing file for user:', userEmail);
+        const fileName = file.originalname || 'unknown.xlsx';
 
-        const result = await this.ppoImportService.parseAndProcessOrders(file.buffer, userEmail);
+        const result = await this.ppoImportService.parseAndProcessOrders(file.buffer, userEmail, fileName);
 
         return {
             success: true,
@@ -109,7 +100,7 @@ export class PpoImportController {
     }
 
     @Get()
-    async getAll() {
-        return this.ppoImportService.getAllInputItems();
+    async getAll(@Request() req: any) {
+        return this.ppoImportService.getAllInputItems(req.query);
     }
 }

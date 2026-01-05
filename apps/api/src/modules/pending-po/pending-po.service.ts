@@ -1,50 +1,115 @@
 import { Injectable } from '@nestjs/common';
-import { db, pendingPoLedger, repOrders, auditEvents, statusEvents, products, suppliers } from '@sahakar/database';
-import { sql, eq, and } from 'drizzle-orm';
+import { db, pendingPoLedger, ppoInput, repOrders, auditEvents, statusEvents, products, suppliers } from '@sahakar/database';
+import { sql, eq, and, or } from 'drizzle-orm';
 
 @Injectable()
 export class PendingPoService {
     /**
      * Get all pending ledger items with product details
      */
-    async getAllPendingItems() {
-        const items = await db.execute(sql`
-            SELECT 
-                pl.id,
-                pl.product_id,
-                pl.req_qty,
-                pl.ordered_qty,
-                pl.stock_qty,
-                pl.offer_qty,
-                pl.allocation_status,
-                pl.locked,
-                pl.supplier_priority,
-                pl.remarks,
-                pl.item_name_change,
-                pl.allocation_details,
-                p.name as product_name,
-                p.packing,
-                p.mrp,
-                p.ptr,
-                p.pt,
-                p.local_cost,
-                p.category,
-                p.sub_category as subcategory,
-                p.generic_name,
-                p.patent,
-                p.hsn_code,
-                (SELECT string_agg(DISTINCT rep, ', ') FROM ppo_input WHERE product_id = pl.product_id AND stage = 'Pending') as rep,
-                (SELECT string_agg(DISTINCT mobile, ', ') FROM ppo_input WHERE product_id = pl.product_id AND stage = 'Pending') as mobile,
-                (SELECT MIN(accepted_date) FROM ppo_input WHERE product_id = pl.product_id AND stage = 'Pending') as accepted_date,
-                (SELECT MIN(accepted_time) FROM ppo_input WHERE product_id = pl.product_id AND stage = 'Pending') as accepted_time,
-                (SELECT string_agg(DISTINCT primary_supplier, ', ') FROM ppo_input WHERE product_id = pl.product_id AND stage = 'Pending') as ordered_supplier
-            FROM pending_po_ledger pl
-            LEFT JOIN products p ON pl.product_id = p.id
-            WHERE pl.locked = false OR pl.allocation_status = 'PENDING'
-            ORDER BY pl.created_at DESC
-        `);
+    async getAllPendingItems(params: {
+        productName?: string;
+        orderId?: string;
+        rep?: string[];
+        supplier?: string;
+        stage?: string[];
+        dateFrom?: string;
+        dateTo?: string;
+        sortField?: string;
+        sortDir?: 'asc' | 'desc';
+    }) {
+        const conditions = [];
 
-        return items.rows;
+        // Note: Filter logic usually targets the ledger orjoined tables
+        if (params.productName) {
+            conditions.push(sql`LOWER(${products.name}) LIKE ${'%' + params.productName.toLowerCase() + '%'}`);
+        }
+        if (params.supplier) {
+            conditions.push(sql`(
+                LOWER(${pendingPoLedger.decidedSupplierName}) LIKE ${'%' + params.supplier.toLowerCase() + '%'} OR
+                LOWER(${products.primarySupplier}) LIKE ${'%' + params.supplier.toLowerCase() + '%'}
+            )`);
+        }
+        if (params.stage && params.stage.length > 0) {
+            // Ledger doesn't have stage directly, it's inferred or we filter by locked/status
+        }
+        if (params.dateFrom) {
+            conditions.push(sql`${pendingPoLedger.createdAt} >= ${params.dateFrom}`);
+        }
+        if (params.dateTo) {
+            conditions.push(sql`${pendingPoLedger.createdAt} <= ${params.dateTo}`);
+        }
+
+        // Subqueries for ppo_input aggregations
+        const repSubquery = db.select({
+            productId: ppoInput.productId,
+            rep: sql<string>`string_agg(DISTINCT ${ppoInput.rep}, ', ')`.as('rep'),
+            mobile: sql<string>`string_agg(DISTINCT ${ppoInput.mobile}, ', ')`.as('mobile'),
+            acceptedDate: sql<Date>`MIN(${ppoInput.acceptedDate})`.as('accepted_date'),
+            acceptedTime: sql<string>`MIN(${ppoInput.acceptedTime})`.as('accepted_time'),
+            orderedSupplier: sql<string>`string_agg(DISTINCT ${ppoInput.primarySupplier}, ', ')`.as('ordered_supplier')
+        })
+            .from(ppoInput)
+            .where(eq(ppoInput.stage, 'Pending'))
+            .groupBy(ppoInput.productId)
+            .as('ppo_agg');
+
+        const query = db.select({
+            id: pendingPoLedger.id,
+            productId: pendingPoLedger.productId,
+            requestedQty: pendingPoLedger.reqQty,
+            orderedQty: pendingPoLedger.orderedQty,
+            stockQty: pendingPoLedger.stockQty,
+            offerQty: pendingPoLedger.offerQty,
+            decidedSupplierName: pendingPoLedger.decidedSupplierName,
+            allocationStatus: pendingPoLedger.allocationStatus,
+            locked: pendingPoLedger.locked,
+            supplierPriority: pendingPoLedger.supplierPriority,
+            remarks: pendingPoLedger.remarks,
+            itemNameChange: pendingPoLedger.itemNameChange,
+            allocationDetails: pendingPoLedger.allocationDetails,
+            productName: products.name,
+            packing: products.packing,
+            mrp: products.mrp,
+            ptr: products.ptr,
+            pt: products.pt,
+            localCost: products.localCost,
+            category: products.category,
+            subcategory: products.subCategory,
+            genericName: products.genericName,
+            patent: products.patent,
+            hsnCode: products.hsnCode,
+            rep: repSubquery.rep,
+            mobile: repSubquery.mobile,
+            accepted_date: repSubquery.acceptedDate,
+            accepted_time: repSubquery.acceptedTime,
+            ordered_supplier: repSubquery.orderedSupplier
+        })
+            .from(pendingPoLedger)
+            .leftJoin(products, eq(pendingPoLedger.productId, products.id))
+            .leftJoin(repSubquery, eq(pendingPoLedger.productId, repSubquery.productId))
+            .where(and(
+                or(eq(pendingPoLedger.locked, false), eq(pendingPoLedger.allocationStatus, 'PENDING')),
+                ...conditions as any
+            ));
+
+        const sortFieldMap: Record<string, any> = {
+            productName: products.name,
+            requestedQty: pendingPoLedger.reqQty,
+            createdAt: pendingPoLedger.createdAt
+        };
+
+        const sortCol = sortFieldMap[params.sortField || 'createdAt'] || pendingPoLedger.createdAt;
+        const sortDir = params.sortDir === 'asc' ? sql`ASC` : sql`DESC`;
+
+        query.orderBy(sql`${sortCol} ${sortDir}`);
+
+        const items = await query;
+        return items.map(r => ({
+            ...r,
+            id: r.id?.toString(),
+            productId: r.productId?.toString()
+        }));
     }
 
     /**
@@ -52,15 +117,26 @@ export class PendingPoService {
      */
     async getAllocations(pendingItemId: string) {
         const [pivot] = await db.select().from(pendingPoLedger).where(eq(pendingPoLedger.id, BigInt(pendingItemId))).limit(1);
-        if (!pivot) throw new Error('Pending item not found');
+        if (!pivot || !pivot.productId) throw new Error('Pending item or product mapping not found');
 
-        const rows = await db.execute(sql`
-            SELECT 
-                id, order_id, customer_id, customer_name, requested_qty, order_qty, stock, offer
-            FROM ppo_input
-            WHERE product_id = ${pivot.productId} AND stage = 'Pending'
-        `);
-        return rows.rows;
+        const rows = await db.select({
+            id: ppoInput.id,
+            order_id: ppoInput.orderId,
+            customer_id: ppoInput.customerId,
+            customer_name: ppoInput.customerName,
+            requested_qty: ppoInput.requestedQty
+        })
+            .from(ppoInput)
+            .where(and(eq(ppoInput.productId, pivot.productId as bigint), eq(ppoInput.stage, 'Pending')))
+            .orderBy(ppoInput.orderId);
+
+        // Convert bigints to strings for JSON serialization
+        return rows.map(r => ({
+            ...r,
+            id: r.id?.toString(),
+            order_id: r.order_id?.toString(),
+            customer_id: r.customer_id?.toString()
+        }));
     }
 
     /**

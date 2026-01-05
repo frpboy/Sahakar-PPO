@@ -9,6 +9,7 @@ import { ConflictModule } from './modules/conflict/conflict.module';
 import { ProductsModule } from './modules/products/products.module';
 import { SuppliersModule } from './modules/suppliers/suppliers.module';
 import { RepMasterModule } from './modules/rep-master/rep-master.module';
+import { RepAllocationModule } from './modules/rep-allocation/rep-allocation.module';
 import { UsersModule } from './modules/users/users.module';
 import { DutySessionsModule } from './modules/duty-sessions/duty-sessions.module';
 import { AuditLogsModule } from './modules/audit-logs/audit-logs.module';

@@ -172,7 +172,7 @@ export function DataGrid<TData>({
                             <col key={column.id} style={{ width: column.getSize() }} />
                         ))}
                     </colgroup>
-                    <thead className="sticky top-0 z-30 bg-white border-b-2 border-neutral-200">
+                    <thead className="z-30">
                         {table.getHeaderGroups().map((headerGroup) => (
                             <tr key={headerGroup.id} className="divide-x divide-neutral-200">
                                 {headerGroup.headers.map((header, index) => {
@@ -190,10 +190,12 @@ export function DataGrid<TData>({
                                                 maxWidth: header.getSize()
                                             }}
                                             className={`
-                                                px-3 py-2.5 text-[11px] font-bold text-neutral-500 uppercase tracking-widest bg-neutral-50/80 backdrop-blur-sm
-                                                ${isPinnedLeft ? 'sticky left-0 z-40 bg-white border-r border-neutral-200' : ''}
-                                                ${isPinnedRight ? 'sticky right-0 z-40 bg-white border-l border-neutral-200' : ''}
+                                                px-3 py-2.5 text-[11px] font-black text-neutral-500 uppercase tracking-widest bg-white border-b-2 border-neutral-200
+                                                ${stickyHeader ? 'sticky top-0 z-40' : ''}
+                                                ${isPinnedLeft ? 'sticky left-0 z-50 border-r border-neutral-200 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]' : ''}
+                                                ${isPinnedRight ? 'sticky right-0 z-50 border-l border-neutral-200 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]' : ''}
                                                 ${align === 'right' ? 'text-right' : align === 'center' ? 'text-center' : 'text-left'}
+                                                shadow-[inset_0_-1px_0_rgba(0,0,0,0.05)]
                                             `}
                                         >
                                             {flexRender(header.column.columnDef.header, header.getContext())}
@@ -235,10 +237,10 @@ export function DataGrid<TData>({
                                                     maxWidth: cell.column.getSize()
                                                 }}
                                                 className={`
-                                                    px-3 py-2 whitespace-nowrap overflow-hidden text-ellipsis text-neutral-700 align-middle
-                                                    ${isPinnedLeft ? 'sticky left-0 z-10 bg-white group-hover:bg-brand-50/50 border-r border-neutral-200 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]' : ''}
-                                                    ${isPinnedRight ? 'sticky right-0 z-10 bg-white group-hover:bg-brand-50/50 border-l border-neutral-200 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]' : ''}
-                                                    ${align === 'right' ? 'text-right tabular-nums font-bold text-neutral-900' : align === 'center' ? 'text-center' : 'text-left'}
+                                                    px-3 py-3 whitespace-nowrap overflow-hidden text-ellipsis text-neutral-700 align-middle
+                                                    ${isPinnedLeft ? 'sticky left-0 z-10 bg-white group-hover:bg-neutral-50 border-r border-neutral-200 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]' : ''}
+                                                    ${isPinnedRight ? 'sticky right-0 z-10 bg-white group-hover:bg-neutral-50 border-l border-neutral-200 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]' : ''}
+                                                    ${align === 'right' ? 'text-right tabular-nums font-bold text-neutral-900 px-4' : align === 'center' ? 'text-center' : 'text-left'}
                                                 `}
                                             >
                                                 {flexRender(cell.column.columnDef.cell, cell.getContext())}

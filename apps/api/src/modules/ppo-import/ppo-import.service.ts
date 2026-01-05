@@ -28,15 +28,35 @@ interface OrderRow {
     stage?: string;
 }
 
+export interface IngestionError {
+    row: number;
+    column: string;
+    value: string;
+    error: string;
+}
+
+export interface IngestionPreview {
+    row: number;
+    orderId: string;
+    productId: string;
+    productName: string;
+    reqQty: number;
+    stage: string;
+    decision: 'CREATED' | 'UPDATED' | 'DUPLICATE' | 'REJECTED';
+    reason: string;
+}
+
 export interface ProcessOrdersResult {
-    totalRows: number;
-    validRows: number;
-    duplicates: number;
-    rejectedNoProduct: number;
-    processed: number;
-    batchId: string;
-    errors: string[];
-    preview: any[];
+    fileName: string;
+    summary: {
+        rowsRead: number;
+        rowsAccepted: number;
+        pendingCreated: number;
+        pendingUpdated: number;
+        duplicatesSkipped: number;
+    };
+    preview: IngestionPreview[];
+    errors: IngestionError[];
 }
 
 @Injectable()
@@ -47,9 +67,10 @@ export class PpoImportService {
      */
     async parseAndProcessOrders(
         fileBuffer: Buffer,
-        userEmail: string
+        userEmail: string,
+        fileName: string = 'unknown.xlsx'
     ): Promise<ProcessOrdersResult> {
-        console.log('parseAndProcessOrders started');
+        console.log('parseAndProcessOrders started for:', fileName);
 
         // Debug DB Connection availability
         console.log('Checking Environment:', {
@@ -119,16 +140,16 @@ export class PpoImportService {
         }
         rows.forEach(r => r.acceptDatetime = importDate);
 
-        return this.processOrders(rows, userEmail);
+        return this.processOrders(rows, userEmail, fileName);
     }
 
-    async processOrders(rows: OrderRow[], userEmail: string): Promise<ProcessOrdersResult> {
-        const batchId = crypto.randomUUID();
-        const errors: string[] = [];
-        const preview: any[] = [];
-        let duplicates = 0;
-        let rejectedNoProduct = 0;
-        let processed = 0;
+    async processOrders(rows: OrderRow[], userEmail: string, fileName: string = 'manual_input.json'): Promise<ProcessOrdersResult> {
+        const errors: IngestionError[] = [];
+        const preview: IngestionPreview[] = [];
+        let duplicatesSkipped = 0;
+        let rowsAccepted = 0;
+        let pendingCreated = 0;
+        let pendingUpdated = 0;
 
         console.log('Fetching products from DB...');
         const productList = await db.select().from(products);
@@ -142,62 +163,79 @@ export class PpoImportService {
             if (p.name) productNameMap.set(p.name.toLowerCase(), p.id);
         });
 
-        // Step 1: Resolve productId and Filter rows
-        const validRows: OrderRow[] = [];
-        for (const row of rows) {
-            if (row.reqQty <= 0) { // Only process rows with positive quantity
-                continue;
-            }
-
-            let pid = row.productId;
-            if (!pid) {
-                if (row.legacyProductId && productMap.has(row.legacyProductId)) {
-                    pid = productMap.get(row.legacyProductId);
-                } else if (row.productName && productNameMap.has(row.productName.toLowerCase())) {
-                    pid = productNameMap.get(row.productName.toLowerCase());
-                }
-            }
-
-            if (!pid) {
-                rejectedNoProduct++;
-                errors.push(`Row for product '${row.productName || row.legacyProductId}' rejected: Product ID could not be resolved.`);
-                continue;
-            }
-            row.productId = pid;
-            validRows.push(row);
-        }
-
-        console.log(`Valid rows after product resolution: ${validRows.length}, Rejected(no product): ${rejectedNoProduct} `);
-
+        // Step 1: Process Rows
         await db.transaction(async (tx) => {
-            for (const r of validRows) {
+            let rowIndex = 2; // Starting from 2 assuming header is 1
+            for (const r of rows) {
                 try {
-                    // Deduplicate by (order_id + product_id)
-                    // Ensure orderId is present for deduplication
-                    if (!r.orderId || !r.productId) {
-                        errors.push(`Row skipped: Missing orderId or productId for deduplication.Order: ${r.orderId}, Product: ${r.productId} `);
+                    if (r.reqQty <= 0) {
+                        rowIndex++;
                         continue;
                     }
 
+                    let pid = r.productId;
+                    if (!pid) {
+                        if (r.legacyProductId && productMap.has(r.legacyProductId)) {
+                            pid = productMap.get(r.legacyProductId);
+                        } else if (r.productName && productNameMap.has(r.productName.toLowerCase())) {
+                            pid = productNameMap.get(r.productName.toLowerCase());
+                        }
+                    }
+
+                    if (!pid) {
+                        errors.push({
+                            row: rowIndex,
+                            column: 'Product ID',
+                            value: r.legacyProductId || r.productName || 'N/A',
+                            error: 'Product could not be resolved in Master List'
+                        });
+
+                        preview.push({
+                            row: rowIndex,
+                            orderId: r.orderId?.toString() || 'N/A',
+                            productId: 'N/A',
+                            productName: r.productName || 'N/A',
+                            reqQty: r.reqQty,
+                            stage: 'N/A',
+                            decision: 'REJECTED',
+                            reason: 'Unmapped Product'
+                        });
+                        rowIndex++;
+                        continue;
+                    }
+
+                    // Deduplicate
                     const existing = await tx.select().from(ppoInput).where(
                         and(
-                            eq(ppoInput.orderId, r.orderId),
-                            eq(ppoInput.productId, r.productId)
+                            eq(ppoInput.orderId, r.orderId!),
+                            eq(ppoInput.productId, pid)
                         )
                     ).limit(1);
 
                     if (existing.length > 0) {
-                        duplicates++;
-                        continue; // Skip insertion if duplicate
+                        duplicatesSkipped++;
+                        preview.push({
+                            row: rowIndex,
+                            orderId: r.orderId?.toString() || 'N/A',
+                            productId: pid.toString(),
+                            productName: r.productName || 'N/A',
+                            reqQty: r.reqQty,
+                            stage: existing[0].stage || 'N/A',
+                            decision: 'DUPLICATE',
+                            reason: 'Order already exists'
+                        });
+                        rowIndex++;
+                        continue;
                     }
 
+                    // Insert
                     const [inserted] = await tx.insert(ppoInput).values({
                         acceptedDate: r.acceptDatetime.toISOString().split('T')[0],
                         acceptedTime: r.acceptedTime || null,
                         customerId: r.customerId,
                         customerName: r.customerName,
                         orderId: r.orderId,
-                        productId: r.productId,
+                        productId: pid,
                         productName: r.productName,
                         packing: r.packing,
                         subcategory: r.subcategory,
@@ -210,17 +248,21 @@ export class PpoImportService {
                         confirmedQty: r.cQty,
                         requestedQty: r.reqQty,
                         modification: r.modification,
-                        stage: 'Pending' // Default stage for new inputs
+                        stage: 'Pending'
                     }).returning();
 
-                    processed++;
+                    rowsAccepted++;
 
                     if (preview.length < 100) {
                         preview.push({
-                            orderId: r.orderId?.toString(),
-                            productName: r.productName,
-                            qty: r.reqQty,
-                            status: 'Inserted'
+                            row: rowIndex,
+                            orderId: r.orderId?.toString() || 'N/A',
+                            productId: pid.toString(),
+                            productName: r.productName || 'N/A',
+                            reqQty: r.reqQty,
+                            stage: 'Pending',
+                            decision: 'CREATED',
+                            reason: 'New order ingested'
                         });
                     }
 
@@ -229,12 +271,18 @@ export class PpoImportService {
                         action: 'INGEST',
                         entityType: 'PPO_INPUT',
                         entityId: inserted.id,
-                        payload: r as any // Cast to any as OrderRow might not perfectly match payload type
+                        payload: { ...r, row: rowIndex } as any
                     });
+
                 } catch (e: any) {
-                    console.error(`Error processing row for order ${r.orderId} product ${r.productId}: `, e);
-                    errors.push(`Row Error(Order: ${r.orderId}, Product: ${r.productName}): ${e.message} `);
+                    errors.push({
+                        row: rowIndex,
+                        column: 'UNKNOWN',
+                        value: 'N/A',
+                        error: e.message
+                    });
                 }
+                rowIndex++;
             }
 
             // Global aggregation for pending_po_ledger
@@ -258,32 +306,96 @@ export class PpoImportService {
 
             for (const item of aggregated.rows) {
                 const totalQty = parseInt(item.total_qty as string, 10);
+                const pid = BigInt(item.product_id as string);
+
                 if (totalQty > 0) {
-                    await tx.insert(pendingPoLedger).values({
-                        productId: BigInt(item.product_id as string),
-                        reqQty: totalQty,
-                        allocationStatus: 'PENDING',
-                        remarks: item.aggregated_remarks as string
-                    });
+                    // Check if already exists in ledger but is NOT locked
+                    const existingLedger = await tx.select().from(pendingPoLedger).where(
+                        and(
+                            eq(pendingPoLedger.productId, pid),
+                            eq(pendingPoLedger.locked, false)
+                        )
+                    ).limit(1);
+
+                    if (existingLedger.length > 0) {
+                        await tx.update(pendingPoLedger).set({
+                            reqQty: totalQty,
+                            remarks: item.aggregated_remarks as string,
+                            updatedAt: new Date()
+                        }).where(eq(pendingPoLedger.id, existingLedger[0].id));
+                        pendingUpdated++;
+                    } else {
+                        await tx.insert(pendingPoLedger).values({
+                            productId: pid,
+                            reqQty: totalQty,
+                            allocationStatus: 'PENDING',
+                            remarks: item.aggregated_remarks as string
+                        });
+                        pendingCreated++;
+                    }
                 }
             }
-            console.log(`Created ${aggregated.rows.length} aggregated pending items in pending_po_ledger.`);
+            console.log(`Aggregation complete: ${pendingCreated} created, ${pendingUpdated} updated.`);
         });
 
         return {
-            totalRows: rows.length,
-            validRows: validRows.length,
-            duplicates,
-            rejectedNoProduct,
-            processed,
-            batchId,
-            errors,
-            preview
+            fileName,
+            summary: {
+                rowsRead: rows.length,
+                rowsAccepted,
+                pendingCreated,
+                pendingUpdated,
+                duplicatesSkipped
+            },
+            preview,
+            errors
         };
     }
 
-    async getAllInputItems() {
-        return await db.select({
+    async getAllInputItems(params: {
+        productName?: string;
+        orderId?: string;
+        customerId?: string;
+        rep?: string[];
+        stage?: string[];
+        supplier?: string;
+        dateFrom?: string;
+        dateTo?: string;
+        sortField?: string;
+        sortDir?: 'asc' | 'desc';
+    }) {
+        const conditions = [];
+
+        if (params.productName) {
+            conditions.push(sql`LOWER(${ppoInput.productName}) LIKE ${'%' + params.productName.toLowerCase() + '%'}`);
+        }
+        if (params.orderId) {
+            conditions.push(sql`${ppoInput.orderId}::text LIKE ${'%' + params.orderId + '%'}`);
+        }
+        if (params.customerId) {
+            conditions.push(sql`${ppoInput.customerId}::text LIKE ${'%' + params.customerId + '%'}`);
+        }
+        if (params.rep && params.rep.length > 0) {
+            conditions.push(sql`${ppoInput.rep} IN ${params.rep}`);
+        }
+        if (params.stage && params.stage.length > 0) {
+            conditions.push(sql`${ppoInput.stage} IN ${params.stage}`);
+        }
+        if (params.supplier) {
+            conditions.push(sql`(
+                LOWER(${ppoInput.primarySupplier}) LIKE ${'%' + params.supplier.toLowerCase() + '%'} OR
+                LOWER(${ppoInput.secondarySupplier}) LIKE ${'%' + params.supplier.toLowerCase() + '%'} OR
+                LOWER(${ppoInput.decidedSupplier}) LIKE ${'%' + params.supplier.toLowerCase() + '%'}
+            )`);
+        }
+        if (params.dateFrom) {
+            conditions.push(sql`${ppoInput.acceptedDate} >= ${params.dateFrom}`);
+        }
+        if (params.dateTo) {
+            conditions.push(sql`${ppoInput.acceptedDate} <= ${params.dateTo}`);
+        }
+
+        const query = db.select({
             id: ppoInput.id,
             acceptedDate: ppoInput.acceptedDate,
             acceptedTime: ppoInput.acceptedTime,
@@ -310,8 +422,32 @@ export class PpoImportService {
             modification: ppoInput.modification,
             stage: ppoInput.stage,
             createdAt: ppoInput.createdAt
-        })
-            .from(ppoInput)
-            .orderBy(sql`${ppoInput.createdAt} DESC`);
+        }).from(ppoInput);
+
+        if (conditions.length > 0) {
+            query.where(and(...conditions as any));
+        }
+
+        const sortFieldMap: Record<string, any> = {
+            productName: ppoInput.productName,
+            requestedQty: ppoInput.requestedQty,
+            acceptedDate: ppoInput.acceptedDate,
+            createdAt: ppoInput.createdAt
+        };
+
+        const sortCol = sortFieldMap[params.sortField || 'createdAt'] || ppoInput.createdAt;
+        const sortDir = params.sortDir === 'asc' ? sql`ASC` : sql`DESC`;
+
+        query.orderBy(sql`${sortCol} ${sortDir}`);
+
+        const result = await query;
+        // Convert BigInts for serialiazation
+        return result.map(r => ({
+            ...r,
+            id: r.id?.toString(),
+            orderId: r.orderId?.toString(),
+            productId: r.productId?.toString(),
+            customerId: (r as any).customerId?.toString()
+        }));
     }
 }

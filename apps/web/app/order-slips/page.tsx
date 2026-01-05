@@ -7,16 +7,16 @@ import { DataGrid } from '../../components/DataGrid';
 import { ConfirmModal } from '../../components/ConfirmModal';
 import { useToast } from '../../components/Toast';
 import { useUserRole } from '../../context/UserRoleContext';
-import { FileSearch, Plus, Printer, Info } from 'lucide-react';
+import { FileSearch, Plus, Printer, Info, Wallet, Layers, CheckCircle2, FileText, Download, Loader2 } from 'lucide-react';
 import { ColumnDef } from '@tanstack/react-table';
-import { FilterPanel, FilterState } from '../../components/FilterPanel';
+import { FilterPanel } from '../../components/FilterPanel';
 import { TableToolbar } from '../../components/TableToolbar';
 import { SortOption } from '../../components/SortMenu';
 import { useTableState } from '../../hooks/useTableState';
 import { StatusBadge } from '../../components/StatusBadge';
 
 export default function OrderSlipsPage() {
-    const { currentUser, can } = useUserRole();
+    const { currentUser, can, role } = useUserRole();
     const queryClient = useQueryClient();
     const router = useRouter();
     const { showToast } = useToast();
@@ -28,7 +28,6 @@ export default function OrderSlipsPage() {
     const {
         filters, sort, isFilterOpen, setIsFilterOpen,
         applyFilters, removeFilter, clearAllFilters, applySort,
-        savedFilters, activeFilterCount
     } = useTableState({
         storageKey: 'order_slips',
         defaultSort: { id: 'date_desc', label: 'Newest First', field: 'slipDate', direction: 'desc' }
@@ -45,10 +44,16 @@ export default function OrderSlipsPage() {
         { id: 'date_asc', label: 'Date (Oldest)', field: 'slipDate', direction: 'asc' },
     ];
 
-    const { data: slips, isLoading } = useQuery({
-        queryKey: ['order-slips'],
+    const { data: slips, isLoading, isFetching } = useQuery({
+        queryKey: ['order-slips', filters, sort],
         queryFn: async () => {
-            const res = await fetch(`${apiUrl}/order-slips`);
+            const params = new URLSearchParams();
+            if (filters.supplier) params.append('supplier', filters.supplier);
+            if (filters.dateFrom) params.append('dateFrom', filters.dateFrom);
+            if (filters.dateTo) params.append('dateTo', filters.dateTo);
+            if (filters.status?.length) params.append('status', filters.status[0]); // Backend handles single status for now
+
+            const res = await fetch(`${apiUrl}/order-slips?${params.toString()}`);
             if (!res.ok) throw new Error('Failed to fetch slips');
             return res.json();
         },
@@ -59,14 +64,22 @@ export default function OrderSlipsPage() {
             const res = await fetch(`${apiUrl}/order-slips/generate`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userEmail: currentUser?.email || 'unknown@sahakar.com' }),
+                body: JSON.stringify({
+                    supplierNames: [], // Empty means "All eligible" based on current implementation or logic
+                    slipDate: new Date().toISOString().split('T')[0],
+                    userEmail: currentUser?.email || 'unknown@sahakar.com'
+                }),
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.message || 'Generation failed');
             return data;
         },
         onSuccess: (data) => {
-            showToast(data.message || 'Slips generated successfully', 'success');
+            if (data.generated === 0) {
+                showToast('No eligible allocations found to slip.', 'info');
+            } else {
+                showToast(data.message || 'Slips generated successfully', 'success');
+            }
             queryClient.invalidateQueries({ queryKey: ['order-slips'] });
             queryClient.invalidateQueries({ queryKey: ['rep-items'] });
             queryClient.invalidateQueries({ queryKey: ['pending-items'] });
@@ -77,17 +90,36 @@ export default function OrderSlipsPage() {
         }
     });
 
+    // Summary Statistics
+    const summary = useMemo(() => {
+        if (!slips) return { count: 0, items: 0, value: 0 };
+        return slips.reduce((acc: any, slip: any) => ({
+            count: acc.count + 1,
+            items: acc.items + (slip.totalItems || 0),
+            value: acc.value + parseFloat(slip.totalValue || '0')
+        }), { count: 0, items: 0, value: 0 });
+    }, [slips]);
+
     const columns = useMemo<ColumnDef<any>[]>(() => [
         {
             header: 'SLIP ID',
-            size: 100,
-            cell: ({ row }) => <span className="font-mono text-[10px] text-brand-600 font-bold uppercase">#{row.original.id?.toString().substring(0, 8) || '-'}</span>
+            size: 140,
+            cell: ({ row }) => (
+                <span className="font-mono text-[10px] text-brand-600 font-black uppercase tracking-widest bg-brand-50 px-2 py-0.5 border border-brand-100">
+                    {row.original.displayId || row.original.id?.toString().substring(0, 8)}
+                </span>
+            )
+        },
+        {
+            header: 'STATUS',
+            size: 110,
+            cell: ({ row }) => <StatusBadge status={row.original.status || 'GENERATED'} />
         },
         {
             header: 'DATE',
-            size: 110,
+            size: 100,
             cell: ({ row }) => (
-                <span className="tabular-nums text-[11px] font-bold text-neutral-500">
+                <span className="tabular-nums text-[10px] font-black text-neutral-400 uppercase">
                     {row.original.slipDate ? new Date(row.original.slipDate).toLocaleDateString() : '-'}
                 </span>
             )
@@ -95,44 +127,36 @@ export default function OrderSlipsPage() {
         {
             header: 'SUPPLIER',
             accessorKey: 'supplier',
-            size: 220,
-            cell: (info) => <span className="font-bold text-neutral-900 uppercase text-[11px] tracking-tight">{info.getValue() as string}</span>
+            size: 240,
+            cell: (info) => <span className="font-black text-neutral-900 uppercase text-[11px] tracking-tight">{info.getValue() as string}</span>
         },
         {
-            header: 'SUMMARY',
-            size: 180,
+            header: 'ITEMS',
+            size: 80,
+            meta: { align: 'right' },
+            cell: ({ row }) => <span className="tabular-nums font-black text-neutral-600 text-xs">{row.original.totalItems || 0}</span>
+        },
+        {
+            header: 'TOTAL VALUE',
+            size: 120,
+            meta: { align: 'right' },
             cell: ({ row }) => (
-                <div className="flex flex-col">
-                    <span className="text-[11px] font-bold text-neutral-900 leading-none">
-                        ITEMS: <span className="tabular-nums">{row.original.totalItems || 0}</span> SKUs
-                    </span>
-                    <span className="text-[11px] font-black text-brand-600 mt-1">
-                        VALUE: ₹<span className="tabular-nums">{parseFloat(row.original.totalValue || '0').toFixed(2)}</span>
-                    </span>
-                </div>
+                <span className="tabular-nums font-black text-brand-600 text-xs">
+                    ₹{parseFloat(row.original.totalValue || '0').toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                </span>
             )
-        },
-        {
-            header: 'REMARKS',
-            size: 150,
-            cell: ({ row }) => <span className="text-[11px] text-neutral-500 italic truncate">{row.original.remarks || '-'}</span>
         },
         {
             header: 'BILL ID',
             size: 120,
-            cell: ({ row }) => <span className="font-mono text-[11px] font-bold text-neutral-700">{row.original.billId || '-'}</span>
-        },
-        {
-            header: 'BILL DATE',
-            size: 110,
-            cell: ({ row }) => <span className="tabular-nums text-[11px] font-bold text-neutral-500">{row.original.billDate ? new Date(row.original.billDate).toLocaleDateString() : '-'}</span>
+            cell: ({ row }) => <span className="font-mono text-[10px] font-black text-neutral-400 uppercase italic tracking-tighter">{row.original.billId || 'NO BILL'}</span>
         },
         {
             header: 'ACTIONS',
-            size: 100,
+            size: 80,
             cell: ({ row }) => (
                 <div className="flex items-center gap-2">
-                    <Link href={`/order-slips/${row.original.id}`} className="p-1.5 text-brand-600 hover:bg-brand-50 rounded transition-all" title="View Details">
+                    <Link href={`/order-slips/${row.original.id}`} className="p-1.5 text-brand-600 hover:bg-brand-50 border border-transparent hover:border-brand-100 transition-all">
                         <FileSearch size={16} />
                     </Link>
                 </div>
@@ -140,88 +164,43 @@ export default function OrderSlipsPage() {
         }
     ], []);
 
-    const filteredItems = useMemo(() => {
-        if (!slips) return [];
-        let result = [...slips];
-
-        // Apply Search/Filters
-        if (filters.productName) { // Using productName filter as a generic search for supplier in this context
-            result = result.filter(item =>
-                item.supplier?.toLowerCase().includes(filters.productName!.toLowerCase())
-            );
-        }
-        if (filters.supplier) {
-            result = result.filter(item =>
-                item.supplier?.toLowerCase().includes(filters.supplier!.toLowerCase())
-            );
-        }
-        if (filters.dateFrom) {
-            result = result.filter(item =>
-                item.slipDate && item.slipDate >= filters.dateFrom!
-            );
-        }
-        if (filters.dateTo) {
-            result = result.filter(item =>
-                item.slipDate && item.slipDate <= filters.dateTo!
-            );
-        }
-
-        // Apply Sorting
-        if (sort) {
-            result.sort((a, b) => {
-                let valA: any = '';
-                let valB: any = '';
-
-                if (sort.field === 'supplier') {
-                    valA = a.supplier || '';
-                    valB = b.supplier || '';
-                } else if (sort.field === 'totalItems') {
-                    valA = a.totalItems || 0;
-                    valB = b.totalItems || 0;
-                } else if (sort.field === 'totalValue') {
-                    valA = parseFloat(a.totalValue || '0');
-                    valB = parseFloat(b.totalValue || '0');
-                } else if (sort.field === 'slipDate') {
-                    valA = a.slipDate || '';
-                    valB = b.slipDate || '';
-                }
-
-                if (valA < valB) return sort.direction === 'asc' ? -1 : 1;
-                if (valA > valB) return sort.direction === 'asc' ? 1 : -1;
-                return 0;
-            });
-        }
-
-        return result;
-    }, [slips, filters, sort]);
-
     return (
-        <div className="flex flex-col h-full bg-neutral-50/50">
-            <header className="px-6 py-4 bg-white border-b border-neutral-200">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-xl font-black text-neutral-900 tracking-tight flex items-center gap-2">
-                            <Printer className="text-brand-600" />
-                            ORDER SLIPS REPOSITORY
-                        </h1>
-                        <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest mt-1">
-                            Document Management & Fulfillment Registry
-                        </p>
-                    </div>
-                    {can('generate_slips') && (
+        <div className="flex flex-col h-full bg-transparent font-sans pb-20">
+            <header className="mb-10 flex items-center justify-between">
+                <div>
+                    <h1 className="text-3xl font-extrabold text-neutral-900 tracking-tight flex items-center gap-4">
+                        <div className="w-12 h-12 bg-white rounded-none shadow-[0_1px_3px_rgba(16_24_40/0.1)] flex items-center justify-center border border-neutral-200/80">
+                            <Printer size={28} className="text-brand-600" />
+                        </div>
+                        Order Slips Registry
+                    </h1>
+                    <p className="text-sm text-neutral-400 font-bold uppercase tracking-widest mt-2">Document Management & Fulfillment Registry</p>
+                </div>
+                <div className="flex items-center gap-4">
+                    <button className="flex items-center gap-2 px-6 py-3 bg-white border border-neutral-200 text-neutral-400 text-[10px] font-black uppercase tracking-widest hover:bg-neutral-50 transition-all opacity-50 cursor-not-allowed">
+                        <Download size={14} /> Export CSV
+                    </button>
+                    {can('generate_slips') || role === 'SUPER_ADMIN' || role === 'PROCUREMENT_HEAD' ? (
                         <button
                             onClick={() => setIsGenerateModalOpen(true)}
-                            className="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 text-xs font-bold uppercase tracking-widest transition-all flex items-center gap-2"
+                            className="bg-brand-600 hover:bg-brand-700 text-white px-8 py-3 text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-3 shadow-xl shadow-brand-600/20 active:scale-95 disabled:opacity-50"
                             disabled={generateMutation.isPending}
                         >
-                            <Plus size={16} />
-                            {generateMutation.isPending ? 'Generating...' : 'New Batch'}
+                            {generateMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+                            {generateMutation.isPending ? 'GENERATING...' : 'GENERATE BATCH'}
                         </button>
-                    )}
+                    ) : null}
                 </div>
             </header>
 
-            <main className="flex-1 p-6 overflow-hidden">
+            <main className="space-y-8">
+                {/* Summary View */}
+                <div className="grid grid-cols-3 gap-6">
+                    <SummaryCard label="Slip Documents" value={summary.count} icon={<FileText size={20} />} color="neutral" />
+                    <SummaryCard label="Consolidated Items" value={summary.items} icon={<Layers size={20} />} color="brand" />
+                    <SummaryCard label="Total Inventory Value" value={summary.value} icon={<Wallet size={20} />} isCurrency color="success" />
+                </div>
+
                 <TableToolbar
                     onOpenFilter={() => setIsFilterOpen(true)}
                     filters={filters}
@@ -232,43 +211,86 @@ export default function OrderSlipsPage() {
                     onSort={applySort}
                 />
 
-                <DataGrid
-                    data={filteredItems}
-                    columns={columns}
-                    isLoading={isLoading}
-                    onRowClick={(row: any) => router.push(`/order-slips/${row.id}`)}
+                <FilterPanel
+                    isOpen={isFilterOpen}
+                    onClose={() => setIsFilterOpen(false)}
+                    filters={filters}
+                    onApply={applyFilters}
+                    onClear={clearAllFilters}
+                    stageOptions={[
+                        { label: 'GENERATED', value: 'GENERATED' },
+                        { label: 'SENT', value: 'SENT' },
+                        { label: 'BILLED', value: 'BILLED' },
+                        { label: 'CLOSED', value: 'CLOSED' }
+                    ]}
                 />
 
-                {!isLoading && filteredItems.length === 0 && (
-                    <div className="app-card bg-white p-20 text-center mt-6">
+                <div className="app-card overflow-hidden bg-white shadow-xl shadow-neutral-200/40 border border-neutral-200/50">
+                    <DataGrid
+                        data={slips || []}
+                        columns={columns}
+                        isLoading={isLoading}
+                        onRowClick={(row: any) => router.push(`/order-slips/${row.id}`)}
+                    />
+                </div>
+
+                {!isLoading && (!slips || slips.length === 0) && (
+                    <div className="app-card bg-white p-24 text-center border-2 border-dashed border-neutral-200">
                         <div className="max-w-xs mx-auto">
-                            <div className="w-16 h-16 bg-neutral-50 rounded-none flex items-center justify-center mx-auto mb-6">
-                                <Printer size={32} className="text-neutral-200" />
-                            </div>
-                            <h3 className="text-sm font-bold text-neutral-900 uppercase">No Data found</h3>
-                            <p className="text-[10px] text-neutral-400 mt-2 font-bold uppercase tracking-widest">Adjust filters or generate new slips</p>
+                            <Info size={40} className="text-neutral-200 mx-auto mb-6" />
+                            <h3 className="text-lg font-bold text-neutral-900 uppercase">Registry Empty</h3>
+                            <p className="text-xs text-neutral-400 mt-2 font-medium">Refine your search parameters or check PPO Pipeline.</p>
                         </div>
                     </div>
                 )}
             </main>
 
-            <FilterPanel
-                isOpen={isFilterOpen}
-                onClose={() => setIsFilterOpen(false)}
-                filters={filters}
-                onApply={applyFilters}
-                onClear={clearAllFilters}
-            />
-
             <ConfirmModal
                 isOpen={isGenerateModalOpen}
                 onConfirm={() => generateMutation.mutate()}
                 onCancel={() => setIsGenerateModalOpen(false)}
-                title="Batch Slips Generation"
-                message="This will automatically group all current allocations by supplier and create printable order slips. This action is final and will move items out of the allocation stage. Proceed?"
-                confirmLabel="Begin Generation"
+                title="Execute Batch Distribution?"
+                message={
+                    <div className="space-y-4 text-left">
+                        <p>This action will initiate the following operational transition:</p>
+                        <ul className="text-xs space-y-2 list-disc pl-5 opacity-80">
+                            <li>Lock current <span className="font-bold">REP Allocations</span> into permanent records</li>
+                            <li>Create supplier-wise <span className="font-bold">Order Slips</span> for procurement</li>
+                            <li>Prevent further edits to allocated quantities</li>
+                        </ul>
+                        <p className="text-danger-600 font-extrabold uppercase text-[10px] tracking-widest mt-4">Critical: This operation cannot be reversed.</p>
+                    </div>
+                }
+                confirmLabel="Confirm & Generate"
                 variant="primary"
             />
+        </div>
+    );
+}
+
+function SummaryCard({ label, value, icon, isCurrency, color }: { label: string, value: number, icon: React.ReactNode, isCurrency?: boolean, color: 'brand' | 'success' | 'neutral' }) {
+    const colors = {
+        brand: 'text-brand-600 bg-brand-50 border-brand-100',
+        success: 'text-success-600 bg-success-50 border-success-100',
+        neutral: 'text-neutral-500 bg-neutral-50 border-neutral-200'
+    };
+    const iconColors = {
+        brand: 'text-brand-400',
+        success: 'text-success-400',
+        neutral: 'text-neutral-300'
+    };
+
+    return (
+        <div className={`p-6 bg-white border border-neutral-200/80 shadow-sm flex items-center gap-5`}>
+            <div className={`w-12 h-12 flex items-center justify-center ${colors[color]} border rounded-none`}>
+                <div className={iconColors[color]}>{icon}</div>
+            </div>
+            <div>
+                <p className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] mb-1">{label}</p>
+                <h4 className="text-2xl font-black text-neutral-900 tabular-nums leading-none">
+                    {isCurrency && '₹'}{typeof value === 'number' ? value.toLocaleString('en-IN', { maximumFractionDigits: 0 }) : '0'}
+                </h4>
+            </div>
         </div>
     );
 }

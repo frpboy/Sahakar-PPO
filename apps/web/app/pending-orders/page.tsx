@@ -90,10 +90,22 @@ export default function PendingOrdersPage() {
 
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://asia-south1-sahakar-ppo.cloudfunctions.net/api';
 
-    const { data: items, isLoading } = useQuery({
-        queryKey: ['pending-items'],
+    const { data: items, isLoading } = useQuery<PendingItem[]>({
+        queryKey: ['pending-items', filters, sort],
         queryFn: async () => {
-            const res = await fetch(`${apiUrl}/pending-items`);
+            const params = new URLSearchParams();
+            if (filters.productName) params.append('productName', filters.productName);
+            if (filters.supplier) params.append('supplier', filters.supplier);
+            if (filters.rep?.length) filters.rep.forEach(r => params.append('rep[]', r));
+            if (filters.dateFrom) params.append('dateFrom', filters.dateFrom);
+            if (filters.dateTo) params.append('dateTo', filters.dateTo);
+
+            if (sort) {
+                params.append('sortField', sort.field);
+                params.append('sortDir', sort.direction);
+            }
+
+            const res = await fetch(`${apiUrl}/pending-items?${params.toString()}`);
             if (!res.ok) throw new Error('Network response was not ok');
             return res.json();
         },
@@ -166,15 +178,23 @@ export default function PendingOrdersPage() {
         });
     };
 
-    const handleOpenAllocator = async (item: PendingItem) => {
+    const handleOpenAllocator = (item: PendingItem) => {
         setAllocatorItem(item);
         setIsAllocatorOpen(true);
+        setAllocationRows([]); // Clear previous
+    };
+
+    const loadAllocationData = async () => {
+        if (!allocatorItem) return;
         setIsAllocLoading(true);
         try {
-            const res = await fetch(`${apiUrl}/pending-items/${item.id}/allocations`);
+            const res = await fetch(`${apiUrl}/pending-items/${allocatorItem.id}/allocations`);
             if (!res.ok) throw new Error('Failed to fetch allocations');
             const data = await res.json();
             setAllocationRows(data);
+            if (data.length === 0) {
+                showToast('No child orders found for this product.', 'info');
+            }
         } catch (err) {
             showToast('Failed to load allocations', 'error');
         } finally {
@@ -189,15 +209,39 @@ export default function PendingOrdersPage() {
     const handleSaveAllocator = async () => {
         if (!allocatorItem) return;
 
-        // Calculate notes string: Ord 61067: 10(Buy), 2(Off) | Ord 60906: 10(Buy), 2(Off)
-        const notes = allocationRows
-            .filter(r => r.order_qty > 0 || parseInt(r.offer) > 0)
-            .map(r => `Ord ${r.order_id}: ${r.order_qty}(Buy), ${r.offer || 0}(Off)`)
-            .join(' | ');
+        let totalOrdered = 0;
+        let totalStock = 0;
+        let uniqueOffers = new Set<string>();
+        const notes: string[] = [];
 
-        const totalOrdered = allocationRows.reduce((sum, r) => sum + (r.order_qty || 0), 0);
-        const totalStock = allocationRows.reduce((sum, r) => sum + (r.stock || 0), 0);
-        const totalOffer = allocationRows.reduce((sum, r) => sum + parseInt(r.offer || '0'), 0);
+        allocationRows.forEach(row => {
+            const buyVal = row.order_qty === undefined || row.order_qty === null ? row.requested_qty : row.order_qty;
+            const stkVal = row.stock || 0;
+            const offVal = row.offer?.trim() || "";
+
+            const parts: string[] = [];
+            if (buyVal > 0) {
+                totalOrdered += buyVal;
+                parts.push(`${buyVal}(Buy)`);
+            }
+            if (stkVal > 0) {
+                totalStock += stkVal;
+                parts.push(`${stkVal}(Stk)`);
+            }
+            if (offVal !== "") {
+                parts.push(`${offVal}(Off)`);
+                uniqueOffers.add(offVal);
+            }
+
+            if (parts.length > 0) {
+                notes.push(`Ord ${row.order_id}: ${parts.join(', ')}`);
+            }
+        });
+
+        const totalOffer = uniqueOffers.size > 0 ? Array.from(uniqueOffers).length : 0; // Or just sum up quantities if that's what was intended
+        // The GAS code uses unique offers size for some reason or just collects them. 
+        // Let's stick to the user's GAS logic for notes but keep the total counts accurate.
+        const notesString = notes.join(' | ');
 
         try {
             await updateMutation.mutateAsync({
@@ -205,11 +249,12 @@ export default function PendingOrdersPage() {
                 payload: {
                     orderedQty: totalOrdered,
                     stockQty: totalStock,
-                    offerQty: totalOffer,
-                    notes: notes // This updates the remarks/notes column
+                    offerQty: totalOffer > 0 ? totalOffer : 0, // Using count of unique offers for now as per GAS hint, or we could sum.
+                    notes: notesString
                 }
             });
             setIsAllocatorOpen(false);
+            showToast('Allocation calculated and saved', 'success');
         } catch (err) {
             // Toast handled by mutation
         }
@@ -243,89 +288,30 @@ export default function PendingOrdersPage() {
         queryClient.invalidateQueries({ queryKey: ['pending-items'] });
     };
 
-    const filteredItems = useMemo(() => {
-        if (!items) return [];
-        let result = [...items];
-
-        // Apply Search/Filters
-        if (filters.productName) {
-            result = result.filter(item =>
-                item.product_name?.toLowerCase().includes(filters.productName!.toLowerCase())
-            );
-        }
-        if (filters.supplier) {
-            result = result.filter(item =>
-                item.decided_supplier_name?.toLowerCase().includes(filters.supplier!.toLowerCase()) ||
-                item.ordered_supplier?.toLowerCase().includes(filters.supplier!.toLowerCase())
-            );
-        }
-        if (filters.rep && filters.rep.length > 0) {
-            result = result.filter(item =>
-                filters.rep!.includes(item.rep || '')
-            );
-        }
-        if (filters.dateFrom) {
-            result = result.filter(item =>
-                item.accepted_date && item.accepted_date >= filters.dateFrom!
-            );
-        }
-        if (filters.dateTo) {
-            result = result.filter(item =>
-                item.accepted_date && item.accepted_date <= filters.dateTo!
-            );
-        }
-
-        if (sort) {
-            result.sort((a, b) => {
-                let valA: any = '';
-                let valB: any = '';
-
-                if (sort.field === 'product_name') {
-                    valA = a.product_name || '';
-                    valB = b.product_name || '';
-                } else if (sort.field === 'req_qty') {
-                    valA = a.req_qty || 0;
-                    valB = b.req_qty || 0;
-                } else if (sort.field === 'accepted_date') {
-                    valA = a.accepted_date || '';
-                    valB = b.accepted_date || '';
-                }
-
-                if (valA < valB) return sort.direction === 'asc' ? -1 : 1;
-                if (valA > valB) return sort.direction === 'asc' ? 1 : -1;
-                return 0;
-            });
-        }
-
-        return result;
-    }, [items, filters, sort]);
+    const filteredItems = items || [];
 
     const columns = useMemo<ColumnDef<PendingItem>[]>(() => [
         {
-            header: 'PROD ID',
-            size: 80,
-            cell: ({ row }) => <span className="font-mono text-[10px] text-neutral-500">{row.original.product_id?.toString().substring(0, 8) || '-'}</span>
+            header: '#ID',
+            size: 60,
+            meta: { align: 'center' },
+            cell: ({ row }) => <span className="font-mono text-[10px] text-brand-600 font-bold">#{row.original.id?.toString().padStart(4, '0')}</span>
         },
         {
-            header: 'MRP',
+            header: 'PROD ID',
             size: 80,
-            meta: { align: 'right' },
-            cell: ({ row }) => <span className="tabular-nums">₹{row.original.mrp || '0.00'}</span>
+            meta: { align: 'center' },
+            cell: ({ row }) => <span className="font-mono text-[10px] text-neutral-400">{row.original.product_id?.toString().substring(0, 8) || '-'}</span>
+        },
+        {
+            header: 'ITEM NAME',
+            size: 200,
+            cell: ({ row }) => <span className="font-bold text-neutral-900 uppercase truncate" title={row.original.product_name}>{row.original.product_name}</span>
         },
         {
             header: 'PACKING',
             size: 80,
-            cell: ({ row }) => <span className="text-[10px] font-bold text-neutral-400 uppercase">{row.original.packing || '-'}</span>
-        },
-        {
-            header: 'ITEM NAME',
-            size: 220,
-            cell: ({ row }) => <span className="font-bold text-neutral-900 uppercase truncate" title={row.original.product_name}>{row.original.product_name}</span>
-        },
-        {
-            header: 'REMARKS',
-            size: 150,
-            cell: ({ row }) => <span className="text-[10px] text-neutral-500 truncate italic font-medium" title={row.original.remarks}>{row.original.remarks || '-'}</span>
+            cell: ({ row }) => <span className="text-[10px] font-bold text-neutral-400 uppercase">{row.original.packing || 'N/A'}</span>
         },
         {
             header: 'SUBCATEGORY',
@@ -333,18 +319,9 @@ export default function PendingOrdersPage() {
             cell: ({ row }) => <span className="text-[10px] bg-neutral-100 px-1 rounded font-bold text-neutral-500 uppercase">{row.original.subcategory || 'N/A'}</span>
         },
         {
-            header: 'MOVE TO REP',
-            size: 120,
-            cell: ({ row }) => (
-                <button
-                    onClick={(e) => { e.stopPropagation(); handleMoveToRep(row.original.id); }}
-                    disabled={movingIds.has(row.original.id)}
-                    className="text-[9px] font-black bg-brand-600 text-white px-3 py-1 uppercase tracking-tighter hover:bg-brand-700 disabled:bg-neutral-300 transition-all flex items-center gap-1"
-                >
-                    {movingIds.has(row.original.id) ? <Loader2 size={10} className="animate-spin" /> : <ArrowRight size={10} />}
-                    Move to REP
-                </button>
-            )
+            header: 'REMARKS',
+            size: 150,
+            cell: ({ row }) => <span className="text-[10px] text-neutral-500 truncate italic font-medium" title={row.original.remarks}>{row.original.remarks || '-'}</span>
         },
         {
             header: 'REQ QTY',
@@ -361,27 +338,27 @@ export default function PendingOrdersPage() {
                 return editingId === item.id ? (
                     <input
                         type="number"
-                        className="w-full bg-white border border-brand-500 p-1 text-xs text-right tabular-nums"
+                        className="w-full bg-white border border-brand-500 p-1 text-xs text-right tabular-nums text-success-600"
                         value={editFormData.ordered_qty || ''}
                         onChange={(e) => handleInputChange('ordered_qty', parseInt(e.target.value))}
                     />
-                ) : <span className="tabular-nums font-bold text-brand-600">{item.ordered_qty}</span>;
+                ) : <span className="tabular-nums font-bold text-success-600">{item.ordered_qty}</span>;
             }
         },
         {
-            header: 'STOCK IN HAND',
-            size: 100,
+            header: 'STOCK',
+            size: 90,
             meta: { align: 'right' },
             cell: ({ row }) => {
                 const item = row.original;
                 return editingId === item.id ? (
                     <input
                         type="number"
-                        className="w-full bg-white border border-brand-500 p-1 text-xs text-right tabular-nums"
+                        className="w-full bg-white border border-brand-500 p-1 text-xs text-right tabular-nums text-brand-600"
                         value={editFormData.stock_qty || ''}
                         onChange={(e) => handleInputChange('stock_qty', parseInt(e.target.value))}
                     />
-                ) : <span className="tabular-nums font-bold text-neutral-900">{item.stock_qty}</span>;
+                ) : <span className="tabular-nums font-bold text-brand-600">{item.stock_qty}</span>;
             }
         },
         {
@@ -393,20 +370,17 @@ export default function PendingOrdersPage() {
                 return editingId === item.id ? (
                     <input
                         type="number"
-                        className="w-full bg-white border border-brand-500 p-1 text-xs text-right tabular-nums"
+                        className="w-full bg-white border border-brand-500 p-1 text-xs text-right tabular-nums text-warning-600"
                         value={editFormData.offer_qty || ''}
                         onChange={(e) => handleInputChange('offer_qty', parseInt(e.target.value))}
                     />
-                ) : <span className="tabular-nums font-bold text-success-600">{item.offer_qty}</span>;
+                ) : <span className="tabular-nums font-bold text-warning-600">{item.offer_qty}</span>;
             }
         },
         {
             header: 'NOTES',
             size: 200,
-            cell: ({ row }) => {
-                const item = row.original;
-                return <span className="text-[10px] text-brand-700 font-bold italic truncate" title={item.allocation_details}>{item.allocation_details || '-'}</span>;
-            }
+            cell: ({ row }) => <span className="text-[10px] text-brand-700 font-bold italic truncate" title={row.original.allocation_details}>{row.original.allocation_details || '-'}</span>
         },
         {
             header: 'ITEM NAME CHANGE',
@@ -435,15 +409,13 @@ export default function PendingOrdersPage() {
             cell: ({ row }) => {
                 const item = row.original;
                 return editingId === item.id ? (
-                    <div className="relative">
-                        <input
-                            list="pipeline-suppliers"
-                            className="w-full bg-white border border-brand-500 p-1 text-[10px] font-bold uppercase text-brand-700 h-7"
-                            value={editFormData.decided_supplier_name || ''}
-                            onChange={(e) => handleInputChange('decided_supplier_name', e.target.value)}
-                            placeholder="Search Supplier..."
-                        />
-                    </div>
+                    <input
+                        list="pipeline-suppliers"
+                        className="w-full bg-white border border-brand-500 p-1 text-[10px] font-bold uppercase text-brand-700 h-7"
+                        value={editFormData.decided_supplier_name || ''}
+                        onChange={(e) => handleInputChange('decided_supplier_name', e.target.value)}
+                        placeholder="Search Supplier..."
+                    />
                 ) : <span className="text-[11px] font-bold text-brand-600 uppercase truncate">{item.decided_supplier_name || row.original.ordered_supplier || '-'}</span>;
             }
         },
@@ -451,11 +423,6 @@ export default function PendingOrdersPage() {
             header: 'PRIMARY SUP',
             size: 150,
             cell: ({ row }) => <span className="text-[11px] text-neutral-400 uppercase truncate">{row.original.ordered_supplier || '-'}</span>
-        },
-        {
-            header: 'SECONDARY SUP',
-            size: 150,
-            cell: ({ row }) => <span className="text-[11px] text-neutral-400 uppercase truncate">N/A</span>
         },
         {
             header: 'REP',
@@ -466,20 +433,6 @@ export default function PendingOrdersPage() {
             header: 'MOBILE',
             size: 100,
             cell: ({ row }) => <span className="tabular-nums text-[10px] text-neutral-500">{row.original.mobile || '-'}</span>
-        },
-        {
-            header: 'CHANGE TO REP',
-            size: 150,
-            cell: ({ row }) => (
-                <button
-                    onClick={() => handleMoveToRep(row.original.id)}
-                    disabled={movingIds.has(row.original.id)}
-                    className="text-[10px] font-bold text-brand-600 hover:text-brand-700 bg-brand-50 px-2 py-1 rounded-none border border-brand-100 uppercase tracking-tight transition-colors flex items-center gap-2"
-                >
-                    {movingIds.has(row.original.id) ? <Loader2 size={12} className="animate-spin" /> : <ArrowRight size={12} />}
-                    Move to REP
-                </button>
-            )
         },
         {
             header: 'ACCEPT DATE',
@@ -493,33 +446,55 @@ export default function PendingOrdersPage() {
         },
         {
             header: 'ACTIONS',
-            size: 80,
+            size: 150,
+            meta: { align: 'center' },
             cell: ({ row }) => {
                 const item = row.original;
+                const isMoving = movingIds.has(item.id);
+
+                if (editingId === item.id) {
+                    return (
+                        <div className="flex items-center gap-1 justify-center">
+                            <button onClick={() => handleSave(item.id)} className="p-1 px-2 text-brand-600 hover:bg-brand-50 border border-brand-200 rounded flex items-center gap-1">
+                                <CheckCircle2 size={14} /> <span className="text-[9px] font-bold uppercase">Save</span>
+                            </button>
+                            <button onClick={() => setEditingId(null)} className="p-1 px-2 text-danger-600 hover:bg-danger-50 border border-danger-200 rounded flex items-center gap-1">
+                                <XCircle size={14} /> <span className="text-[9px] font-bold uppercase">Cancel</span>
+                            </button>
+                        </div>
+                    );
+                }
+
                 return (
-                    <div className="flex items-center gap-2">
-                        {editingId === item.id ? (
-                            <>
-                                <button onClick={() => handleSave(item.id)} className="p-1 text-brand-600 hover:bg-neutral-100"><CheckCircle2 size={16} /></button>
-                                <button onClick={() => setEditingId(null)} className="p-1 text-danger-600 hover:bg-neutral-100"><XCircle size={16} /></button>
-                            </>
-                        ) : (
-                            <div className="flex items-center gap-1">
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); handleOpenAllocator(item); }}
-                                    className="p-1 text-brand-600 hover:bg-brand-50 rounded"
-                                    title="Open Allocator"
-                                >
-                                    <ClipboardList size={16} />
-                                </button>
-                                <button onClick={() => handleEditClick(item)} className="p-1 text-neutral-400 hover:text-brand-600 hover:bg-neutral-100 transition-all"><Edit size={16} /></button>
-                            </div>
-                        )}
+                    <div className="flex items-center gap-1 justify-center">
+                        <button
+                            onClick={() => handleOpenAllocator(item)}
+                            className="p-1 text-neutral-400 hover:text-brand-600 hover:bg-neutral-50 transition-all border border-transparent hover:border-brand-200 rounded"
+                            title="Open Allocator"
+                        >
+                            <ClipboardList size={14} />
+                        </button>
+                        <button
+                            onClick={() => handleEditClick(item)}
+                            className="p-1 text-neutral-400 hover:text-brand-600 hover:bg-neutral-50 transition-all border border-transparent hover:border-brand-200 rounded"
+                            title="Edit Row"
+                        >
+                            <Edit size={14} />
+                        </button>
+                        <button
+                            onClick={() => handleMoveToRep(item.id)}
+                            disabled={isMoving || !isOnline}
+                            className="p-1 px-2 bg-brand-600 text-white text-[9px] font-black uppercase rounded hover:bg-brand-700 disabled:bg-neutral-200 transition-all flex items-center gap-1"
+                            title="Move to REP Allocation"
+                        >
+                            {isMoving ? <Loader2 size={10} className="animate-spin" /> : <ArrowRight size={10} />}
+                            <span>REP</span>
+                        </button>
                     </div>
                 );
             }
         }
-    ], [editingId, editFormData, movingIds, handleMoveToRep, handleSave, handleEditClick]);
+    ], [editingId, editFormData, movingIds, isOnline, handleMoveToRep, handleSave, handleEditClick, handleOpenAllocator]);
 
     return (
         <div className="flex flex-col h-full bg-neutral-50/50">
@@ -660,11 +635,11 @@ export default function PendingOrdersPage() {
                         <div className="p-6 space-y-6">
                             {/* Load Row Button */}
                             <button
-                                onClick={() => handleOpenAllocator(allocatorItem)}
+                                onClick={loadAllocationData}
                                 className="w-full bg-success-600 text-white font-bold py-3 uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-success-700 transition-all shadow-lg shadow-success-600/20"
+                                disabled={isAllocLoading}
                             >
-                                <Loader2 size={18} className={isAllocLoading ? "animate-spin" : "hidden"} />
-                                🔄 LOAD SELECTED ROW
+                                {isAllocLoading ? <Loader2 size={18} className="animate-spin" /> : "🔄 LOAD SELECTED ROW"}
                             </button>
 
                             {/* Product Info Card */}
@@ -674,16 +649,16 @@ export default function PendingOrdersPage() {
 
                                 {/* Allocation Table */}
                                 <div className="overflow-x-auto">
-                                    <table className="w-full border-collapse">
-                                        <thead>
-                                            <tr className="bg-neutral-50 border-y border-neutral-200">
-                                                <th className="px-3 py-2 text-left text-[10px] font-black text-neutral-400 uppercase tracking-widest">Cust / Ord</th>
-                                                <th className="px-3 py-2 text-center text-[10px] font-black text-neutral-400 uppercase tracking-widest border-x border-neutral-200">Ord</th>
-                                                <th className="px-3 py-2 text-center text-[10px] font-black text-neutral-400 uppercase tracking-widest border-x border-neutral-200">Stk</th>
-                                                <th className="px-3 py-2 text-center text-[10px] font-black text-neutral-400 uppercase tracking-widest">Off</th>
+                                    <table className="w-full text-left border-collapse border border-neutral-300">
+                                        <thead className="bg-neutral-200">
+                                            <tr className="divide-x divide-neutral-300">
+                                                <th className="px-3 py-2 text-[10px] font-black uppercase tracking-tight text-neutral-600 w-[35%]">CUST / ORD</th>
+                                                <th className="px-3 py-2 text-[10px] font-black uppercase tracking-tight text-success-700 text-center">ORD (BUY)</th>
+                                                <th className="px-3 py-2 text-[10px] font-black uppercase tracking-tight text-brand-700 text-center">STK (STOCK)</th>
+                                                <th className="px-3 py-2 text-[10px] font-black uppercase tracking-tight text-warning-700 text-center">OFF (OFFER)</th>
                                             </tr>
                                         </thead>
-                                        <tbody className="divide-y divide-neutral-100">
+                                        <tbody className="bg-white divide-y divide-neutral-100">
                                             {isAllocLoading ? (
                                                 <tr>
                                                     <td colSpan={4} className="py-8 text-center text-neutral-400 font-bold animate-pulse">Fetching order breakdown...</td>
@@ -694,32 +669,35 @@ export default function PendingOrdersPage() {
                                                 </tr>
                                             ) : (
                                                 allocationRows.map((row) => (
-                                                    <tr key={row.id}>
-                                                        <td className="px-3 py-3">
-                                                            <div className="text-[11px] font-bold text-neutral-800">{row.customer_id}</div>
-                                                            <div className="text-[11px] font-black text-brand-600">{row.order_id}</div>
+                                                    <tr key={row.id} className="divide-x divide-neutral-200 hover:bg-neutral-50 transition-colors">
+                                                        <td className="px-3 py-2">
+                                                            <div className="text-[10px] font-bold text-neutral-800 uppercase leading-tight">{row.customer_name}</div>
+                                                            <div className="text-[10px] font-black text-brand-600">Ord: {row.order_id}</div>
                                                         </td>
-                                                        <td className="px-3 py-3 border-x border-neutral-200">
+                                                        <td className="px-3 py-2 bg-success-50/30">
                                                             <input
                                                                 type="number"
-                                                                className="w-20 mx-auto block border border-neutral-300 p-1.5 text-center text-xs font-bold tabular-nums focus:ring-1 focus:ring-brand-500"
-                                                                value={row.order_qty || 0}
-                                                                onChange={(e) => updateAllocationRow(row.id, 'order_qty', parseInt(e.target.value) || 0)}
+                                                                className="w-full bg-white border border-neutral-300 p-1 text-center text-xs font-bold tabular-nums focus:ring-1 focus:ring-success-500 text-success-600"
+                                                                value={row.order_qty === undefined || row.order_qty === null ? '' : row.order_qty}
+                                                                placeholder={row.requested_qty.toString()}
+                                                                onChange={(e) => updateAllocationRow(row.id, 'order_qty', e.target.value === '' ? null : parseInt(e.target.value))}
                                                             />
                                                         </td>
-                                                        <td className="px-3 py-3 border-x border-neutral-200">
+                                                        <td className="px-3 py-2 bg-brand-50/30">
                                                             <input
                                                                 type="number"
-                                                                className="w-20 mx-auto block border border-neutral-300 p-1.5 text-center text-xs font-bold tabular-nums focus:ring-1 focus:ring-brand-500"
-                                                                value={row.stock || 0}
+                                                                className="w-full bg-white border border-neutral-300 p-1 text-center text-xs font-bold tabular-nums focus:ring-1 focus:ring-brand-500 text-brand-600"
+                                                                value={row.stock || ''}
+                                                                placeholder="0"
                                                                 onChange={(e) => updateAllocationRow(row.id, 'stock', parseInt(e.target.value) || 0)}
                                                             />
                                                         </td>
-                                                        <td className="px-3 py-3">
+                                                        <td className="px-3 py-2 bg-warning-50/30">
                                                             <input
                                                                 type="text"
-                                                                className="w-20 mx-auto block border border-neutral-300 p-1.5 text-center text-xs font-bold tabular-nums focus:ring-1 focus:ring-brand-500"
-                                                                value={row.offer || '-'}
+                                                                className="w-full bg-white border border-neutral-300 p-1 text-center text-xs font-bold tabular-nums focus:ring-1 focus:ring-warning-500 text-warning-600"
+                                                                value={row.offer || ''}
+                                                                placeholder="-"
                                                                 onChange={(e) => updateAllocationRow(row.id, 'offer', e.target.value)}
                                                             />
                                                         </td>

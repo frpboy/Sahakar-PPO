@@ -11,21 +11,19 @@ export interface FilterState {
     rep?: string[];
     mobile?: string;
     supplier?: string;
-    category?: string;
     area?: string;
     primarySupplier?: string;
     secondarySupplier?: string;
     decidedSupplier?: string;
+    category?: string;
     status?: string[];
     stage?: string[];
     dateFrom?: string;
     dateTo?: string;
+
+    // Specialized Flags
     itemNameChange?: boolean;
     reqQtyGt0?: boolean;
-    pendingQtyGt0?: boolean;
-    damagedQtyGt0?: boolean;
-    invoicePresent?: boolean;
-    invoiceMissing?: boolean;
 }
 
 interface FilterPanelProps {
@@ -34,9 +32,10 @@ interface FilterPanelProps {
     filters: FilterState;
     onApply: (filters: FilterState) => void;
     onClear: () => void;
+    stageOptions?: { label: string; value: string }[];
 }
 
-export function FilterPanel({ isOpen, onClose, filters, onApply, onClear }: FilterPanelProps) {
+export function FilterPanel({ isOpen, onClose, filters, onApply, onClear, stageOptions }: FilterPanelProps) {
     const [localFilters, setLocalFilters] = useState<FilterState>(filters);
     const [advancedOpen, setAdvancedOpen] = useState(false);
 
@@ -138,16 +137,21 @@ export function FilterPanel({ isOpen, onClose, filters, onApply, onClear }: Filt
                             <div className="space-y-2">
                                 <label className="text-[11px] font-bold text-neutral-500 uppercase">Stage</label>
                                 <div className="grid grid-cols-2 gap-2">
-                                    {['PENDING', 'REP', 'SLIPPED', 'CLOSED'].map(stage => (
+                                    {(stageOptions || [
+                                        { label: 'PENDING', value: 'PENDING' },
+                                        { label: 'REP', value: 'REP' },
+                                        { label: 'SLIPPED', value: 'SLIPPED' },
+                                        { label: 'CLOSED', value: 'CLOSED' }
+                                    ]).map(opt => (
                                         <button
-                                            key={stage}
-                                            onClick={() => toggleMultiSelect('stage', stage)}
-                                            className={`px-3 py-2 rounded-sm text-[10px] font-bold border transition-all ${localFilters.stage?.includes(stage)
+                                            key={opt.value}
+                                            onClick={() => toggleMultiSelect('stage', opt.value)}
+                                            className={`px-3 py-2 rounded-sm text-[10px] font-bold border transition-all ${localFilters.stage?.includes(opt.value)
                                                 ? 'bg-brand-50 border-brand-500 text-brand-700 shadow-sm'
                                                 : 'bg-white border-neutral-100 text-neutral-400 hover:border-neutral-200'
                                                 }`}
                                         >
-                                            {stage}
+                                            {opt.label}
                                         </button>
                                     ))}
                                 </div>
@@ -183,7 +187,6 @@ export function FilterPanel({ isOpen, onClose, filters, onApply, onClear }: Filt
                             <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
                                 <Checkbox label="Item Name Changed" checked={localFilters.itemNameChange} onChange={v => handleChange('itemNameChange', v)} />
                                 <Checkbox label="Req Qty > 0" checked={localFilters.reqQtyGt0} onChange={v => handleChange('reqQtyGt0', v)} />
-                                <Checkbox label="Invoice Missing" checked={localFilters.invoiceMissing} onChange={v => handleChange('invoiceMissing', v)} />
                             </div>
                         )}
                     </section>

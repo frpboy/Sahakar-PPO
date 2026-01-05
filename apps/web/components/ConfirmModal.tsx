@@ -5,7 +5,7 @@ import React from 'react';
 interface ConfirmModalProps {
     isOpen: boolean;
     title: string;
-    message: string;
+    message: React.ReactNode;
     confirmLabel?: string;
     cancelLabel?: string;
     onConfirm: () => void;
@@ -13,6 +13,7 @@ interface ConfirmModalProps {
     variant?: 'danger' | 'primary' | 'accent';
     children?: React.ReactNode;
     showFooter?: boolean;
+    confirmDisabled?: boolean;
 }
 
 export function ConfirmModal({
@@ -26,6 +27,7 @@ export function ConfirmModal({
     variant = 'primary',
     children,
     showFooter = true,
+    confirmDisabled = false,
 }: ConfirmModalProps) {
     if (!isOpen) return null;
 
@@ -41,14 +43,14 @@ export function ConfirmModal({
                         {title}
                     </h3>
                     <div className="mt-2">
-                        <p className="text-[11px] text-neutral-400 font-bold uppercase tracking-widest leading-relaxed">
+                        <div className="text-[11px] text-neutral-400 font-bold uppercase tracking-widest leading-relaxed">
                             {message}
-                        </p>
+                        </div>
                     </div>
                 </div>
 
                 {children && (
-                    <div className="px-8 pb-8">
+                    <div className="px-8 pb-8 text-[11px]">
                         {children}
                     </div>
                 )}
@@ -58,13 +60,15 @@ export function ConfirmModal({
                         <button
                             type="button"
                             onClick={onConfirm}
+                            disabled={confirmDisabled}
                             className={`
                 px-6 py-2.5 text-[11px] font-bold text-white rounded uppercase tracking-widest shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-offset-2
-                ${variant === 'danger'
-                                    ? 'bg-error-600 hover:bg-error-700 focus:ring-error-500/20'
-                                    : variant === 'accent'
-                                        ? 'bg-accent-600 hover:bg-accent-700 focus:ring-accent-500/20'
-                                        : 'bg-primary-700 hover:bg-primary-900 focus:ring-primary-500/20'
+                ${confirmDisabled ? 'opacity-50 cursor-not-allowed bg-neutral-400' :
+                                    variant === 'danger'
+                                        ? 'bg-error-600 hover:bg-error-700 focus:ring-error-500/20'
+                                        : variant === 'accent'
+                                            ? 'bg-accent-600 hover:bg-accent-700 focus:ring-accent-500/20'
+                                            : 'bg-primary-700 hover:bg-primary-900 focus:ring-primary-500/20'
                                 }
               `}
                         >

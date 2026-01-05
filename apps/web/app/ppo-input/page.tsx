@@ -61,9 +61,24 @@ export default function PpoInputPage() {
     ];
 
     const { data: items, isLoading } = useQuery<PpoInputRow[]>({
-        queryKey: ['ppo-input'],
+        queryKey: ['ppo-input', filters, sort],
         queryFn: async () => {
-            const res = await fetch(`${apiUrl}/ppo/import`);
+            const params = new URLSearchParams();
+            if (filters.productName) params.append('productName', filters.productName);
+            if (filters.orderId) params.append('orderId', filters.orderId);
+            if (filters.customerId) params.append('customerId', filters.customerId);
+            if (filters.rep?.length) filters.rep.forEach(r => params.append('rep[]', r));
+            if (filters.stage?.length) filters.stage.forEach(s => params.append('stage[]', s));
+            if (filters.supplier) params.append('supplier', filters.supplier);
+            if (filters.dateFrom) params.append('dateFrom', filters.dateFrom);
+            if (filters.dateTo) params.append('dateTo', filters.dateTo);
+
+            if (sort) {
+                params.append('sortField', sort.field);
+                params.append('sortDir', sort.direction);
+            }
+
+            const res = await fetch(`${apiUrl}/ppo/import?${params.toString()}`);
             if (!res.ok) throw new Error('Failed to fetch PPO input data');
             return res.json();
         }
@@ -79,18 +94,19 @@ export default function PpoInputPage() {
         {
             header: 'PPO ID',
             size: 80,
+            meta: { align: 'center' },
             cell: ({ row }) => <span className="font-mono text-[10px] text-brand-600 font-bold uppercase">#{row.original.id?.toString().padStart(4, '0')}</span>
         },
         {
             header: 'PROD ID',
             size: 80,
+            meta: { align: 'center' },
             cell: ({ row }) => <span className="font-mono text-[10px] text-neutral-400">{row.original.productId?.toString().substring(0, 8) || '-'}</span>
         },
         {
-            header: 'MRP',
-            size: 80,
-            meta: { align: 'right' },
-            cell: ({ row }) => <span className="tabular-nums font-bold">₹{formatCurrency(row.original.mrp)}</span>
+            header: 'ITEM NAME',
+            size: 220,
+            cell: ({ row }) => <span className="font-bold text-neutral-900 uppercase truncate" title={row.original.productName}>{row.original.productName}</span>
         },
         {
             header: 'PACKING',
@@ -98,9 +114,9 @@ export default function PpoInputPage() {
             cell: ({ row }) => <span className="text-[10px] font-bold text-neutral-400 uppercase">{row.original.packing || 'N/A'}</span>
         },
         {
-            header: 'ITEM NAME',
-            size: 220,
-            cell: ({ row }) => <span className="font-bold text-neutral-900 uppercase truncate" title={row.original.productName}>{row.original.productName}</span>
+            header: 'SUBCATEGORY',
+            size: 120,
+            cell: ({ row }) => <span className="text-[10px] font-bold text-neutral-400 uppercase">{row.original.subcategory || '-'}</span>
         },
         {
             header: 'REQ QTY',
@@ -138,16 +154,6 @@ export default function PpoInputPage() {
             cell: ({ row }) => <span className="tabular-nums font-black text-brand-600">₹{formatCurrency(row.original.value)}</span>
         },
         {
-            header: 'STATUS',
-            size: 100,
-            cell: ({ row }) => <StatusBadge status={row.original.status?.toUpperCase() as any || 'DONE'} />
-        },
-        {
-            header: 'NOTES',
-            size: 150,
-            cell: ({ row }) => <span className="text-[11px] text-neutral-500 italic truncate" title={row.original.notes}>{row.original.notes || '-'}</span>
-        },
-        {
             header: 'DECIDED SUP',
             size: 180,
             cell: ({ row }) => <span className="text-[11px] font-bold text-neutral-900 uppercase truncate">{row.original.decidedSupplier || '-'}</span>
@@ -173,13 +179,25 @@ export default function PpoInputPage() {
             cell: ({ row }) => <span className="tabular-nums text-[11px] text-neutral-500">{row.original.mobile || '-'}</span>
         },
         {
+            header: 'STATUS',
+            size: 100,
+            meta: { align: 'center' },
+            cell: ({ row }) => <StatusBadge status={row.original.status?.toUpperCase() as any || 'DONE'} />
+        },
+        {
             header: 'STAGE',
             size: 100,
+            meta: { align: 'center' },
             cell: ({ row }) => (
-                <span className="text-[10px] font-bold text-neutral-400 uppercase bg-neutral-50 px-2 py-0.5 border border-neutral-100 rounded">
-                    {row.original.stage || 'PENDING'}
-                </span>
+                <StatusBadge
+                    status={row.original.stage?.toUpperCase() as any || 'PENDING'}
+                />
             )
+        },
+        {
+            header: 'NOTES',
+            size: 150,
+            cell: ({ row }) => <span className="text-[11px] text-neutral-500 italic truncate" title={row.original.notes}>{row.original.notes || '-'}</span>
         },
         {
             header: 'ACCEPT DATE',
@@ -194,6 +212,7 @@ export default function PpoInputPage() {
         {
             header: 'ACTIONS',
             size: 80,
+            meta: { align: 'center' },
             cell: () => (
                 <div className="flex gap-1 justify-center">
                     <button className="p-1 px-2 text-[10px] font-bold bg-neutral-100 text-neutral-600 rounded hover:bg-neutral-200 transition-colors uppercase">View</button>
@@ -202,67 +221,7 @@ export default function PpoInputPage() {
         }
     ], []);
 
-    const filteredItems = useMemo(() => {
-        if (!items) return [];
-        let result = [...items];
-
-        // Apply Search/Filters
-        if (filters.productName) {
-            result = result.filter(item =>
-                item.productName?.toLowerCase().includes(filters.productName!.toLowerCase())
-            );
-        }
-        if (filters.orderId) {
-            result = result.filter(item =>
-                item.orderId?.toString().includes(filters.orderId!)
-            );
-        }
-        if (filters.rep && filters.rep.length > 0) {
-            result = result.filter(item =>
-                filters.rep!.includes(item.rep || '')
-            );
-        }
-        if (filters.stage && filters.stage.length > 0) {
-            result = result.filter(item =>
-                filters.stage!.includes(item.stage?.toUpperCase() || 'PENDING')
-            );
-        }
-        if (filters.dateFrom) {
-            result = result.filter(item =>
-                item.acceptedDate && item.acceptedDate >= filters.dateFrom!
-            );
-        }
-        if (filters.dateTo) {
-            result = result.filter(item =>
-                item.acceptedDate && item.acceptedDate <= filters.dateTo!
-            );
-        }
-
-        // Apply Sorting
-        if (sort) {
-            result.sort((a, b) => {
-                let valA: any = '';
-                let valB: any = '';
-
-                if (sort.field === 'productName') {
-                    valA = a.productName || '';
-                    valB = b.productName || '';
-                } else if (sort.field === 'requestedQty') {
-                    valA = a.requestedQty || 0;
-                    valB = b.requestedQty || 0;
-                } else if (sort.field === 'acceptedDate') {
-                    valA = a.acceptedDate || '';
-                    valB = b.acceptedDate || '';
-                }
-
-                if (valA < valB) return sort.direction === 'asc' ? -1 : 1;
-                if (valA > valB) return sort.direction === 'asc' ? 1 : -1;
-                return 0;
-            });
-        }
-
-        return result;
-    }, [items, filters, sort]);
+    const filteredItems = items || [];
 
     return (
         <div className="flex flex-col h-full bg-neutral-50/50">
