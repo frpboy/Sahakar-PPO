@@ -348,7 +348,7 @@ export default function SuppliersPage() {
             size: 140,
             meta: { align: 'right' },
             cell: ({ row }) => (
-                <span className={`text-[11px] font-black ${parseFloat(row.original.closingBalance || '0') > 0 ? 'text-error-600' : 'text-success-600'}`}>
+                <span className={`text-[11px] font-black ${parseFloat(row.original.closingBalance || '0') > 0 ? 'text-danger-600' : 'text-success-600'}`}>
                     ₹{parseFloat(row.original.closingBalance || '0').toFixed(2)}
                 </span>
             )

@@ -113,7 +113,7 @@ export default function OrderImportPage() {
                 const status = info.getValue() as string;
                 const isError = status.toLowerCase().includes('error');
                 const isUpdated = status.toLowerCase().includes('updated');
-                const bgColor = isError ? 'bg-error-100 text-error-600' : isUpdated ? 'bg - warning-100 text-warning-600' : 'bg-accent-100 text-accent-600';
+                const bgColor = isError ? 'bg-danger-100 text-danger-600' : isUpdated ? 'bg-warning-100 text-warning-600' : 'bg-brand-100 text-brand-600';
                 return (
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${bgColor}`}>
                         {status.toUpperCase()}

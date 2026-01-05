@@ -292,7 +292,7 @@ export default function RepAllocationPage() {
                 <button
                     onClick={() => setReturnId(row.original.id)}
                     disabled={returnToPendingMutation.isPending}
-                    className="text-[10px] font-bold text-error-600 hover:text-error-700 bg-error-50 px-2 py-1 rounded-none border border-error-100 uppercase tracking-tight transition-colors"
+                    className="text-[10px] font-bold text-danger-600 hover:text-danger-700 bg-danger-50 px-2 py-1 rounded-none border border-danger-100 uppercase tracking-tight transition-colors"
                 >
                     {returnToPendingMutation.isPending ? 'Moving...' : 'Move to Pending'}
                 </button>
@@ -357,8 +357,8 @@ export default function RepAllocationPage() {
                     <div className="flex items-center gap-2">
                         {editingId === item.id ? (
                             <>
-                                <button onClick={() => handleSave(item.id)} className="p-1 text-accent-600 hover:bg-neutral-100"><CheckCircle2 size={16} /></button>
-                                <button onClick={() => setEditingId(null)} className="p-1 text-error-600 hover:bg-neutral-100"><XCircle size={16} /></button>
+                                <button onClick={() => handleSave(item.id)} className="p-1 text-brand-600 hover:bg-neutral-100"><CheckCircle2 size={16} /></button>
+                                <button onClick={() => setEditingId(null)} className="p-1 text-danger-600 hover:bg-neutral-100"><XCircle size={16} /></button>
                             </>
                         ) : (
                             <button onClick={() => handleEditClick(item)} className="p-1 text-neutral-400 hover:text-brand-600 hover:bg-neutral-100 transition-all"><Edit size={16} /></button>

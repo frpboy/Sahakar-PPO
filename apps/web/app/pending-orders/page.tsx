@@ -500,8 +500,8 @@ export default function PendingOrdersPage() {
                     <div className="flex items-center gap-2">
                         {editingId === item.id ? (
                             <>
-                                <button onClick={() => handleSave(item.id)} className="p-1 text-accent-600 hover:bg-neutral-100"><CheckCircle2 size={16} /></button>
-                                <button onClick={() => setEditingId(null)} className="p-1 text-error-600 hover:bg-neutral-100"><XCircle size={16} /></button>
+                                <button onClick={() => handleSave(item.id)} className="p-1 text-brand-600 hover:bg-neutral-100"><CheckCircle2 size={16} /></button>
+                                <button onClick={() => setEditingId(null)} className="p-1 text-danger-600 hover:bg-neutral-100"><XCircle size={16} /></button>
                             </>
                         ) : (
                             <div className="flex items-center gap-1">
@@ -549,10 +549,10 @@ export default function PendingOrdersPage() {
                 >
                     <button
                         onClick={handleBulkDone}
-                        className="bg-accent-600 text-white px-4 py-2 text-[11px] font-black uppercase tracking-widest hover:bg-accent-700 transition-all shadow-lg shadow-accent-600/20 flex items-center gap-2"
+                        className="bg-brand-600 text-white px-5 py-2.5 text-[11px] font-black uppercase tracking-widest hover:bg-brand-700 transition-all shadow-lg shadow-brand-600/20 flex items-center gap-2"
                     >
                         <CheckCircle2 size={16} />
-                        Done
+                        Mark as Done
                     </button>
                 </TableToolbar>
 
