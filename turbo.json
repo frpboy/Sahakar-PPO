@@ -25,6 +25,12 @@
             "cache": false,
             "persistent": true
         },
-        "format": {}
+        "format": {},
+        "test": {
+            "dependsOn": [
+                "^build"
+            ],
+            "outputs": []
+        }
     }
 }
